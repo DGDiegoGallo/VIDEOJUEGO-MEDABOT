@@ -47,6 +47,19 @@ export class EnemyManager {
     dashDuration: 600, // Duración del dash ligeramente más larga
   };
 
+  // Configuración específica del Tank
+  private tankConfig = {
+    color: 0x808080, // Gris
+    strokeColor: 0x404040, // Gris oscuro
+    shieldColor: 0x00ffff, // Cyan para el escudo
+    size: 36, // Más grande que zombies normales
+    speed: 100, // Misma velocidad que zombie normal
+    damage: 30, // Daño moderado
+    health: 8, // 8 puntos de vida
+    shieldHealth: 1, // El escudo se rompe con 1 explosión
+    hasShield: true, // Comienza con escudo
+  };
+
   /**
    * Constructor de la clase EnemyManager
    * @param scene - Escena de Phaser donde se crearán los enemigos
@@ -153,6 +166,8 @@ export class EnemyManager {
     // Configurar propiedades específicas del tipo
     if (type === EnemyType.DASHER) {
       this.configureDasher(enemy);
+    } else if (type === EnemyType.TANK) {
+      this.configureTank(enemy);
     } else {
       this.configureZombie(enemy);
     }
@@ -199,10 +214,18 @@ export class EnemyManager {
     }
     
     const random = Math.random();
-    if (random < this.config.difficultyScaling.dasherSpawnChance) {
+    
+    // 15% probabilidad de Tank (aparece desde el inicio)
+    if (random < 0.15) {
+      return EnemyType.TANK;
+    }
+    
+    // 25% probabilidad de Dasher (solo después de desbloquearse)
+    if (random < 0.40) {
       return EnemyType.DASHER;
     }
     
+    // 60% probabilidad de Zombie normal
     return EnemyType.ZOMBIE;
   }
 
@@ -256,6 +279,8 @@ export class EnemyManager {
     
     if (enemyType === 'dasher') {
       this.moveDasherTowardsPlayer(enemy, playerX, playerY);
+    } else if (enemyType === 'tank') {
+      this.moveTankTowardsPlayer(enemy, playerX, playerY);
     } else {
       // Movimiento normal con aceleración suave
       this.applySmoothMovement(enemy, playerX, playerY);
@@ -440,6 +465,38 @@ export class EnemyManager {
       
       console.log(`💜 Dasher spawneado con efectos especiales`);
     }
+    
+    // Efecto adicional para Tank
+    if (enemyType === EnemyType.TANK) {
+      // Efecto de parpadeo gris
+      this.scene.tweens.add({
+        targets: enemy,
+        alpha: 0.7,
+        duration: 200,
+        yoyo: true,
+        repeat: 2,
+        ease: 'Power2'
+      });
+      
+      // Efecto de anillo cyan para el escudo
+      const shieldRing = this.scene.add.circle(enemy.x, enemy.y, 8, 0x00ffff);
+      shieldRing.setStrokeStyle(4, 0x00cccc);
+      shieldRing.setAlpha(0.9);
+      shieldRing.setDepth(4);
+      
+      this.scene.tweens.add({
+        targets: shieldRing,
+        radius: 50,
+        alpha: 0,
+        duration: 600,
+        ease: 'Power2',
+        onComplete: () => {
+          shieldRing.destroy();
+        }
+      });
+      
+      console.log(`🛡️ Tank spawneado con escudo activado`);
+    }
   }
 
   /**
@@ -462,11 +519,19 @@ export class EnemyManager {
    * Daña a un enemigo específico
    * @param enemy - Sprite del enemigo
    * @param damage - Cantidad de daño a aplicar
+   * @param isExplosion - Si el daño viene de una explosión
    * @returns true si el enemigo murió, false si sobrevivió
    */
-  damageEnemy(enemy: Phaser.GameObjects.Rectangle, damage: number = 1): boolean {
-    const currentHealth = enemy.getData('health') || 1;
+  damageEnemy(enemy: Phaser.GameObjects.Rectangle, damage: number = 1, isExplosion: boolean = false): boolean {
+    const enemyType = enemy.getData('type');
     
+    // Manejar daño al tanque con escudo
+    if (enemyType === 'tank') {
+      return this.damageTank(enemy, damage, isExplosion);
+    }
+    
+    // Daño normal para otros enemigos
+    const currentHealth = enemy.getData('health') || 1;
     enemy.setData('health', Math.max(0, currentHealth - damage));
     
     // Efecto visual de daño
@@ -478,6 +543,46 @@ export class EnemyManager {
     }
     
     return false;
+  }
+
+  /**
+   * Maneja el daño específico para enemigos tanque con escudo
+   * @param enemy - Sprite del enemigo tanque
+   * @param damage - Cantidad de daño a aplicar
+   * @param isExplosion - Si el daño viene de una explosión
+   * @returns true si el enemigo murió, false si sobrevivió
+   */
+  private damageTank(enemy: Phaser.GameObjects.Rectangle, damage: number, isExplosion: boolean): boolean {
+    const hasShield = enemy.getData('hasShield') || false;
+    
+    if (hasShield) {
+      // Si tiene escudo, solo las explosiones pueden romperlo
+      if (isExplosion) {
+        enemy.setData('hasShield', false);
+        this.removeShieldEffect(enemy);
+        this.createShieldBreakEffect(enemy);
+        console.log('🛡️ Escudo del tanque roto por explosión!');
+        return false; // No muere, solo pierde el escudo
+      } else {
+        // Las balas normales no pueden atravesar el escudo
+        this.createShieldBlockEffect(enemy);
+        console.log('🛡️ Bala bloqueada por escudo del tanque');
+        return false;
+      }
+    } else {
+      // Sin escudo, recibe daño normal
+      const currentHealth = enemy.getData('health') || 1;
+      enemy.setData('health', Math.max(0, currentHealth - damage));
+      
+      this.createDamageEffect(enemy);
+      
+      if (enemy.getData('health') <= 0) {
+        this.removeEnemy(enemy);
+        return true;
+      }
+      
+      return false;
+    }
   }
 
   /**
@@ -504,6 +609,18 @@ export class EnemyManager {
         scaleY: 1.2,
         duration: 100,
         yoyo: true,
+        ease: 'Power2'
+      });
+    }
+    
+    // Efecto de sacudida para Tank
+    if (enemyType === 'tank') {
+      this.scene.tweens.add({
+        targets: enemy,
+        x: enemy.x + 3,
+        duration: 50,
+        yoyo: true,
+        repeat: 3,
         ease: 'Power2'
       });
     }
@@ -549,6 +666,12 @@ export class EnemyManager {
    * @param enemy - Sprite del enemigo a eliminar
    */
   removeEnemy(enemy: Phaser.GameObjects.Rectangle): void {
+    // Limpiar efectos específicos del tipo de enemigo
+    const enemyType = enemy.getData('type');
+    if (enemyType === 'tank') {
+      this.removeShieldEffect(enemy);
+    }
+    
     const index = this.enemies.indexOf(enemy);
     if (index > -1) {
       this.enemies.splice(index, 1);
@@ -716,6 +839,7 @@ export class EnemyManager {
     totalEnemies: number;
     dasherCount: number;
     zombieCount: number;
+    tankCount: number;
     currentSpawnInterval: number;
     dasherUnlocked: boolean;
     gameTime: number;
@@ -723,11 +847,13 @@ export class EnemyManager {
     const enemies = this.getEnemies();
     const dasherCount = enemies.filter(e => (e as any).enemyType === EnemyType.DASHER).length;
     const zombieCount = enemies.filter(e => (e as any).enemyType === EnemyType.ZOMBIE).length;
+    const tankCount = enemies.filter(e => (e as any).enemyType === EnemyType.TANK).length;
     
     return {
       totalEnemies: enemies.length,
       dasherCount,
       zombieCount,
+      tankCount,
       currentSpawnInterval: this.currentSpawnInterval,
       dasherUnlocked: this.dasherUnlocked,
       gameTime: this.gameTimeSeconds
@@ -757,6 +883,8 @@ export class EnemyManager {
       let type = 'zombie';
       if (enemy.getData('type') === 'dasher') {
         type = 'dasher';
+      } else if (enemy.getData('type') === 'tank') {
+        type = 'tank';
       }
       
       return {
@@ -850,5 +978,186 @@ export class EnemyManager {
     
     // Marcar el tipo de enemigo para identificación
     (enemy as any).enemyType = EnemyType.ZOMBIE;
+  }
+
+  /**
+   * Configura un enemigo Tank con sus propiedades específicas
+   * @param enemy - Sprite del enemigo
+   */
+  private configureTank(enemy: Phaser.GameObjects.Rectangle): void {
+    // Configurar propiedades específicas del Tank
+    enemy.setData('type', 'tank');
+    enemy.setData('health', this.tankConfig.health);
+    enemy.setData('speed', this.tankConfig.speed);
+    enemy.setData('hasShield', this.tankConfig.hasShield);
+    enemy.setData('shieldHealth', this.tankConfig.shieldHealth);
+    
+    // Configurar color y tamaño
+    enemy.setFillStyle(this.tankConfig.color);
+    enemy.setStrokeStyle(3, this.tankConfig.strokeColor); // Borde más grueso
+    enemy.setSize(this.tankConfig.size, this.tankConfig.size);
+    
+    // Configurar física básica
+    const body = enemy.body as Phaser.Physics.Arcade.Body;
+    body.setCollideWorldBounds(false);
+    body.setBounce(0);
+    body.setSize(this.tankConfig.size, this.tankConfig.size);
+    body.setDrag(0); // Sin resistencia para detención limpia
+    body.setMaxVelocity(this.tankConfig.speed * 1.5); // Límite de velocidad
+    
+    // Marcar el tipo de enemigo para identificación
+    (enemy as any).enemyType = EnemyType.TANK;
+    
+    // Crear efecto visual del escudo
+    this.createShieldEffect(enemy);
+    
+    console.log(`🛡️ Tank creado con ${this.tankConfig.health} de vida y escudo`);
+  }
+
+  /**
+   * Mueve un Tank hacia el jugador con movimiento pesado
+   * @param enemy - Sprite del enemigo Tank
+   * @param playerX - Posición X del jugador
+   * @param playerY - Posición Y del jugador
+   */
+  private moveTankTowardsPlayer(enemy: Phaser.GameObjects.Rectangle, playerX: number, playerY: number): void {
+    const body = enemy.body as Phaser.Physics.Arcade.Body;
+    const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, playerX, playerY);
+    const speed = this.tankConfig.speed;
+    
+    // Movimiento directo pero pesado
+    body.setVelocity(
+      Math.cos(angle) * speed,
+      Math.sin(angle) * speed
+    );
+  }
+
+  /**
+   * Crea el efecto visual del escudo del tanque
+   * @param enemy - Sprite del enemigo Tank
+   */
+  private createShieldEffect(enemy: Phaser.GameObjects.Rectangle): void {
+    // Crear anillo de escudo que rota alrededor del tanque
+    const shieldRing = this.scene.add.circle(enemy.x, enemy.y, this.tankConfig.size + 8, 0x00ffff);
+    shieldRing.setStrokeStyle(3, this.tankConfig.shieldColor);
+    shieldRing.setFillStyle(0x00ffff, 0.1); // Transparente
+    shieldRing.setDepth(6); // Por encima del enemigo
+    shieldRing.setAlpha(0.8);
+    
+    // Guardar referencia del escudo en el enemigo
+    (enemy as any).shieldEffect = shieldRing;
+    
+    // Animación de pulsación del escudo
+    this.scene.tweens.add({
+      targets: shieldRing,
+      alpha: 0.4,
+      duration: 1000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    
+    // Actualizar posición del escudo en cada frame
+    const updateShield = () => {
+      if (enemy.active && shieldRing.active) {
+        shieldRing.setPosition(enemy.x, enemy.y);
+        this.scene.time.delayedCall(16, updateShield); // ~60 FPS
+      }
+    };
+    updateShield();
+  }
+
+  /**
+   * Remueve el efecto visual del escudo
+   * @param enemy - Sprite del enemigo Tank
+   */
+  private removeShieldEffect(enemy: Phaser.GameObjects.Rectangle): void {
+    const shieldEffect = (enemy as any).shieldEffect;
+    if (shieldEffect && shieldEffect.active) {
+      shieldEffect.destroy();
+      (enemy as any).shieldEffect = null;
+    }
+  }
+
+  /**
+   * Crea el efecto visual de escudo roto
+   * @param enemy - Sprite del enemigo Tank
+   */
+  private createShieldBreakEffect(enemy: Phaser.GameObjects.Rectangle): void {
+    // Crear múltiples fragmentos del escudo que se dispersan
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const fragment = this.scene.add.rectangle(
+        enemy.x + Math.cos(angle) * 20,
+        enemy.y + Math.sin(angle) * 20,
+        6, 6,
+        this.tankConfig.shieldColor
+      );
+      fragment.setDepth(7);
+      
+      // Animación de dispersión
+      this.scene.tweens.add({
+        targets: fragment,
+        x: enemy.x + Math.cos(angle) * 60,
+        y: enemy.y + Math.sin(angle) * 60,
+        alpha: 0,
+        rotation: Math.random() * Math.PI * 2,
+        duration: 500,
+        ease: 'Power2',
+        onComplete: () => {
+          fragment.destroy();
+        }
+      });
+    }
+    
+    // Efecto de flash en el tanque
+    this.scene.tweens.add({
+      targets: enemy,
+      alpha: 0.5,
+      duration: 100,
+      yoyo: true,
+      repeat: 3,
+      ease: 'Power2'
+    });
+  }
+
+  /**
+   * Crea el efecto visual de bala bloqueada por escudo
+   * @param enemy - Sprite del enemigo Tank
+   */
+  private createShieldBlockEffect(enemy: Phaser.GameObjects.Rectangle): void {
+    // Crear efecto de chispa en el punto de impacto
+    const spark = this.scene.add.circle(
+      enemy.x + (Math.random() - 0.5) * this.tankConfig.size,
+      enemy.y + (Math.random() - 0.5) * this.tankConfig.size,
+      4,
+      0xffff00
+    );
+    spark.setDepth(7);
+    
+    // Animación de chispa
+    this.scene.tweens.add({
+      targets: spark,
+      scaleX: 2,
+      scaleY: 2,
+      alpha: 0,
+      duration: 200,
+      ease: 'Power2',
+      onComplete: () => {
+        spark.destroy();
+      }
+    });
+    
+    // Efecto de brillo en el escudo
+    const shieldEffect = (enemy as any).shieldEffect;
+    if (shieldEffect && shieldEffect.active) {
+      this.scene.tweens.add({
+        targets: shieldEffect,
+        alpha: 1,
+        duration: 100,
+        yoyo: true,
+        ease: 'Power2'
+      });
+    }
   }
 } 

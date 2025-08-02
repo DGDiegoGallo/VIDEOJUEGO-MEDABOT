@@ -184,7 +184,8 @@ export enum EnemyType {
   ZOMBIE = 'zombie',
   FAST_ZOMBIE = 'fast_zombie',
   TANK_ZOMBIE = 'tank_zombie',
-  DASHER = 'dasher'  // Nuevo enemigo con dash
+  DASHER = 'dasher',  // Nuevo enemigo con dash
+  TANK = 'tank'       // Enemigo tanque con escudo
 }
 
 /**

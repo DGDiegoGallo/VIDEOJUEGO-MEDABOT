@@ -5,6 +5,7 @@ import { BulletManager } from './BulletManager';
 import { ExperienceManager } from './ExperienceManager';
 import { WorldManager } from './WorldManager';
 import { VisualEffects } from './VisualEffects';
+import { ExplosionManager } from './ExplosionManager';
 
 export class CollisionManager {
   private scene: Scene;
@@ -14,11 +15,17 @@ export class CollisionManager {
   private experienceManager: ExperienceManager;
   private worldManager: WorldManager;
   private visualEffects: VisualEffects;
+  private explosionManager: ExplosionManager;
 
   // Sets para evitar colisiones múltiples
   private collidingEnemies: Set<Phaser.GameObjects.Rectangle> = new Set();
   private collidingBullets: Set<Phaser.GameObjects.Rectangle> = new Set();
   private collidingDiamonds: Set<Phaser.GameObjects.Polygon> = new Set();
+
+  // Grupos de física para colisiones nativas
+  private structureGroup?: Phaser.Physics.Arcade.StaticGroup;
+  private riverGroup?: Phaser.Physics.Arcade.StaticGroup;
+  private enemyGroup?: Phaser.Physics.Arcade.Group;
 
   constructor(
     scene: Scene,
@@ -27,7 +34,8 @@ export class CollisionManager {
     bulletManager: BulletManager,
     experienceManager: ExperienceManager,
     worldManager: WorldManager,
-    visualEffects: VisualEffects
+    visualEffects: VisualEffects,
+    explosionManager: ExplosionManager
   ) {
     this.scene = scene;
     this.player = player;
@@ -36,7 +44,103 @@ export class CollisionManager {
     this.experienceManager = experienceManager;
     this.worldManager = worldManager;
     this.visualEffects = visualEffects;
+    this.explosionManager = explosionManager;
+
+    this.setupPhysicsGroups();
   }
+
+  /**
+   * Configura los grupos de física para colisiones nativas
+   */
+  private setupPhysicsGroups(): void {
+    // Crear grupos estáticos para estructuras y ríos
+    this.structureGroup = this.scene.physics.add.staticGroup();
+    this.riverGroup = this.scene.physics.add.staticGroup();
+    this.enemyGroup = this.scene.physics.add.group();
+
+    // Configurar colisiones del jugador con obstáculos
+    const playerSprite = this.player.getSprite();
+    if (playerSprite) {
+      // Jugador vs estructuras - COLISIÓN NATIVA
+      this.scene.physics.add.collider(playerSprite, this.structureGroup, () => {
+        // No hacer nada - Phaser maneja la colisión automáticamente
+      });
+
+      // Jugador vs ríos - COLISIÓN NATIVA  
+      this.scene.physics.add.collider(playerSprite, this.riverGroup, () => {
+        // No hacer nada - Phaser maneja la colisión automáticamente
+      });
+    }
+
+    // Enemigos vs estructuras - COLISIÓN NATIVA
+    this.scene.physics.add.collider(this.enemyGroup, this.structureGroup, () => {
+      // No hacer nada - Phaser maneja la colisión automáticamente
+    });
+
+    // Enemigos vs ríos - COLISIÓN NATIVA
+    this.scene.physics.add.collider(this.enemyGroup, this.riverGroup, () => {
+      // No hacer nada - Phaser maneja la colisión automáticamente
+    });
+
+    // Configurar colisiones con barriles explosivos
+    const barrelGroup = this.explosionManager.getBarrelGroup();
+    if (barrelGroup && playerSprite) {
+      // Jugador vs barriles - COLISIÓN NATIVA
+      this.scene.physics.add.collider(playerSprite, barrelGroup, () => {
+        // No hacer nada - Phaser maneja la colisión automáticamente
+      });
+
+      // Enemigos vs barriles - COLISIÓN NATIVA
+      this.scene.physics.add.collider(this.enemyGroup, barrelGroup, () => {
+        // No hacer nada - Phaser maneja la colisión automáticamente
+      });
+    }
+  }
+
+  /**
+   * Actualiza los grupos de física con los obstáculos actuales
+   */
+  private updatePhysicsGroups(): void {
+    if (!this.structureGroup || !this.riverGroup) return;
+
+    // ARREGLADO: Limpiar grupos SIN destruir objetos visuales
+    // clear(false, false) = no remover de escena, no destruir objetos
+    this.structureGroup.clear(false, false);
+    this.riverGroup.clear(false, false);
+
+    // Agregar estructuras actuales
+    const structures = this.worldManager.getPhysicsStructures();
+    structures.forEach(structure => {
+      // Verificar que el objeto aún existe antes de agregarlo
+      if (structure && structure.scene && !structure.scene.sys.isDestroyed) {
+        this.structureGroup!.add(structure);
+      }
+    });
+
+    // Agregar ríos actuales
+    const rivers = this.worldManager.getPhysicsRivers();
+    rivers.forEach(river => {
+      // Verificar que el objeto aún existe antes de agregarlo
+      if (river && river.scene && !river.scene.sys.isDestroyed) {
+        this.riverGroup!.add(river);
+      }
+    });
+
+    // Actualizar enemigos en el grupo
+    if (this.enemyGroup) {
+      this.enemyGroup.clear(false, false);
+      const enemies = this.enemyManager.getEnemies();
+      enemies.forEach(enemy => {
+        // Verificar que el enemigo aún existe antes de agregarlo
+        if (enemy && enemy.scene && !enemy.scene.sys.isDestroyed) {
+          this.enemyGroup!.add(enemy);
+        }
+      });
+    }
+  }
+
+  // Contador para optimizar actualizaciones de grupos de física
+  private updateCounter: number = 0;
 
   /**
    * Verifica todas las colisiones del juego
@@ -46,12 +150,25 @@ export class CollisionManager {
     const enemies = this.enemyManager.getEnemies();
     const bullets = this.bulletManager.getBullets();
     const diamonds = this.experienceManager.getDiamonds();
-    const structures = this.worldManager.getPhysicsStructures();
-    const rivers = this.worldManager.getPhysicsRivers();
 
-    // Log de diagnóstico cada 2 segundos aprox
-    if (Math.random() < 0.008) { // ~1/120
-      console.log(`🔍 Colisiones: ${structures.length} estructuras, ${rivers.length} ríos, jugador en (${Math.round(playerPos.x)}, ${Math.round(playerPos.y)})`);
+    // Incrementar contador
+    this.updateCounter++;
+
+    // ARREGLADO: Actualizar grupos de física menos frecuentemente pero de forma más estable
+    if (this.updateCounter % 120 === 0) { // Cada 2 segundos aprox (120 frames)
+      this.updatePhysicsGroups();
+    }
+
+    // Log de diagnóstico cada 5 segundos aprox
+    if (this.updateCounter % 300 === 0) { // ~5 segundos
+      const structures = this.worldManager.getPhysicsStructures();
+      const rivers = this.worldManager.getPhysicsRivers();
+      console.log(`🔍 Colisiones NATIVAS: ${structures.length} estructuras, ${rivers.length} ríos, jugador en (${Math.round(playerPos.x)}, ${Math.round(playerPos.y)})`);
+    }
+
+    // Resetear contador para evitar overflow
+    if (this.updateCounter >= 600) { // Cada 10 segundos
+      this.updateCounter = 0;
     }
 
     // Limpiar flags de colisión
@@ -59,17 +176,14 @@ export class CollisionManager {
     this.collidingBullets.clear();
     this.collidingDiamonds.clear();
 
-    // Verificar colisiones usando detección manual
+    // Solo verificar colisiones que no maneja Phaser automáticamente
     this.checkPlayerEnemyCollisions(playerPos, enemies);
-    this.checkPlayerStructureCollisions(playerPos, structures);
-    this.checkPlayerRiverCollisions(playerPos, rivers);
     this.checkBulletEnemyCollisions(bullets, enemies);
-    this.checkBulletStructureCollisions(bullets, structures);
+    this.checkBulletStructureCollisions(bullets);
     this.checkPlayerDiamondCollisions(playerPos, diamonds);
-
-    // Verificar colisiones de enemigos con estructuras y ríos
-    this.checkEnemyStructureCollisions(enemies, structures);
-    this.checkEnemyRiverCollisions(enemies, rivers);
+    
+    // Verificar colisiones con barriles explosivos
+    this.explosionManager.checkBulletBarrelCollisions(bullets);
   }
 
   /**
@@ -89,96 +203,6 @@ export class CollisionManager {
         }
       }
     });
-  }
-
-  /**
-   * Verifica colisiones entre jugador y estructuras - PARED SÓLIDA
-   */
-  private checkPlayerStructureCollisions(playerPos: { x: number; y: number }, structures: Phaser.GameObjects.GameObject[]): void {
-    const playerRadius = 12;
-    const playerSprite = this.player.getSprite();
-    if (!playerSprite) return;
-
-    let isColliding = false;
-
-    structures.forEach(structure => {
-      // Usar getBounds() si está disponible, sino usar posición y tamaño
-      let structureBounds: Phaser.Geom.Rectangle;
-
-      if ('getBounds' in structure && typeof structure.getBounds === 'function') {
-        structureBounds = structure.getBounds();
-      } else {
-        // Fallback: crear bounds basado en posición y tamaño
-        structureBounds = new Phaser.Geom.Rectangle(
-          (structure as any).x || 0,
-          (structure as any).y || 0,
-          (structure as any).width || 32,
-          (structure as any).height || 32
-        );
-      }
-
-      const playerBounds = new Phaser.Geom.Rectangle(
-        playerPos.x - playerRadius,
-        playerPos.y - playerRadius,
-        playerRadius * 2,
-        playerRadius * 2
-      );
-
-      if (Phaser.Geom.Rectangle.Overlaps(playerBounds, structureBounds)) {
-        isColliding = true;
-        this.handlePlayerStructureCollision(playerSprite, structure);
-      }
-    });
-
-    // Si no está colisionando con ninguna estructura, permitir movimiento normal
-    if (!isColliding) {
-      // El jugador puede moverse libremente
-    }
-  }
-
-  /**
-   * Verifica colisiones entre jugador y ríos - PARED SÓLIDA
-   */
-  private checkPlayerRiverCollisions(playerPos: { x: number; y: number }, rivers: Phaser.GameObjects.GameObject[]): void {
-    const playerRadius = 12;
-    const playerSprite = this.player.getSprite();
-    if (!playerSprite) return;
-
-    let isColliding = false;
-
-    rivers.forEach(river => {
-      // Usar getBounds() si está disponible, sino usar posición y tamaño
-      let riverBounds: Phaser.Geom.Rectangle;
-
-      if ('getBounds' in river && typeof river.getBounds === 'function') {
-        riverBounds = river.getBounds();
-      } else {
-        // Fallback: crear bounds basado en posición y tamaño
-        riverBounds = new Phaser.Geom.Rectangle(
-          (river as any).x || 0,
-          (river as any).y || 0,
-          (river as any).width || 32,
-          (river as any).height || 32
-        );
-      }
-
-      const playerBounds = new Phaser.Geom.Rectangle(
-        playerPos.x - playerRadius,
-        playerPos.y - playerRadius,
-        playerRadius * 2,
-        playerRadius * 2
-      );
-
-      if (Phaser.Geom.Rectangle.Overlaps(playerBounds, riverBounds)) {
-        isColliding = true;
-        this.handlePlayerRiverCollision(playerSprite, river);
-      }
-    });
-
-    // Si no está colisionando con ningún río, permitir movimiento normal
-    if (!isColliding) {
-      // El jugador puede moverse libremente
-    }
   }
 
   /**
@@ -203,40 +227,26 @@ export class CollisionManager {
   }
 
   /**
-   * Verifica colisiones entre balas y estructuras
+   * Verifica colisiones entre balas y estructuras usando grupos de física
    */
-  private checkBulletStructureCollisions(bullets: Phaser.GameObjects.Rectangle[], structures: Phaser.GameObjects.GameObject[]): void {
+  private checkBulletStructureCollisions(bullets: Phaser.GameObjects.Rectangle[]): void {
+    if (!this.structureGroup) return;
+
     bullets.forEach(bullet => {
       if (!this.collidingBullets.has(bullet)) {
-        structures.forEach(structure => {
-          // Usar getBounds() si está disponible, sino usar posición y tamaño
-          let structureBounds: Phaser.Geom.Rectangle;
-
-          if ('getBounds' in structure && typeof structure.getBounds === 'function') {
-            structureBounds = structure.getBounds();
-          } else {
-            // Fallback: crear bounds basado en posición y tamaño
-            structureBounds = new Phaser.Geom.Rectangle(
-              (structure as any).x || 0,
-              (structure as any).y || 0,
-              (structure as any).width || 32,
-              (structure as any).height || 32
-            );
-          }
-
-          const bulletBounds = new Phaser.Geom.Rectangle(
-            bullet.x - 4,
-            bullet.y - 4,
-            8,
-            8
-          );
-
-          if (Phaser.Geom.Rectangle.Overlaps(bulletBounds, structureBounds)) {
-            this.collidingBullets.add(bullet);
-            this.handleBulletStructureCollision(bullet, structure);
-            return; // Salir del loop de estructuras
-          }
+        // Verificar colisión con grupo de estructuras
+        this.scene.physics.overlap(bullet, this.structureGroup, (bulletObj, structureObj) => {
+          this.collidingBullets.add(bullet);
+          this.handleBulletStructureCollision(bullet, structureObj as Phaser.GameObjects.GameObject);
         });
+
+        // Verificar colisión con grupo de ríos
+        if (this.riverGroup) {
+          this.scene.physics.overlap(bullet, this.riverGroup, (bulletObj, riverObj) => {
+            this.collidingBullets.add(bullet);
+            this.handleBulletStructureCollision(bullet, riverObj as Phaser.GameObjects.GameObject);
+          });
+        }
       }
     });
   }
@@ -261,84 +271,6 @@ export class CollisionManager {
   }
 
   /**
-   * Verifica colisiones entre enemigos y estructuras
-   */
-  private checkEnemyStructureCollisions(enemies: Phaser.GameObjects.Rectangle[], structures: Phaser.GameObjects.GameObject[]): void {
-    enemies.forEach(enemy => {
-      let isColliding = false;
-
-      structures.forEach(structure => {
-        // Usar getBounds() si está disponible, sino usar posición y tamaño
-        let structureBounds: Phaser.Geom.Rectangle;
-
-        if ('getBounds' in structure && typeof structure.getBounds === 'function') {
-          structureBounds = structure.getBounds();
-        } else {
-          // Fallback: crear bounds basado en posición y tamaño
-          structureBounds = new Phaser.Geom.Rectangle(
-            (structure as any).x || 0,
-            (structure as any).y || 0,
-            (structure as any).width || 32,
-            (structure as any).height || 32
-          );
-        }
-
-        const enemyRadius = enemy.width / 2 || 12;
-        const enemyBounds = new Phaser.Geom.Rectangle(
-          enemy.x - enemyRadius,
-          enemy.y - enemyRadius,
-          enemyRadius * 2,
-          enemyRadius * 2
-        );
-
-        if (Phaser.Geom.Rectangle.Overlaps(enemyBounds, structureBounds)) {
-          isColliding = true;
-          this.handleEnemyStructureCollision(enemy, structure);
-        }
-      });
-    });
-  }
-
-  /**
-   * Verifica colisiones entre enemigos y ríos
-   */
-  private checkEnemyRiverCollisions(enemies: Phaser.GameObjects.Rectangle[], rivers: Phaser.GameObjects.GameObject[]): void {
-    enemies.forEach(enemy => {
-      let isColliding = false;
-
-      rivers.forEach(river => {
-        // Usar getBounds() si está disponible, sino usar posición y tamaño
-        let riverBounds: Phaser.Geom.Rectangle;
-
-        if ('getBounds' in river && typeof river.getBounds === 'function') {
-          riverBounds = river.getBounds();
-        } else {
-          // Fallback: crear bounds basado en posición y tamaño
-          riverBounds = new Phaser.Geom.Rectangle(
-            (river as any).x || 0,
-            (river as any).y || 0,
-            (river as any).width || 32,
-            (river as any).height || 32
-          );
-        }
-
-        const enemyRadius = enemy.width / 2 || 12;
-        const enemyBounds = new Phaser.Geom.Rectangle(
-          enemy.x - enemyRadius,
-          enemy.y - enemyRadius,
-          enemyRadius * 2,
-          enemyRadius * 2
-        );
-
-        if (Phaser.Geom.Rectangle.Overlaps(enemyBounds, riverBounds)) {
-          isColliding = true;
-          this.handleEnemyRiverCollision(enemy, river);
-        }
-      });
-    });
-  }
-
-  /**
    * Maneja la colisión entre jugador y enemigo
    */
   private handlePlayerEnemyCollision(enemy: Phaser.GameObjects.Rectangle): void {
@@ -352,71 +284,13 @@ export class CollisionManager {
   }
 
   /**
-   * Maneja la colisión entre jugador y estructura - DETENER + SEPARAR MÍNIMO
-   */
-  private handlePlayerStructureCollision(playerSprite: Phaser.GameObjects.Rectangle, structure: Phaser.GameObjects.GameObject): void {
-    const body = playerSprite.body as Phaser.Physics.Arcade.Body;
-    if (!body) return;
-
-    // DETENER COMPLETAMENTE
-    body.setVelocity(0, 0);
-
-    // Separar SOLO lo necesario para salir del overlap
-    this.separateFromObstacle(playerSprite, structure, 12); // Radio del jugador
-  }
-
-  /**
-   * Maneja la colisión entre jugador y río - DETENER + SEPARAR MÍNIMO
-   */
-  private handlePlayerRiverCollision(playerSprite: Phaser.GameObjects.Rectangle, river: Phaser.GameObjects.GameObject): void {
-    const body = playerSprite.body as Phaser.Physics.Arcade.Body;
-    if (!body) return;
-
-    // DETENER COMPLETAMENTE
-    body.setVelocity(0, 0);
-
-    // Separar SOLO lo necesario para salir del overlap
-    this.separateFromObstacle(playerSprite, river, 12); // Radio del jugador
-  }
-
-  /**
-   * Maneja la colisión entre enemigo y estructura - DETENER + SEPARAR MÍNIMO
-   */
-  private handleEnemyStructureCollision(enemy: Phaser.GameObjects.Rectangle, structure: Phaser.GameObjects.GameObject): void {
-    const body = enemy.body as Phaser.Physics.Arcade.Body;
-    if (!body) return;
-
-    // DETENER COMPLETAMENTE
-    body.setVelocity(0, 0);
-
-    // Separar SOLO lo necesario para salir del overlap
-    const enemyRadius = enemy.width / 2 || 12;
-    this.separateFromObstacle(enemy, structure, enemyRadius);
-  }
-
-  /**
-   * Maneja la colisión entre enemigo y río - DETENER + SEPARAR MÍNIMO
-   */
-  private handleEnemyRiverCollision(enemy: Phaser.GameObjects.Rectangle, river: Phaser.GameObjects.GameObject): void {
-    const body = enemy.body as Phaser.Physics.Arcade.Body;
-    if (!body) return;
-
-    // DETENER COMPLETAMENTE
-    body.setVelocity(0, 0);
-
-    // Separar SOLO lo necesario para salir del overlap
-    const enemyRadius = enemy.width / 2 || 12;
-    this.separateFromObstacle(enemy, river, enemyRadius);
-  }
-
-  /**
    * Maneja la colisión entre bala y enemigo
    */
   private handleBulletEnemyCollision(bullet: Phaser.GameObjects.Rectangle, enemy: Phaser.GameObjects.Rectangle): void {
     this.bulletManager.removeBullet(bullet);
 
-    // Usar el nuevo sistema de daño
-    const enemyDied = this.enemyManager.damageEnemy(enemy, 1);
+    // Usar el nuevo sistema de daño (false = no es explosión)
+    const enemyDied = this.enemyManager.damageEnemy(enemy, 1, false);
 
     if (enemyDied) {
       // Enemigo eliminado
@@ -432,6 +306,13 @@ export class CollisionManager {
 
       if (enemyType === 'dasher') {
         this.visualEffects.showScoreText(enemy.x, enemy.y, `HP: ${remainingHealth}`, '#8a2be2');
+      } else if (enemyType === 'tank') {
+        const hasShield = enemy.getData('hasShield');
+        if (hasShield) {
+          this.visualEffects.showScoreText(enemy.x, enemy.y, 'BLOCKED', '#00ffff');
+        } else {
+          this.visualEffects.showScoreText(enemy.x, enemy.y, `HP: ${remainingHealth}`, '#808080');
+        }
       } else {
         this.visualEffects.showScoreText(enemy.x, enemy.y, 'HIT', '#ff6666');
       }
@@ -462,65 +343,24 @@ export class CollisionManager {
   }
 
   /**
-   * Separa un objeto del obstáculo SOLO lo necesario para evitar overlap
-   * @param gameObject - Objeto a separar
-   * @param obstacle - Obstáculo del cual separar
-   * @param objectRadius - Radio del objeto
+   * Fuerza la actualización inmediata de los grupos de física
+   * Útil cuando se generan nuevos chunks o se cambia de área
    */
-  private separateFromObstacle(
-    gameObject: Phaser.GameObjects.Rectangle,
-    obstacle: Phaser.GameObjects.GameObject,
-    objectRadius: number
-  ): void {
-    // Obtener bounds del obstáculo
-    let obstacleBounds: Phaser.Geom.Rectangle;
+  public forceUpdatePhysicsGroups(): void {
+    this.updatePhysicsGroups();
+    console.log('🔄 Grupos de física actualizados forzadamente');
+  }
 
-    if ('getBounds' in obstacle && typeof obstacle.getBounds === 'function') {
-      obstacleBounds = obstacle.getBounds();
-    } else {
-      obstacleBounds = new Phaser.Geom.Rectangle(
-        (obstacle as any).x || 0,
-        (obstacle as any).y || 0,
-        (obstacle as any).width || 32,
-        (obstacle as any).height || 32
-      );
-    }
-
-    // Calcular la distancia mínima necesaria para separar
-    const objX = gameObject.x;
-    const objY = gameObject.y;
-    const obsX = obstacleBounds.x + obstacleBounds.width / 2;
-    const obsY = obstacleBounds.y + obstacleBounds.height / 2;
-
-    // Calcular overlap en cada dirección
-    const overlapLeft = (objX + objectRadius) - obstacleBounds.left;
-    const overlapRight = obstacleBounds.right - (objX - objectRadius);
-    const overlapTop = (objY + objectRadius) - obstacleBounds.top;
-    const overlapBottom = obstacleBounds.bottom - (objY - objectRadius);
-
-    // Encontrar la separación mínima (menor overlap)
-    const minOverlapX = Math.min(overlapLeft, overlapRight);
-    const minOverlapY = Math.min(overlapTop, overlapBottom);
-
-    if (minOverlapX < minOverlapY) {
-      // Separar horizontalmente
-      if (overlapLeft < overlapRight) {
-        // Mover hacia la izquierda
-        gameObject.setPosition(obstacleBounds.left - objectRadius - 1, objY);
-      } else {
-        // Mover hacia la derecha
-        gameObject.setPosition(obstacleBounds.right + objectRadius + 1, objY);
-      }
-    } else {
-      // Separar verticalmente
-      if (overlapTop < overlapBottom) {
-        // Mover hacia arriba
-        gameObject.setPosition(objX, obstacleBounds.top - objectRadius - 1);
-      } else {
-        // Mover hacia abajo
-        gameObject.setPosition(objX, obstacleBounds.bottom + objectRadius + 1);
-      }
-    }
+  /**
+   * Obtiene estadísticas de los grupos de física para diagnóstico
+   */
+  public getPhysicsGroupsStats(): { structures: number; rivers: number; enemies: number; barrels: number } {
+    return {
+      structures: this.structureGroup?.children.size || 0,
+      rivers: this.riverGroup?.children.size || 0,
+      enemies: this.enemyGroup?.children.size || 0,
+      barrels: this.explosionManager.getBarrels().length
+    };
   }
 
   /**
@@ -530,5 +370,19 @@ export class CollisionManager {
     this.collidingEnemies.clear();
     this.collidingBullets.clear();
     this.collidingDiamonds.clear();
+
+    // Limpiar grupos de física SIN destruir objetos visuales
+    if (this.structureGroup) {
+      this.structureGroup.clear(false, false);
+      this.structureGroup.destroy(false);
+    }
+    if (this.riverGroup) {
+      this.riverGroup.clear(false, false);
+      this.riverGroup.destroy(false);
+    }
+    if (this.enemyGroup) {
+      this.enemyGroup.clear(false, false);
+      this.enemyGroup.destroy(false);
+    }
   }
 }

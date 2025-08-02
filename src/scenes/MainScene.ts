@@ -11,7 +11,8 @@ import { CameraManager } from '../managers/CameraManager';
 import { TimerManager } from '../managers/TimerManager';
 import { MinimapManager } from '../managers/MinimapManager';
 import { UIManager } from '../managers/UIManager';
-import { SkillLevels, SkillOption } from '../types/game';
+import { ExplosionManager } from '../managers/ExplosionManager';
+import { SkillLevels, SkillOption, EnemyType } from '../types/game';
 
 export class MainScene extends Scene {
   // Managers
@@ -27,6 +28,7 @@ export class MainScene extends Scene {
   private timerManager!: TimerManager;
   private minimapManager!: MinimapManager;
   private uiManager!: UIManager;
+  private explosionManager!: ExplosionManager;
 
   // Input
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -114,6 +116,15 @@ export class MainScene extends Scene {
       this.gameEffectsManager
     );
 
+    // Inicializar ExplosionManager
+    this.explosionManager = new ExplosionManager(
+      this,
+      this.player,
+      this.enemyManager,
+      this.worldManager,
+      this.visualEffects
+    );
+
     // Inicializar CollisionManager - CRÍTICO: debe ir después de todos los managers
     this.collisionManager = new CollisionManager(
       this,
@@ -122,7 +133,8 @@ export class MainScene extends Scene {
       this.bulletManager,
       this.experienceManager,
       this.worldManager,
-      this.visualEffects
+      this.visualEffects,
+      this.explosionManager
     );
   }
 
@@ -187,6 +199,22 @@ export class MainScene extends Scene {
 
     // Inicializar GameEffectsManager
     this.gameEffectsManager.initialize(this.player, this.bulletManager, this.experienceManager);
+
+    // Generar barriles explosivos iniciales
+    const playerPos = this.player.getPosition();
+    this.explosionManager.generateRandomBarrels(playerPos.x, playerPos.y, 5);
+
+    // Generar tanques de prueba en la primera zona
+    console.log('🛡️ Generando tanques de prueba...');
+    for (let i = 0; i < 3; i++) {
+      const angle = (i / 3) * Math.PI * 2;
+      const distance = 200 + i * 50; // Diferentes distancias
+      const tankX = playerPos.x + Math.cos(angle) * distance;
+      const tankY = playerPos.y + Math.sin(angle) * distance;
+
+      this.enemyManager.createEnemy(tankX, tankY, EnemyType.TANK);
+      console.log(`🛡️ Tank creado en (${Math.round(tankX)}, ${Math.round(tankY)})`);
+    }
   }
 
   update(_delta: number) {
@@ -201,6 +229,10 @@ export class MainScene extends Scene {
 
   // Contador para optimizar actualizaciones menos críticas
   private updateCounter: number = 0;
+
+  // Seguimiento del chunk anterior para detectar cambios
+  private lastChunkX: number = 0;
+  private lastChunkY: number = 0;
 
   /**
    * Actualiza todos los managers (optimizado pero funcional)
@@ -222,10 +254,27 @@ export class MainScene extends Scene {
     if (this.updateCounter % 2 === 0) {
       // Actualizar mundo procedural
       this.worldManager.updateWorld(playerPos.x, playerPos.y);
-      
+
+      // ARREGLADO: Detectar cambio de chunk y forzar actualización de colisiones
+      const currentChunkX = Math.floor(playerPos.x / 800); // 800 es el chunkSize
+      const currentChunkY = Math.floor(playerPos.y / 800);
+
+      if (currentChunkX !== this.lastChunkX || currentChunkY !== this.lastChunkY) {
+        this.lastChunkX = currentChunkX;
+        this.lastChunkY = currentChunkY;
+
+        // Forzar actualización de grupos de física cuando cambia de chunk
+        this.collisionManager.forceUpdatePhysicsGroups();
+        console.log(`🔄 Cambio de chunk detectado: (${currentChunkX}, ${currentChunkY}) - Colisiones actualizadas`);
+      }
+
       // Diagnóstico cada 5 segundos aprox (300 frames)
       if (this.updateCounter % 300 === 0) {
         this.worldManager.diagnoseWorld(playerPos.x, playerPos.y);
+
+        // Diagnóstico adicional de colisiones
+        const collisionStats = this.collisionManager.getPhysicsGroupsStats();
+        console.log(`🔍 Estadísticas colisiones: ${collisionStats.structures} estructuras, ${collisionStats.rivers} ríos, ${collisionStats.enemies} enemigos, ${collisionStats.barrels} barriles en grupos`);
       }
     }
 
@@ -234,6 +283,7 @@ export class MainScene extends Scene {
       this.bulletManager.cleanupOffscreenBullets();
       this.enemyManager.cleanupOffscreenEnemies();
       this.experienceManager.cleanupOffscreenDiamonds();
+      this.explosionManager.cleanupOffscreenBarrels(playerPos.x, playerPos.y);
     }
 
     // Actualizaciones de UI (cada 4 frames para mejor rendimiento)
@@ -308,6 +358,11 @@ export class MainScene extends Scene {
 
     this.events.on('gameOver', () => {
       this.gameOver();
+    });
+
+    // Evento para manejar balas que golpean barriles
+    this.events.on('bulletHitBarrel', (bullet: Phaser.GameObjects.Rectangle) => {
+      this.bulletManager.removeBullet(bullet);
     });
   }
 
@@ -440,6 +495,7 @@ export class MainScene extends Scene {
     this.timerManager.destroy();
     this.minimapManager.destroy();
     this.uiManager.destroy();
+    this.explosionManager.destroy();
 
     console.log('🗑️ MainScene destruida');
   }
