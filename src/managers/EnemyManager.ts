@@ -36,15 +36,15 @@ export class EnemyManager {
   
   // Configuración específica del Dasher
   private dasherConfig = {
-    color: 0x8a2be2, // Violeta
+    color: 0x8a2be2, // Violeta brillante
     strokeColor: 0x4b0082, // Violeta oscuro
-    size: 28, // Ligeramente más grande
-    speed: 120, // Más rápido
-    damage: 30, // Más daño
-    health: 3, // Más vida (requiere 3 disparos)
-    dashCooldown: 3000, // 3 segundos entre dashes
-    dashSpeed: 300, // Velocidad del dash
-    dashDuration: 500, // Duración del dash en ms
+    size: 32, // Más grande para ser más visible
+    speed: 140, // Más rápido que zombies normales
+    damage: 35, // Más daño
+    health: 4, // Más vida (requiere 4 disparos)
+    dashCooldown: 2500, // 2.5 segundos entre dashes (más frecuente)
+    dashSpeed: 350, // Velocidad del dash más rápida
+    dashDuration: 600, // Duración del dash ligeramente más larga
   };
 
   /**
@@ -58,7 +58,7 @@ export class EnemyManager {
     // Configuración por defecto
     this.config = {
       size: 24,
-      spawnInterval: 3000, // Aumentar de 2000 a 3000ms
+      spawnInterval: 2000, // Restaurar a 2000ms para spawn más frecuente
       color: 0xff0000,
       strokeColor: 0x8b0000,
       damage: 20,
@@ -66,11 +66,11 @@ export class EnemyManager {
       speedVariation: 50,
       difficultyScaling: {
         enabled: true,
-        baseSpawnInterval: 3000, // Aumentar de 2000 a 3000ms
-        minSpawnInterval: 200, // Más agresivo: mínimo 200ms
-        spawnIntervalReduction: 750, // x5 más agresivo: reduce 750ms por minuto
-        dasherSpawnChance: 0.15, // 15% de probabilidad
-        dasherUnlockTime: 30, // Desbloquea más rápido: 30 segundos
+        baseSpawnInterval: 2000, // Restaurar a 2000ms
+        minSpawnInterval: 150, // Más agresivo: mínimo 150ms
+        spawnIntervalReduction: 100, // Reduce 100ms por minuto (más gradual pero constante)
+        dasherSpawnChance: 0.25, // 25% de probabilidad para más Dashers
+        dasherUnlockTime: 20, // Desbloquea a los 20 segundos
       },
       ...config
     };
@@ -257,15 +257,29 @@ export class EnemyManager {
     if (enemyType === 'dasher') {
       this.moveDasherTowardsPlayer(enemy, playerX, playerY);
     } else {
-      // Movimiento normal
-      const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, playerX, playerY);
-      const speed = this.config.speed + Math.random() * this.config.speedVariation;
-      
-      body.setVelocity(
-        Math.cos(angle) * speed,
-        Math.sin(angle) * speed
-      );
+      // Movimiento normal con aceleración suave
+      this.applySmoothMovement(enemy, playerX, playerY);
     }
+  }
+
+  /**
+   * Aplica movimiento básico hacia el jugador - SIMPLE Y DIRECTO
+   * @param enemy - Sprite del enemigo
+   * @param targetX - Posición X objetivo
+   * @param targetY - Posición Y objetivo
+   */
+  private applySmoothMovement(enemy: Phaser.GameObjects.Rectangle, targetX: number, targetY: number): void {
+    const body = enemy.body as Phaser.Physics.Arcade.Body;
+    if (!body) return;
+    
+    const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, targetX, targetY);
+    const speed = this.config.speed + Math.random() * this.config.speedVariation;
+    
+    // Movimiento directo sin aceleración compleja
+    body.setVelocity(
+      Math.cos(angle) * speed,
+      Math.sin(angle) * speed
+    );
   }
 
   /**
@@ -284,17 +298,22 @@ export class EnemyManager {
     if (!isDashing && currentTime - lastDashTime > this.dasherConfig.dashCooldown) {
       const distanceToPlayer = Phaser.Math.Distance.Between(enemy.x, enemy.y, playerX, playerY);
       
-      // Dash si está a cierta distancia del jugador
-      if (distanceToPlayer > 150 && distanceToPlayer < 300) {
-        this.performDash(enemy, playerX, playerY);
-        return;
+      // Dash si está a cierta distancia del jugador (rango más amplio)
+      if (distanceToPlayer > 100 && distanceToPlayer < 400) {
+        // Probabilidad de dash basada en la distancia (más cerca = más probable)
+        const dashProbability = Math.max(0.3, 1 - (distanceToPlayer / 400));
+        if (Math.random() < dashProbability) {
+          this.performDash(enemy, playerX, playerY);
+          return;
+        }
       }
     }
     
-    // Movimiento normal del Dasher
+    // Movimiento normal del Dasher - DIRECTO
     const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, playerX, playerY);
-    const speed = this.dasherConfig.speed + Math.random() * this.config.speedVariation;
+    const speed = this.dasherConfig.speed + Math.random() * (this.config.speedVariation * 0.5);
     
+    // Movimiento directo sin aceleración compleja
     body.setVelocity(
       Math.cos(angle) * speed,
       Math.sin(angle) * speed
@@ -335,27 +354,43 @@ export class EnemyManager {
    * @param enemy - Sprite del enemigo Dasher
    */
   private createDashEffect(enemy: Phaser.GameObjects.Rectangle): void {
-    // Efecto de estela violeta
-    const trail = this.scene.add.rectangle(
-      enemy.x, enemy.y, 
-      this.dasherConfig.size, this.dasherConfig.size, 
-      0x8a2be2
-    );
-    trail.setAlpha(0.6);
-    trail.setDepth(4);
+    // Efecto de estela violeta múltiple
+    for (let i = 0; i < 3; i++) {
+      const trail = this.scene.add.rectangle(
+        enemy.x + (Math.random() - 0.5) * 10, 
+        enemy.y + (Math.random() - 0.5) * 10, 
+        this.dasherConfig.size + i * 5, 
+        this.dasherConfig.size + i * 5, 
+        0x8a2be2
+      );
+      trail.setAlpha(0.8 - i * 0.2);
+      trail.setDepth(4 - i);
+      
+      // Animación de desvanecimiento escalonada
+      this.scene.tweens.add({
+        targets: trail,
+        alpha: 0,
+        scaleX: 2 + i * 0.5,
+        scaleY: 2 + i * 0.5,
+        duration: this.dasherConfig.dashDuration + i * 100,
+        ease: 'Power2',
+        onComplete: () => {
+          trail.destroy();
+        }
+      });
+    }
     
-    // Animación de desvanecimiento
+    // Efecto de brillo en el enemigo durante el dash
     this.scene.tweens.add({
-      targets: trail,
-      alpha: 0,
-      scaleX: 1.5,
-      scaleY: 1.5,
-      duration: this.dasherConfig.dashDuration,
-      ease: 'Power2',
-      onComplete: () => {
-        trail.destroy();
-      }
+      targets: enemy,
+      alpha: 0.7,
+      duration: 100,
+      yoyo: true,
+      repeat: Math.floor(this.dasherConfig.dashDuration / 200),
+      ease: 'Power2'
     });
+    
+    console.log(`💨 Dasher realizando dash a velocidad ${this.dasherConfig.dashSpeed}`);
   }
 
   /**
@@ -376,14 +411,34 @@ export class EnemyManager {
     
     // Efecto adicional para Dasher
     if (enemyType === EnemyType.DASHER) {
+      // Efecto de parpadeo violeta
       this.scene.tweens.add({
         targets: enemy,
-        alpha: 0.7,
-        duration: 200,
+        alpha: 0.5,
+        duration: 150,
         yoyo: true,
-        repeat: 2,
+        repeat: 3,
         ease: 'Power2'
       });
+      
+      // Efecto de anillo violeta expandiéndose
+      const ring = this.scene.add.circle(enemy.x, enemy.y, 5, 0x8a2be2);
+      ring.setStrokeStyle(3, 0x4b0082);
+      ring.setAlpha(0.8);
+      ring.setDepth(4);
+      
+      this.scene.tweens.add({
+        targets: ring,
+        radius: 40,
+        alpha: 0,
+        duration: 500,
+        ease: 'Power2',
+        onComplete: () => {
+          ring.destroy();
+        }
+      });
+      
+      console.log(`💜 Dasher spawneado con efectos especiales`);
     }
   }
 
@@ -573,6 +628,35 @@ export class EnemyManager {
   }
 
   /**
+   * Spawna múltiples enemigos basado en el tiempo de juego
+   * @param playerX - Posición X del jugador
+   * @param playerY - Posición Y del jugador
+   */
+  spawnMultipleEnemies(playerX: number, playerY: number): void {
+    // Calcular cuántos enemigos spawnear basado en el tiempo
+    const minutesPassed = Math.floor(this.gameTimeSeconds / 60);
+    let enemiesToSpawn = 1; // Mínimo 1 enemigo
+    
+    // Aumentar gradualmente la cantidad de enemigos
+    if (minutesPassed >= 1) enemiesToSpawn = 2;
+    if (minutesPassed >= 2) enemiesToSpawn = 3;
+    if (minutesPassed >= 4) enemiesToSpawn = 4;
+    if (minutesPassed >= 6) enemiesToSpawn = 5;
+    
+    // Máximo 5 enemigos por spawn para evitar lag
+    enemiesToSpawn = Math.min(enemiesToSpawn, 5);
+    
+    console.log(`👹 Spawneando ${enemiesToSpawn} enemigos (minuto ${minutesPassed})`);
+    
+    for (let i = 0; i < enemiesToSpawn; i++) {
+      // Pequeño delay entre spawns para evitar que aparezcan todos en el mismo lugar
+      this.scene.time.delayedCall(i * 100, () => {
+        this.spawnEnemy(playerX, playerY);
+      });
+    }
+  }
+
+  /**
    * Detiene el spawn automático de enemigos
    */
   stopAutoSpawn(): void {
@@ -584,12 +668,23 @@ export class EnemyManager {
   }
 
   /**
-   * Verifica si hay enemigos fuera de los límites de la pantalla
+   * Verifica si hay enemigos fuera de los límites de la pantalla (ARREGLADO para mundo dinámico)
    * @param margin - Margen adicional para considerar "fuera de pantalla"
    */
   cleanupOffscreenEnemies(margin: number = 100): void {
+    // ARREGLADO: Usar coordenadas de cámara en lugar de coordenadas de pantalla
+    const camera = this.scene.cameras.main;
+    const cameraX = camera.scrollX;
+    const cameraY = camera.scrollY;
     const gameWidth = this.scene.scale.width || 800;
     const gameHeight = this.scene.scale.height || 600;
+    
+    // Límites basados en la posición de la cámara
+    const leftBound = cameraX - margin;
+    const rightBound = cameraX + gameWidth + margin;
+    const topBound = cameraY - margin;
+    const bottomBound = cameraY + gameHeight + margin;
+    
     let removedCount = 0;
 
     this.enemies.forEach((enemy, index) => {
@@ -599,12 +694,18 @@ export class EnemyManager {
         return;
       }
 
-      if (enemy.x < -margin || enemy.x > gameWidth + margin ||
-          enemy.y < -margin || enemy.y > gameHeight + margin) {
+      // Verificar si está fuera de los límites de la cámara (no de la pantalla absoluta)
+      if (enemy.x < leftBound || enemy.x > rightBound ||
+          enemy.y < topBound || enemy.y > bottomBound) {
+        console.log(`🗑️ Enemigo eliminado por estar fuera de cámara: (${Math.round(enemy.x)}, ${Math.round(enemy.y)}) vs cámara (${Math.round(cameraX)}, ${Math.round(cameraY)})`);
         this.removeEnemy(enemy);
         removedCount++;
       }
     });
+
+    if (removedCount > 0) {
+      console.log(`🗑️ Limpiados ${removedCount} enemigos fuera de cámara`);
+    }
   }
 
   /**
@@ -707,13 +808,21 @@ export class EnemyManager {
     
     // Configurar color y tamaño
     enemy.setFillStyle(this.dasherConfig.color);
+    enemy.setStrokeStyle(3, this.dasherConfig.strokeColor); // Borde más grueso
     enemy.setSize(this.dasherConfig.size, this.dasherConfig.size);
     
-    // Configurar física
+    // Configurar física básica
     const body = enemy.body as Phaser.Physics.Arcade.Body;
     body.setCollideWorldBounds(false);
-    body.setBounce(0.1);
+    body.setBounce(0);
+    body.setSize(this.dasherConfig.size, this.dasherConfig.size);
+    body.setDrag(0); // Sin resistencia para detención limpia
+    body.setMaxVelocity(this.dasherConfig.dashSpeed * 1.2); // Límite de velocidad
     
+    // Marcar el tipo de enemigo para identificación
+    (enemy as any).enemyType = EnemyType.DASHER;
+    
+    console.log(`💜 Dasher creado con ${this.dasherConfig.health} de vida`);
   }
 
   /**
@@ -728,12 +837,18 @@ export class EnemyManager {
     
     // Configurar color y tamaño
     enemy.setFillStyle(this.config.color);
+    enemy.setStrokeStyle(2, this.config.strokeColor);
     enemy.setSize(this.config.size, this.config.size);
     
-    // Configurar física
+    // Configurar física básica
     const body = enemy.body as Phaser.Physics.Arcade.Body;
     body.setCollideWorldBounds(false);
-    body.setBounce(0.05);
+    body.setBounce(0);
+    body.setSize(this.config.size, this.config.size);
+    body.setDrag(0); // Sin resistencia para detención limpia
+    body.setMaxVelocity(this.config.speed * 2); // Límite de velocidad
     
+    // Marcar el tipo de enemigo para identificación
+    (enemy as any).enemyType = EnemyType.ZOMBIE;
   }
 } 

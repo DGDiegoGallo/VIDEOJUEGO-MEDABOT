@@ -69,7 +69,7 @@ export class MainScene extends Scene {
   create() {
     // Inicializar managers
     this.initializeManagers();
-    
+
     // Configurar input
     this.cursors = this.input.keyboard!.createCursorKeys();
 
@@ -96,10 +96,10 @@ export class MainScene extends Scene {
     this.experienceManager = new ExperienceManager(this);
     this.visualEffects = new VisualEffects(this);
     this.gameEffectsManager = new GameEffectsManager();
-    
+
     // Conectar Player con WorldManager para wraparound
     this.player.setWorldManager(this.worldManager);
-    
+
     // Inicializar managers especializados
     this.cameraManager = new CameraManager(this, this.player);
     this.timerManager = new TimerManager(this);
@@ -113,7 +113,7 @@ export class MainScene extends Scene {
       this.minimapManager,
       this.gameEffectsManager
     );
-    
+
     // Inicializar CollisionManager - CRÍTICO: debe ir después de todos los managers
     this.collisionManager = new CollisionManager(
       this,
@@ -138,12 +138,12 @@ export class MainScene extends Scene {
       onGameTimeUpdate: (gameTime) => {
         this.enemyManager.updateGameTime(gameTime);
         this.uiManager.forceUpdate();
-        
+
         // Emitir evento de actualización de UI con formato correcto
         const uiData = this.uiManager.getData();
         const playerPos = this.player.getPosition();
         const minimapData = this.minimapManager.getData();
-        
+
         const gameStats = {
           health: uiData.health.current,
           maxHealth: uiData.health.max,
@@ -163,7 +163,7 @@ export class MainScene extends Scene {
           minimapData: minimapData,
           equipment: uiData.equipment
         };
-        
+
         this.events.emit('updateUI', gameStats);
       },
       onShoot: () => {
@@ -179,10 +179,10 @@ export class MainScene extends Scene {
     this.timerManager.createGameTimer();
     this.timerManager.createShootingTimer();
 
-    // Inicializar spawn de enemigos
+    // Inicializar spawn de enemigos con spawn múltiple
     this.enemyManager.startAutoSpawn(() => {
       const playerPos = this.player.getPosition();
-      this.enemyManager.spawnEnemy(playerPos.x, playerPos.y);
+      this.enemyManager.spawnMultipleEnemies(playerPos.x, playerPos.y);
     });
 
     // Inicializar GameEffectsManager
@@ -199,63 +199,77 @@ export class MainScene extends Scene {
     this.updateManagers();
   }
 
+  // Contador para optimizar actualizaciones menos críticas
+  private updateCounter: number = 0;
+
   /**
-   * Actualiza todos los managers
+   * Actualiza todos los managers (optimizado pero funcional)
    */
   private updateManagers(): void {
-    // Actualizar mundo procedural
     const playerPos = this.player.getPosition();
-    this.worldManager.updateWorld(playerPos.x, playerPos.y);
 
-    // Actualizar enemigos
-    this.enemyManager.updateEnemies(playerPos.x, playerPos.y);
-
-    // Actualizar balas
+    // Actualizaciones críticas (cada frame) - NUNCA LIMITAR ESTAS
     this.bulletManager.updateBullets();
-
-    // Actualizar diamantes (atracción magnética)
+    this.collisionManager.checkAllCollisions();
+    this.cameraManager.update();
+    this.enemyManager.updateEnemies(playerPos.x, playerPos.y);
     this.experienceManager.updateDiamonds(playerPos.x, playerPos.y);
 
-    // Verificar colisiones - CRÍTICO: debe ejecutarse cada frame
-    this.collisionManager.checkAllCollisions();
+    // Incrementar contador
+    this.updateCounter++;
 
-    // Limpiar objetos fuera de pantalla
-    this.bulletManager.cleanupOffscreenBullets();
-    this.enemyManager.cleanupOffscreenEnemies();
-    this.experienceManager.cleanupOffscreenDiamonds();
+    // Actualizaciones importantes (cada 2 frames para mejor rendimiento)
+    if (this.updateCounter % 2 === 0) {
+      // Actualizar mundo procedural
+      this.worldManager.updateWorld(playerPos.x, playerPos.y);
+      
+      // Diagnóstico cada 5 segundos aprox (300 frames)
+      if (this.updateCounter % 300 === 0) {
+        this.worldManager.diagnoseWorld(playerPos.x, playerPos.y);
+      }
+    }
 
-    // Actualizar cámara
-    this.cameraManager.update();
-    
-    // Actualizar minimapa
-    const minimapData = this.minimapManager.update();
-    
-    // Actualizar UI
-    const uiData = this.uiManager.update();
-    
-    // Transformar datos del UIManager al formato que espera GamePage
-    const gameStats = {
-      health: uiData.health.current,
-      maxHealth: uiData.health.max,
-      score: uiData.score,
-      time: uiData.gameTime,
-      experience: uiData.experience.current,
-      maxExperience: uiData.experience.max,
-      level: uiData.level,
-      skills: uiData.skills,
-      world: {
-        playerX: playerPos.x,
-        playerY: playerPos.y,
-        activeChunks: minimapData.activeChunks.length,
-        totalChunks: minimapData.worldSize,
-        structures: 0 // TODO: obtener del WorldManager
-      },
-      minimapData: minimapData,
-      equipment: uiData.equipment
-    };
-    
-    // Emitir eventos de actualización
-    this.events.emit('updateUI', gameStats);
+    // Actualizaciones de limpieza (cada 3 frames)
+    if (this.updateCounter % 3 === 0) {
+      this.bulletManager.cleanupOffscreenBullets();
+      this.enemyManager.cleanupOffscreenEnemies();
+      this.experienceManager.cleanupOffscreenDiamonds();
+    }
+
+    // Actualizaciones de UI (cada 4 frames para mejor rendimiento)
+    if (this.updateCounter % 4 === 0) {
+      const minimapData = this.minimapManager.update();
+      const uiData = this.uiManager.update();
+
+      // Transformar datos del UIManager al formato que espera GamePage
+      const gameStats = {
+        health: uiData.health.current,
+        maxHealth: uiData.health.max,
+        score: uiData.score,
+        time: uiData.gameTime,
+        experience: uiData.experience.current,
+        maxExperience: uiData.experience.max,
+        level: uiData.level,
+        skills: uiData.skills,
+        world: {
+          playerX: playerPos.x,
+          playerY: playerPos.y,
+          activeChunks: minimapData.activeChunks.length,
+          totalChunks: minimapData.worldSize,
+          structures: this.worldManager.getPhysicsStructures().length
+        },
+        minimapData: minimapData,
+        equipment: uiData.equipment
+      };
+
+      // Emitir eventos de actualización
+      this.events.emit('updateUI', gameStats);
+    }
+
+    // Resetear contador para evitar overflow
+    if (this.updateCounter >= 60) {
+      this.updateCounter = 0;
+    }
   }
 
   /**
@@ -283,7 +297,7 @@ export class MainScene extends Scene {
     this.events.on('enemyKilled', (data: { score: number }) => {
       this.score += data.score;
       this.uiManager.addScore(data.score);
-      
+
       // No re-emitir el evento para evitar bucle infinito
       // this.events.emit('enemyKilled', data);
     });
@@ -335,7 +349,7 @@ export class MainScene extends Scene {
    */
   private getAvailableSkills(): SkillOption[] {
     const availableSkills: SkillOption[] = [];
-    
+
     // Disparo Rápido
     if (this.skills.rapidFire < 3) {
       availableSkills.push({
@@ -385,21 +399,21 @@ export class MainScene extends Scene {
   public selectSkill(skillId: string): void {
     if (this.skills[skillId as keyof SkillLevels] !== undefined) {
       this.skills[skillId as keyof SkillLevels]++;
-      
+
       // Actualizar efectos del juego
       this.gameEffectsManager.updateGameSkills(this.skills);
-      
+
       // Actualizar intervalo de disparo si es necesario
       if (skillId === 'rapidFire') {
         const newInterval = Math.max(100, 500 - (this.skills.rapidFire * 50));
         this.timerManager.updateShootInterval(newInterval);
       }
-      
+
       // Actualizar número de balas si es necesario
       if (skillId === 'multiShot') {
         this.bulletManager.setBulletsPerShot(this.skills.multiShot + 1);
       }
-      
+
       console.log(`🎯 Habilidad ${skillId} mejorada a nivel ${this.skills[skillId as keyof SkillLevels]}`);
     }
 

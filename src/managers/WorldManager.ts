@@ -66,13 +66,13 @@ export class WorldManager {
     this.scene = scene;
     this.config = {
       chunkSize: 800,
-      renderDistance: 2,
+      renderDistance: 2, // Volver a 2 para mejor funcionalidad
       riverWidth: 60,
       bridgeWidth: 100,
-      structureDensity: 0.3,
+      structureDensity: 0.2, // Mantener reducido para rendimiento
       terrainSeed: Math.random() * 1000,
-      worldSize: 12, // 12 chunks para el mundo
-      autoGenerateChunks: 12, // Generar 12 chunks automáticamente
+      worldSize: 12, // Volver a mundo más grande pero controlado
+      autoGenerateChunks: 12, // Generar chunks iniciales
       ...config
     };
 
@@ -94,12 +94,12 @@ export class WorldManager {
   }
 
   /**
-   * Genera los chunks iniciales en un patrón 4x3
+   * Genera los chunks iniciales en un patrón 3x3 (optimizado)
    */
   private generateInitialChunks(): void {
-    const chunksPerRow = 4;
+    const chunksPerRow = 3;
     const chunksPerCol = 3;
-    const startX = -1; // Empezar desde -1 para centrar
+    const startX = -1; // Empezar desde -1 para centrar (3 chunks: -1, 0, 1)
     const startY = -1;
 
     for (let x = startX; x < startX + chunksPerRow; x++) {
@@ -108,6 +108,8 @@ export class WorldManager {
         this.activeChunks.add(`${x}_${y}`);
       }
     }
+
+    console.log(`🌍 Mundo inicial generado: ${chunksPerRow}x${chunksPerCol} chunks (${this.chunks.size} total)`);
   }
 
   /**
@@ -117,13 +119,13 @@ export class WorldManager {
    */
   updateWorld(playerX: number, playerY: number): void {
     const currentChunk = this.getChunkCoordinates(playerX, playerY);
-    
+
     // Solo actualizar si el jugador cambió de chunk
     if (currentChunk.x !== this.lastPlayerChunk.x || currentChunk.y !== this.lastPlayerChunk.y) {
       this.lastPlayerChunk = currentChunk;
-      
-      // Generar chunks silenciosamente sin mostrar animación de carga
-      this.generateNearbyChunks(currentChunk.x, currentChunk.y);
+
+      // Generar chunks necesarios y limpiar distantes (mundo dinámico optimizado)
+      this.generateNearbyChunksIfNeeded(currentChunk.x, currentChunk.y);
       this.cleanupDistantChunks(currentChunk.x, currentChunk.y);
     }
   }
@@ -138,22 +140,54 @@ export class WorldManager {
   }
 
   /**
-   * Genera chunks cercanos al jugador
+   * Genera chunks cercanos al jugador si es necesario (optimizado y funcional)
    */
-  private generateNearbyChunks(centerX: number, centerY: number): void {
+  private generateNearbyChunksIfNeeded(centerX: number, centerY: number): void {
     const distance = this.config.renderDistance;
-    
+
+    // NO limpiar chunks activos - mantener todos los chunks generados como activos
+    // Solo agregar nuevos chunks al conjunto de activos
+
+    // Generar chunks dentro del rango de renderizado
     for (let x = centerX - distance; x <= centerX + distance; x++) {
       for (let y = centerY - distance; y <= centerY + distance; y++) {
         const chunkId = `${x}_${y}`;
-        
+
+        // Generar chunk si no existe
         if (!this.chunks.has(chunkId)) {
           this.generateChunk(x, y);
+          console.log(`🗺️ Nuevo chunk generado: ${chunkId} en (${x * this.config.chunkSize}, ${y * this.config.chunkSize})`);
         }
-        
+
+        // Activar chunk (mantener todos los chunks como activos para colisiones)
         this.activeChunks.add(chunkId);
+
+        // Hacer visible el chunk
+        const chunk = this.chunks.get(chunkId);
+        if (chunk) {
+          if (chunk.terrain) chunk.terrain.setVisible(true);
+          if (chunk.rivers) chunk.rivers.setVisible(true);
+          if (chunk.bridges) chunk.bridges.setVisible(true);
+          if (chunk.structures) chunk.structures.setVisible(true);
+        }
       }
     }
+
+    // Solo ocultar visualmente chunks muy distantes (pero mantener física activa)
+    const hideDistance = distance + 2; // Ocultar solo chunks muy lejanos
+    this.chunks.forEach((chunk, chunkId) => {
+      const chunkDistance = Math.max(
+        Math.abs(chunk.x - centerX),
+        Math.abs(chunk.y - centerY)
+      );
+
+      if (chunkDistance > hideDistance) {
+        // Solo ocultar visualmente, NO desactivar física
+        if (chunk.terrain) chunk.terrain.setVisible(false);
+        if (chunk.bridges) chunk.bridges.setVisible(false);
+        // NO ocultar ríos y estructuras - necesarios para colisiones
+      }
+    });
   }
 
   /**
@@ -163,6 +197,8 @@ export class WorldManager {
     const chunkId = `${chunkX}_${chunkY}`;
     const worldX = chunkX * this.config.chunkSize;
     const worldY = chunkY * this.config.chunkSize;
+
+    console.log(`🔧 Generando chunk ${chunkId} en posición (${worldX}, ${worldY})`);
 
     const chunk: WorldChunk = {
       x: chunkX,
@@ -184,28 +220,33 @@ export class WorldManager {
     chunk.generated = true;
     this.chunks.set(chunkId, chunk);
 
+    // Log de diagnóstico
+    const riverCount = chunk.rivers.children.entries.length;
+    const structureCount = chunk.structures.children.entries.length;
+    console.log(`✅ Chunk ${chunkId} generado: ${riverCount} ríos, ${structureCount} estructuras`);
+
     console.log(`🗺️ Chunk generado: ${chunkId} en (${worldX}, ${worldY})`);
   }
 
   /**
-   * Genera el terreno base del chunk
+   * Genera el terreno base del chunk (optimizado)
    */
   private generateTerrain(chunk: WorldChunk, worldX: number, worldY: number): void {
     const size = this.config.chunkSize;
-    
-    // Crear fondo del terreno con variaciones
-    for (let i = 0; i < 4; i++) {
-      for (let j = 0; j < 4; j++) {
-        const tileX = worldX + (i * size / 4);
-        const tileY = worldY + (j * size / 4);
-        const tileSize = size / 4;
-        
+
+    // Reducir tiles de 4x4 a 2x2 para mejor rendimiento
+    for (let i = 0; i < 2; i++) {
+      for (let j = 0; j < 2; j++) {
+        const tileX = worldX + (i * size / 2);
+        const tileY = worldY + (j * size / 2);
+        const tileSize = size / 2;
+
         // Usar ruido para variar el color del terreno
         const noise = this.noise2D(tileX * 0.01, tileY * 0.01);
         const baseColor = 0x2d5016; // Verde oscuro base
         const variation = Math.floor(noise * 40);
         const terrainColor = baseColor + (variation << 8); // Variar el componente verde
-        
+
         const terrainTile = this.scene.add.rectangle(
           tileX + tileSize / 2,
           tileY + tileSize / 2,
@@ -213,8 +254,9 @@ export class WorldManager {
           tileSize,
           terrainColor
         );
-        
-        terrainTile.setStrokeStyle(1, 0x1a3d0a, 0.3);
+
+        // Reducir grosor del borde para mejor rendimiento
+        terrainTile.setStrokeStyle(1, 0x1a3d0a, 0.2);
         terrainTile.setDepth(-90); // Fondo del terreno
         chunk.terrain.add(terrainTile);
       }
@@ -222,65 +264,65 @@ export class WorldManager {
   }
 
   /**
-   * Genera ríos usando ruido Perlin
+   * Genera ríos usando ruido Perlin (optimizado)
    */
   private generateRivers(chunk: WorldChunk, worldX: number, worldY: number): void {
     const size = this.config.chunkSize;
     const riverWidth = this.config.riverWidth;
-    
-    // Generar río horizontal si el ruido lo indica (reducida probabilidad)
+
+    // Generar río horizontal si el ruido lo indica (probabilidad aún más reducida)
     const horizontalRiverNoise = this.noise2D(worldX * 0.005, worldY * 0.005);
-    if (horizontalRiverNoise > 0.6) { // Aumentado de 0.3 a 0.6 para menos ríos
+    if (horizontalRiverNoise > 0.75) { // Aumentado de 0.6 a 0.75 para menos ríos
       const riverY = worldY + size * 0.5; // Centrado en el chunk para mejor alineación
-      
-      // Crear río continuo
-      for (let x = worldX; x < worldX + size; x += 20) {
+
+      // Crear río continuo con menos segmentos (mejor rendimiento)
+      for (let x = worldX; x < worldX + size; x += 40) { // Aumentado de 20 a 40
         const riverSegment = this.scene.add.rectangle(
-          x + 10,
+          x + 20,
           riverY,
-          20,
+          40, // Aumentado de 20 a 40
           riverWidth,
           0x4a90e2
         );
-        
-        riverSegment.setStrokeStyle(2, 0x2980b9);
+
+        riverSegment.setStrokeStyle(1, 0x2980b9); // Reducido grosor de borde
         riverSegment.setDepth(-80); // Ríos por encima del terreno pero debajo del jugador
-        
+
         // Agregar física para que sea un obstáculo sólido
         this.scene.physics.add.existing(riverSegment, true); // true = static body
-        
+
         chunk.rivers.add(riverSegment);
       }
-      
+
       // Marcar que este chunk tiene río horizontal
       (chunk as any).hasHorizontalRiver = true;
       (chunk as any).horizontalRiverY = riverY;
     }
-    
-    // Generar río vertical si el ruido lo indica (reducida probabilidad)
+
+    // Generar río vertical si el ruido lo indica (probabilidad aún más reducida)
     const verticalRiverNoise = this.noise2D(worldX * 0.003, worldY * 0.007);
-    if (verticalRiverNoise > 0.7) { // Aumentado de 0.4 a 0.7 para menos ríos
+    if (verticalRiverNoise > 0.8) { // Aumentado de 0.7 a 0.8 para menos ríos
       const riverX = worldX + size * 0.5; // Centrado en el chunk para mejor alineación
-      
-      // Crear río continuo
-      for (let y = worldY; y < worldY + size; y += 20) {
+
+      // Crear río continuo con menos segmentos (mejor rendimiento)
+      for (let y = worldY; y < worldY + size; y += 40) { // Aumentado de 20 a 40
         const riverSegment = this.scene.add.rectangle(
           riverX,
-          y + 10,
+          y + 20,
           riverWidth,
-          20,
+          40, // Aumentado de 20 a 40
           0x4a90e2
         );
-        
-        riverSegment.setStrokeStyle(2, 0x2980b9);
+
+        riverSegment.setStrokeStyle(1, 0x2980b9); // Reducido grosor de borde
         riverSegment.setDepth(-80); // Ríos por encima del terreno pero debajo del jugador
-        
+
         // Agregar física para que sea un obstáculo sólido
         this.scene.physics.add.existing(riverSegment, true); // true = static body
-        
+
         chunk.rivers.add(riverSegment);
       }
-      
+
       // Marcar que este chunk tiene río vertical
       (chunk as any).hasVerticalRiver = true;
       (chunk as any).verticalRiverX = riverX;
@@ -292,12 +334,12 @@ export class WorldManager {
    */
   private generateBridges(chunk: WorldChunk, worldX: number, worldY: number): void {
     const size = this.config.chunkSize;
-    
+
     // Verificar si hay río horizontal y crear puente
     if ((chunk as any).hasHorizontalRiver && Math.random() > 0.3) { // 70% probabilidad de puente
       const riverY = (chunk as any).horizontalRiverY;
       const bridgeX = worldX + size * 0.5; // Centro del chunk
-      
+
       // Crear 2 bloques de puente simples SIN colisiones
       const bridge1 = this.scene.add.rectangle(
         bridgeX - 30, // Primer bloque
@@ -310,7 +352,7 @@ export class WorldManager {
       bridge1.setDepth(-65); // Por encima de ríos
       // NO agregar física - permitir que el jugador y balas atraviesen
       chunk.bridges.add(bridge1);
-      
+
       const bridge2 = this.scene.add.rectangle(
         bridgeX + 30, // Segundo bloque
         riverY,
@@ -322,15 +364,15 @@ export class WorldManager {
       bridge2.setDepth(-65); // Por encima de ríos
       // NO agregar física - permitir que el jugador y balas atraviesen
       chunk.bridges.add(bridge2);
-      
+
       console.log(`🌉 Puente horizontal creado en chunk (${chunk.x}, ${chunk.y}) en Y=${riverY} - SIN colisiones`);
     }
-    
+
     // Verificar si hay río vertical y crear puente
     if ((chunk as any).hasVerticalRiver && Math.random() > 0.3) { // 70% probabilidad de puente
       const riverX = (chunk as any).verticalRiverX;
       const bridgeY = worldY + size * 0.5; // Centro del chunk
-      
+
       // Crear 2 bloques de puente simples SIN colisiones
       const bridge1 = this.scene.add.rectangle(
         riverX,
@@ -343,7 +385,7 @@ export class WorldManager {
       bridge1.setDepth(-65); // Por encima de ríos
       // NO agregar física - permitir que el jugador y balas atraviesen
       chunk.bridges.add(bridge1);
-      
+
       const bridge2 = this.scene.add.rectangle(
         riverX,
         bridgeY + 30, // Segundo bloque
@@ -355,29 +397,33 @@ export class WorldManager {
       bridge2.setDepth(-65); // Por encima de ríos
       // NO agregar física - permitir que el jugador y balas atraviesen
       chunk.bridges.add(bridge2);
-      
+
       console.log(`🌉 Puente vertical creado en chunk (${chunk.x}, ${chunk.y}) en X=${riverX} - SIN colisiones`);
     }
   }
 
   /**
-   * Genera estructuras procedurales
+   * Genera estructuras procedurales (arreglado para generar estructuras)
    */
   private generateStructures(chunk: WorldChunk, worldX: number, worldY: number): void {
     const size = this.config.chunkSize;
     const density = this.config.structureDensity;
-    
-    // Determinar número de estructuras basado en densidad
-    const structureCount = Math.floor(Math.random() * density * 8);
-    
+
+    // ARREGLADO: Garantizar que se generen estructuras
+    const baseStructures = 2; // Mínimo 2 estructuras por chunk
+    const extraStructures = Math.floor(Math.random() * density * 6); // 0-1.2 extra
+    const structureCount = baseStructures + extraStructures;
+
+    console.log(`🏗️ Generando ${structureCount} estructuras en chunk (${worldX}, ${worldY})`);
+
     for (let i = 0; i < structureCount; i++) {
       const structX = worldX + Math.random() * size;
       const structY = worldY + Math.random() * size;
-      
-      // Evitar colocar estructuras sobre ríos
+
+      // Simplificar verificación de ríos - solo evitar si está MUY cerca
       const isNearRiver = this.isNearRiver(structX, structY, chunk);
-      if (isNearRiver) continue;
-      
+      if (isNearRiver && Math.random() > 0.5) continue; // 50% probabilidad de evitar ríos
+
       const structureType = this.getRandomStructureType();
       this.createStructure(chunk, structX, structY, structureType);
     }
@@ -388,7 +434,7 @@ export class WorldManager {
    */
   private isNearRiver(x: number, y: number, chunk: WorldChunk): boolean {
     const minDistance = 80;
-    
+
     for (const river of chunk.rivers.children.entries) {
       const riverSprite = river as Phaser.GameObjects.Rectangle;
       const distance = Phaser.Math.Distance.Between(x, y, riverSprite.x, riverSprite.y);
@@ -396,7 +442,7 @@ export class WorldManager {
         return true;
       }
     }
-    
+
     return false;
   }
 
@@ -434,18 +480,18 @@ export class WorldManager {
   private createCubeStructure(chunk: WorldChunk, x: number, y: number): void {
     const size = 30 + Math.random() * 40;
     const color = 0x7f8c8d;
-    
+
     const cube = this.scene.add.rectangle(x, y, size, size, color);
     cube.setStrokeStyle(2, 0x34495e);
     cube.setDepth(-60); // Estructuras por encima de puentes pero debajo del jugador
-    
+
     // Agregar física para colisiones
     this.scene.physics.add.existing(cube, true); // true = static body
-    
+
     // Agregar sombra
     const shadow = this.scene.add.rectangle(x + 3, y + 3, size, size, 0x2c3e50, 0.3);
     shadow.setDepth(-65); // Sombra más atrás que la estructura
-    
+
     chunk.structures.add(shadow);
     chunk.structures.add(cube);
   }
@@ -457,20 +503,20 @@ export class WorldManager {
     const width = 25 + Math.random() * 15;
     const height = 60 + Math.random() * 40;
     const color = 0x95a5a6;
-    
+
     const tower = this.scene.add.rectangle(x, y, width, height, color);
     tower.setStrokeStyle(2, 0x7f8c8d);
     tower.setDepth(-60); // Estructuras por encima de puentes pero debajo del jugador
-    
+
     // Agregar física para colisiones
     this.scene.physics.add.existing(tower, true); // true = static body
-    
+
     // Agregar techo
     const roofWidth = width + 10;
-    const roof = this.scene.add.triangle(x, y - height/2 - 8, 0, 16, roofWidth/2, 0, -roofWidth/2, 0, 0xe74c3c);
+    const roof = this.scene.add.triangle(x, y - height / 2 - 8, 0, 16, roofWidth / 2, 0, -roofWidth / 2, 0, 0xe74c3c);
     roof.setDepth(-60); // Misma profundidad que la torre
     this.scene.physics.add.existing(roof, true);
-    
+
     chunk.structures.add(tower);
     chunk.structures.add(roof);
   }
@@ -482,20 +528,20 @@ export class WorldManager {
     const length = 80 + Math.random() * 60;
     const height = 20 + Math.random() * 20;
     const isHorizontal = Math.random() > 0.5;
-    
+
     const wall = this.scene.add.rectangle(
       x, y,
       isHorizontal ? length : height,
       isHorizontal ? height : length,
       0x8e44ad
     );
-    
+
     wall.setStrokeStyle(2, 0x6c3483);
     wall.setDepth(-60); // Estructuras por encima de puentes pero debajo del jugador
-    
+
     // Agregar física para colisiones
     this.scene.physics.add.existing(wall, true); // true = static body
-    
+
     chunk.structures.add(wall);
   }
 
@@ -506,62 +552,65 @@ export class WorldManager {
     const width = 50 + Math.random() * 30;
     const height = 15;
     const color = 0xf39c12;
-    
+
     const platform = this.scene.add.rectangle(x, y, width, height, color);
     platform.setStrokeStyle(2, 0xe67e22);
     platform.setDepth(-60); // Estructuras por encima de puentes pero debajo del jugador
-    
+
     // Agregar física para colisiones
     this.scene.physics.add.existing(platform, true); // true = static body
-    
+
     // Agregar soportes
-    const support1 = this.scene.add.rectangle(x - width/3, y + 15, 8, 20, 0xd68910);
-    const support2 = this.scene.add.rectangle(x + width/3, y + 15, 8, 20, 0xd68910);
-    
+    const support1 = this.scene.add.rectangle(x - width / 3, y + 15, 8, 20, 0xd68910);
+    const support2 = this.scene.add.rectangle(x + width / 3, y + 15, 8, 20, 0xd68910);
+
     support1.setDepth(-60); // Misma profundidad que la plataforma
     support2.setDepth(-60); // Misma profundidad que la plataforma
-    
+
     this.scene.physics.add.existing(support1, true);
     this.scene.physics.add.existing(support2, true);
-    
+
     chunk.structures.add(platform);
     chunk.structures.add(support1);
     chunk.structures.add(support2);
   }
 
   /**
-   * Limpia chunks distantes para optimizar memoria
+   * Limpia chunks distantes para optimizar memoria (optimizado)
    */
   private cleanupDistantChunks(centerX: number, centerY: number): void {
-    const maxDistance = this.config.renderDistance + 1;
+    const maxDistance = this.config.renderDistance + 2; // Un poco más de margen
     const chunksToRemove: string[] = [];
-    
-    this.chunks.forEach((chunk, chunkId) => {
-      const distance = Math.max(
-        Math.abs(chunk.x - centerX),
-        Math.abs(chunk.y - centerY)
-      );
-      
-      if (distance > maxDistance) {
-        chunksToRemove.push(chunkId);
-        this.activeChunks.delete(chunkId);
+
+    // Solo limpiar si tenemos demasiados chunks
+    if (this.chunks.size > 25) { // Límite de chunks en memoria
+      this.chunks.forEach((chunk, chunkId) => {
+        const distance = Math.max(
+          Math.abs(chunk.x - centerX),
+          Math.abs(chunk.y - centerY)
+        );
+
+        if (distance > maxDistance) {
+          chunksToRemove.push(chunkId);
+        }
+      });
+
+      // Remover chunks distantes
+      chunksToRemove.forEach(chunkId => {
+        const chunk = this.chunks.get(chunkId);
+        if (chunk) {
+          chunk.terrain.destroy(true);
+          chunk.rivers.destroy(true);
+          chunk.bridges.destroy(true);
+          chunk.structures.destroy(true);
+          this.chunks.delete(chunkId);
+          this.activeChunks.delete(chunkId);
+        }
+      });
+
+      if (chunksToRemove.length > 0) {
+        console.log(`🗑️ Limpiados ${chunksToRemove.length} chunks distantes (total: ${this.chunks.size})`);
       }
-    });
-    
-    // Remover chunks distantes
-    chunksToRemove.forEach(chunkId => {
-      const chunk = this.chunks.get(chunkId);
-      if (chunk) {
-        chunk.terrain.destroy(true);
-        chunk.rivers.destroy(true);
-        chunk.bridges.destroy(true);
-        chunk.structures.destroy(true);
-        this.chunks.delete(chunkId);
-      }
-    });
-    
-    if (chunksToRemove.length > 0) {
-      console.log(`🗑️ Limpiados ${chunksToRemove.length} chunks distantes`);
     }
   }
 
@@ -575,49 +624,79 @@ export class WorldManager {
   }
 
   /**
-   * Obtiene todas las estructuras con física de los chunks activos (NO incluye ríos ni puentes)
+   * Obtiene todas las estructuras con física de TODOS los chunks generados (NO incluye ríos ni puentes)
    */
   getPhysicsStructures(): Phaser.GameObjects.GameObject[] {
     const structures: Phaser.GameObjects.GameObject[] = [];
-    
-    this.activeChunks.forEach(chunkId => {
-      const chunk = this.chunks.get(chunkId);
-      if (chunk) {
+    let totalChunks = 0;
+    let chunksWithStructures = 0;
+
+    // Usar TODOS los chunks generados, no solo los activos
+    this.chunks.forEach((chunk, chunkId) => {
+      if (chunk && chunk.generated) {
+        totalChunks++;
+        let chunkStructures = 0;
+        
         // Agregar estructuras con física (cubos, torres, muros, plataformas)
         chunk.structures.children.entries.forEach(structure => {
           const gameObject = structure as Phaser.GameObjects.GameObject;
           if (gameObject.body) { // Solo estructuras con física
             structures.push(gameObject);
+            chunkStructures++;
           }
         });
-        
+
+        if (chunkStructures > 0) {
+          chunksWithStructures++;
+        }
+
         // NO agregar ríos aquí - los ríos solo son obstáculos para el jugador
         // NO agregar puentes aquí - los puentes son completamente atravesables
       }
     });
-    
+
+    // Log cada 60 frames (1 segundo aprox)
+    if (Math.random() < 0.016) { // ~1/60
+      console.log(`🏗️ Estructuras físicas: ${structures.length} total, ${chunksWithStructures}/${totalChunks} chunks con estructuras`);
+    }
+
     return structures;
   }
 
   /**
-   * Obtiene todos los ríos con física (solo para colisiones del jugador)
+   * Obtiene todos los ríos con física de TODOS los chunks generados (solo para colisiones del jugador)
    */
   getPhysicsRivers(): Phaser.GameObjects.GameObject[] {
     const rivers: Phaser.GameObjects.GameObject[] = [];
-    
-    this.activeChunks.forEach(chunkId => {
-      const chunk = this.chunks.get(chunkId);
-      if (chunk) {
+    let totalChunks = 0;
+    let chunksWithRivers = 0;
+
+    // Usar TODOS los chunks generados, no solo los activos
+    this.chunks.forEach((chunk, chunkId) => {
+      if (chunk && chunk.generated) {
+        totalChunks++;
+        let chunkRivers = 0;
+        
         // Agregar ríos con física (obstáculos sólidos solo para el jugador)
         chunk.rivers.children.entries.forEach(river => {
           const gameObject = river as Phaser.GameObjects.GameObject;
           if (gameObject.body) { // Solo ríos con física
             rivers.push(gameObject);
+            chunkRivers++;
           }
         });
+
+        if (chunkRivers > 0) {
+          chunksWithRivers++;
+        }
       }
     });
-    
+
+    // Log cada 60 frames (1 segundo aprox)
+    if (Math.random() < 0.016) { // ~1/60
+      console.log(`🌊 Ríos físicos: ${rivers.length} total, ${chunksWithRivers}/${totalChunks} chunks con ríos`);
+    }
+
     return rivers;
   }
 
@@ -626,7 +705,7 @@ export class WorldManager {
    */
   getPhysicsBridges(): Phaser.GameObjects.GameObject[] {
     const bridges: Phaser.GameObjects.GameObject[] = [];
-    
+
     this.activeChunks.forEach(chunkId => {
       const chunk = this.chunks.get(chunkId);
       if (chunk) {
@@ -637,7 +716,7 @@ export class WorldManager {
         });
       }
     });
-    
+
     return bridges;
   }
 
@@ -676,45 +755,31 @@ export class WorldManager {
       chunk.bridges.destroy(true);
       chunk.structures.destroy(true);
     });
-    
+
     this.chunks.clear();
     this.activeChunks.clear();
-    
+
     if (this.worldContainer) {
       this.worldContainer.destroy();
     }
-    
+
     console.log('🌍 WorldManager: Destruido correctamente');
   }
 
   /**
-   * Aplica wraparound al mundo (como Pacman)
+   * Aplica wraparound al mundo (DESACTIVADO para mundo dinámico infinito)
    * @param x - Posición X del jugador
    * @param y - Posición Y del jugador
-   * @returns Nueva posición con wraparound aplicado
+   * @returns Nueva posición sin wraparound (mundo infinito)
    */
   applyWraparound(x: number, y: number): { x: number; y: number } {
-    const worldWidth = this.config.worldSize * this.config.chunkSize;
-    const worldHeight = this.config.worldSize * this.config.chunkSize;
+    // DESACTIVADO: Permitir mundo infinito dinámico
+    // El wraparound estaba limitando el mundo y causando teletransporte
     
-    let newX = x;
-    let newY = y;
+    console.log(`🌍 Jugador en posición libre: (${Math.round(x)}, ${Math.round(y)}) - Sin límites`);
     
-    // Wraparound horizontal
-    if (x < -worldWidth / 2) {
-      newX = worldWidth / 2;
-    } else if (x > worldWidth / 2) {
-      newX = -worldWidth / 2;
-    }
-    
-    // Wraparound vertical
-    if (y < -worldHeight / 2) {
-      newY = worldHeight / 2;
-    } else if (y > worldHeight / 2) {
-      newY = -worldHeight / 2;
-    }
-    
-    return { x: newX, y: newY };
+    // Devolver la posición original sin modificar
+    return { x, y };
   }
 
   /**
@@ -735,5 +800,76 @@ export class WorldManager {
         y: this.lastPlayerChunk.y
       }
     };
+  }
+
+  /**
+   * Método de diagnóstico para verificar el estado del mundo
+   */
+  diagnoseWorld(playerX: number, playerY: number): void {
+    const currentChunk = this.getChunkCoordinates(playerX, playerY);
+    const chunkId = `${currentChunk.x}_${currentChunk.y}`;
+    const chunk = this.chunks.get(chunkId);
+    
+    console.log(`🔍 DIAGNÓSTICO MUNDO:`);
+    console.log(`  Jugador en: (${Math.round(playerX)}, ${Math.round(playerY)})`);
+    console.log(`  Chunk actual: ${chunkId}`);
+    console.log(`  Chunk existe: ${chunk ? 'SÍ' : 'NO'}`);
+    
+    if (chunk) {
+      const rivers = chunk.rivers.children.entries.length;
+      const structures = chunk.structures.children.entries.length;
+      const riversWithPhysics = chunk.rivers.children.entries.filter(r => (r as any).body).length;
+      const structuresWithPhysics = chunk.structures.children.entries.filter(s => (s as any).body).length;
+      
+      console.log(`  Ríos: ${rivers} total, ${riversWithPhysics} con física`);
+      console.log(`  Estructuras: ${structures} total, ${structuresWithPhysics} con física`);
+    }
+    
+    console.log(`  Total chunks: ${this.chunks.size}`);
+    console.log(`  Chunks activos: ${this.activeChunks.size}`);
+    
+    const allStructures = this.getPhysicsStructures();
+    const allRivers = this.getPhysicsRivers();
+    console.log(`  Estructuras físicas globales: ${allStructures.length}`);
+    console.log(`  Ríos físicos globales: ${allRivers.length}`);
+  }
+
+  /**
+   * Verifica si una posición está dentro de los límites del mundo
+   */
+  isWithinWorldBounds(x: number, y: number): boolean {
+    const halfWorldSize = (this.config.worldSize * this.config.chunkSize) / 2;
+    return x >= -halfWorldSize && x <= halfWorldSize &&
+      y >= -halfWorldSize && y <= halfWorldSize;
+  }
+
+
+
+  /**
+   * Precarga un chunk específico (versión pública para LoadingManager)
+   */
+  preloadChunk(chunkX: number, chunkY: number): void {
+    const chunkId = `${chunkX}_${chunkY}`;
+    if (!this.chunks.has(chunkId) && this.isWithinWorldBounds(chunkX * this.config.chunkSize, chunkY * this.config.chunkSize)) {
+      this.generateChunk(chunkX, chunkY);
+    }
+  }
+
+  /**
+   * Recrea los grupos de un chunk si están corruptos
+   */
+  recreateChunkGroups(chunk: WorldChunk): void {
+    if (!chunk.terrain || chunk.terrain.scene === null) {
+      chunk.terrain = this.scene.add.group();
+    }
+    if (!chunk.rivers || chunk.rivers.scene === null) {
+      chunk.rivers = this.scene.add.group();
+    }
+    if (!chunk.bridges || chunk.bridges.scene === null) {
+      chunk.bridges = this.scene.add.group();
+    }
+    if (!chunk.structures || chunk.structures.scene === null) {
+      chunk.structures = this.scene.add.group();
+    }
   }
 }

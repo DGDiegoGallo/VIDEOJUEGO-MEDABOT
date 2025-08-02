@@ -35,13 +35,13 @@ export class Player {
    * @param config - Configuración opcional del jugador
    */
   constructor(
-    scene: Scene, 
-    x: number, 
-    y: number, 
+    scene: Scene,
+    x: number,
+    y: number,
     config?: Partial<PlayerConfig>
   ) {
     this.scene = scene;
-    
+
     // Configuración por defecto
     this.config = {
       size: 32,
@@ -55,7 +55,7 @@ export class Player {
 
     this.health = this.config.health;
     this.maxHealth = this.config.maxHealth;
-    
+
     this.createSprite(x, y);
   }
 
@@ -74,23 +74,24 @@ export class Player {
    */
   private createSprite(x: number, y: number): void {
     this.sprite = this.scene.add.rectangle(
-      x, 
-      y, 
-      this.config.size, 
-      this.config.size, 
+      x,
+      y,
+      this.config.size,
+      this.config.size,
       this.config.color
     );
-    
+
     this.sprite.setStrokeStyle(2, this.config.strokeColor);
     this.sprite.setDepth(25); // Jugador por encima de balas y todo lo demás
-    
-    // Configurar física
+
+    // Configurar física básica para detención limpia
     this.scene.physics.add.existing(this.sprite);
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
     body.setCollideWorldBounds(false);
-    body.setBounce(0);
-    body.setDrag(0);
-    // Nota: setCollideWorldBounds no está disponible en Rectangle, se maneja en la escena
+    body.setBounce(0); // Sin rebote para detención limpia
+    body.setDrag(0); // Sin resistencia para detención instantánea
+    body.setMaxVelocity(this.config.speed * 1.5); // Límite de velocidad
+    body.setSize(this.config.size * 0.8, this.config.size * 0.8); // Hitbox ligeramente más pequeña
   }
 
   /**
@@ -136,18 +137,18 @@ export class Player {
       const absorbedDamage = Math.min(amount, this.shieldStrength);
       this.shieldStrength -= absorbedDamage;
       amount -= absorbedDamage;
-      
+
       // Si el escudo se agotó, crear efecto visual
       if (this.shieldStrength <= 0) {
         this.createShieldBreakEffect();
       }
     }
-    
+
     // Aplicar daño restante a la vida
     if (amount > 0) {
       this.health = Math.max(0, this.health - amount);
     }
-    
+
     return this.health > 0;
   }
 
@@ -304,7 +305,7 @@ export class Player {
   move(velocityX: number, velocityY: number): void {
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
     body.setVelocity(velocityX, velocityY);
-    
+
     // Aplicar wraparound si tenemos WorldManager
     if (this.worldManager) {
       const newPosition = this.worldManager.applyWraparound(this.sprite.x, this.sprite.y);
@@ -326,10 +327,10 @@ export class Player {
       this.sprite.x, this.sprite.y,
       targetX, targetY
     );
-    
+
     const velocityX = Math.cos(angle) * currentSpeed;
     const velocityY = Math.sin(angle) * currentSpeed;
-    
+
     this.move(velocityX, velocityY);
   }
 
@@ -406,17 +407,17 @@ export class Player {
    */
   updateConfig(newConfig: Partial<PlayerConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    
+
     // Actualizar sprite si cambió el tamaño
     if (newConfig.size) {
       this.sprite.setSize(this.config.size, this.config.size);
     }
-    
+
     // Actualizar colores si cambiaron
     if (newConfig.color) {
       this.sprite.setFillStyle(this.config.color);
     }
-    
+
     if (newConfig.strokeColor) {
       this.sprite.setStrokeStyle(2, this.config.strokeColor);
     }
