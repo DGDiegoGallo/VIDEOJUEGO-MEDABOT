@@ -1,0 +1,497 @@
+@import 'animate.css';
+@import './nft.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+.app-game-mode {
+  overflow: hidden;
+}
+
+.app-landing-mode {
+  overflow-y: auto;
+}
+
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: #1a1a2e;
+  color: #ffffff;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, #1a1a2e 0%, #2d2d44 100%);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ef4444 0%, #f97316 50%, #eab308 100%);
+  border-radius: 6px;
+  border: 2px solid #1a1a2e;
+  transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #dc2626 0%, #ea580c 50%, #ca8a04 100%);
+  transform: scale(1.1);
+}
+
+::-webkit-scrollbar-corner {
+  background: #1a1a2e;
+}
+
+/* Game container styles */
+#game-container {
+  background: #000;
+}
+
+#game-container.game-active {
+  display: block !important;
+}
+
+/* UI overlay styles */
+#ui-overlay {
+  pointer-events: none;
+}
+
+#ui-overlay > * {
+  pointer-events: auto;
+}
+
+/* Modal styles */
+#modal-container {
+  pointer-events: none;
+}
+
+#modal-container > * {
+  pointer-events: auto;
+}
+
+/* Button animations */
+.btn-primary {
+  @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+}
+
+.btn-secondary {
+  @apply bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+}
+
+.btn-success {
+  @apply bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+}
+
+.btn-danger {
+  @apply bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+}
+
+/* Form styles */
+.form-input {
+  @apply w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-gray-300 mb-1;
+}
+
+/* Card styles */
+.card {
+  @apply bg-gray-800 rounded-lg shadow-lg border border-gray-700;
+}
+
+.card-header {
+  @apply px-6 py-4 border-b border-gray-700;
+}
+
+.card-body {
+  @apply px-6 py-4;
+}
+
+.card-footer {
+  @apply px-6 py-4 border-t border-gray-700;
+}
+
+/* Landing page animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
+  50% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.8); }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes neonGlow {
+  0%, 100% { 
+    text-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor;
+  }
+  50% { 
+    text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.6s ease-out;
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 0.8s ease-out;
+}
+
+.animate-neon-glow {
+  animation: neonGlow 2s ease-in-out infinite;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px; /* Account for fixed navbar */
+}
+
+/* Enhanced smooth scrolling for all elements */
+* {
+  scroll-behavior: smooth;
+}
+
+/* Custom scroll animations */
+@keyframes smoothScroll {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.scroll-animate {
+  animation: smoothScroll 0.6s ease-out;
+}
+
+/* Navbar backdrop blur support */
+.backdrop-blur-md {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.backdrop-blur-lg {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Custom navbar styles */
+.navbar-scrolled {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.95) 0%, rgba(31, 41, 55, 0.95) 50%, rgba(0, 0, 0, 0.95) 100%) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  box-shadow: 0 25px 50px -12px rgba(239, 68, 68, 0.3) !important;
+  border-bottom: 1px solid rgba(239, 68, 68, 0.2) !important;
+}
+
+.navbar-transparent {
+  background: transparent !important;
+}
+
+.mobile-menu-bg {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.98) 0%, rgba(31, 41, 55, 0.98) 100%) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+/* Enhanced scroll experience */
+body.app-landing-mode {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Scroll snap for sections */
+.scroll-snap-section {
+  scroll-snap-align: start;
+  scroll-snap-stop: normal;
+}
+
+/* Smooth transitions for all interactive elements */
+button, a, .hover-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Custom animation delays */
+.animate-delay-1s {
+  animation-delay: 1s;
+}
+
+.animate-delay-2s {
+  animation-delay: 2s;
+}
+
+.animate-delay-3s {
+  animation-delay: 3s;
+}
+
+.animate-delay-4s {
+  animation-delay: 4s;
+}
+
+/* Gradient text effects */
+.gradient-text-fire {
+  background: linear-gradient(45deg, #ff6b6b, #ffa500, #ffff00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-neon {
+  background: linear-gradient(45deg, #00ffff, #ff00ff, #ffff00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Hover effects for cards */
+.hover-lift {
+  transition: all 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}/* 
+Game UI specific animations */
+@keyframes health-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+  }
+}
+
+@keyframes exp-glow {
+  0%, 100% { 
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+  }
+  50% { 
+    box-shadow: 0 0 16px rgba(59, 130, 246, 0.7);
+  }
+}
+
+@keyframes shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+.animate-health-pulse {
+  animation: health-pulse 1s ease-in-out infinite;
+}
+
+.animate-exp-glow {
+  animation: exp-glow 2s ease-in-out infinite;
+}
+
+.animate-shine {
+  animation: shine 2s ease-in-out infinite;
+}
+
+/* Game menu animations */
+@keyframes menu-slide-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes menu-fade-in {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+  }
+}
+
+@keyframes mission-progress {
+  from {
+    width: 0%;
+  }
+  to {
+    width: var(--progress-width);
+  }
+}
+
+.animate-menu-slide-in {
+  animation: menu-slide-in 0.3s ease-out;
+}
+
+.animate-menu-fade-in {
+  animation: menu-fade-in 0.3s ease-out;
+}
+
+.animate-mission-progress {
+  animation: mission-progress 1s ease-out;
+}
+
+/* Button hover effects for game menu */
+.game-menu-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.game-menu-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.game-menu-button:hover::before {
+  left: 100%;
+}
+
+.game-menu-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Skill level indicators */
+.skill-level-indicator {
+  position: relative;
+  overflow: hidden;
+}
+
+.skill-level-indicator::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+  animation: skill-shimmer 2s infinite;
+}
+
+@keyframes skill-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Mission completion animation */
+@keyframes mission-complete {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.mission-completed {
+  animation: mission-complete 0.6s ease-in-out;
+}
+
+/* Stats counter animation */
+@keyframes count-up {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.animate-count-up {
+  animation: count-up 0.5s ease-out;
+}
+
+/* Estilos para el radar táctico */
+@keyframes radar-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes radar-scan {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes enemy-blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0.3;
+  }
+}
+
+.radar-pulse {
+  animation: radar-pulse 2s infinite;
+}
+
+.radar-scan {
+  animation: radar-scan 4s linear infinite;
+}
+
+.enemy-blink {
+  animation: enemy-blink 1s infinite;
+}

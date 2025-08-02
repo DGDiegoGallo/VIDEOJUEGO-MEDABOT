@@ -1,0 +1,361 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  FaPlay, 
+  FaSkull, 
+  FaShieldAlt, 
+  FaTrophy, 
+  FaUser, 
+  FaWallet, 
+  FaGhost,
+  FaCrosshairs,
+  FaHeart,
+  FaBolt,
+  FaAward,
+  FaExclamationTriangle,
+  FaCheckCircle,
+  FaClock
+} from 'react-icons/fa';
+import { useAuthStore } from '@/stores/authStore';
+import { useGameSessionData } from '@/hooks/useGameSessionData';
+import { InitialSessionCard } from '@/components/game-session/InitialSessionCard';
+import { MaterialsDisplay } from '@/components/lobby/MaterialsDisplay';
+import type { GameSession } from '@/types/gameSession';
+
+export const SurvivalLobbyView: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const [initialSession, setInitialSession] = useState<GameSession | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showSessionDetails, setShowSessionDetails] = useState(false);
+
+  // Obtener sesiones del usuario
+  const { sessions, loading: sessionsLoading, refreshData } = useGameSessionData(user ? parseInt(user.id) : 0);
+
+  useEffect(() => {
+    if (sessions.length > 0) {
+      // Buscar la sesión inicial (la primera creada)
+      const initial = sessions.find(s => s.session_name?.includes('Sesión Inicial'));
+      const selectedSession = initial || sessions[0];
+      setInitialSession(selectedSession);
+      
+      // Debug logs
+      console.log('🎮 Sessions found:', sessions.length);
+      console.log('🎮 Selected session:', selectedSession);
+      console.log('🎮 Session equipped_items:', selectedSession?.equipped_items);
+      console.log('🎮 Equipped NFTs:', selectedSession?.equipped_items?.nfts);
+      console.log('🎮 User NFTs:', selectedSession?.user_nfts);
+    }
+    setIsLoading(false);
+  }, [sessions]);
+
+  const handleRefreshData = () => {
+    console.log('🔄 Refreshing session data...');
+    refreshData();
+  };
+
+  const handleStartGame = (sessionId: string) => {
+    console.log('🎮 Starting game with session:', sessionId);
+    navigate('/game', { state: { sessionId } });
+  };
+
+  const handleViewDetails = (session: GameSession) => {
+    setShowSessionDetails(true);
+    // Aquí podrías abrir un modal o navegar a una página de detalles
+    console.log('📊 Viewing session details:', session);
+  };
+
+  const handleQuickPlay = () => {
+    navigate('/game');
+  };
+
+  const handleCreateNewSession = () => {
+    navigate('/game-session-test');
+  };
+
+  if (isLoading || sessionsLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center w-full h-full text-white bg-black/40 rounded-lg p-8">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-400 mb-4"></div>
+        <h2 className="text-2xl font-bold text-red-400 mb-2">Cargando Zona de Supervivencia</h2>
+        <p className="text-gray-400">Preparando tu arsenal...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full text-white bg-black/40 rounded-lg p-6 overflow-y-auto">
+      {/* Header Principal */}
+      <div className="text-center mb-8">
+        <div className="flex items-center justify-center mb-4">
+          <FaSkull className="text-6xl text-red-500 mr-4 animate-pulse" />
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 bg-clip-text text-transparent">
+            ZONA DE SUPERVIVENCIA
+          </h1>
+          <FaGhost className="text-6xl text-green-500 ml-4 animate-bounce" />
+        </div>
+        <p className="text-xl text-gray-300 mb-2">
+          Bienvenido, <span className="text-yellow-400 font-bold">{user?.username}</span>
+        </p>
+        <p className="text-gray-400 mb-4">
+          Prepárate para enfrentar la horda de zombies
+        </p>
+        
+        {/* Botón de Refresh */}
+        <button
+          onClick={handleRefreshData}
+          disabled={sessionsLoading}
+          className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 mx-auto"
+        >
+          <div className={`w-4 h-4 border-2 border-white border-t-transparent rounded-full ${sessionsLoading ? 'animate-spin' : ''}`}></div>
+          <span>Actualizar Datos</span>
+        </button>
+      </div>
+
+      {/* Grid Principal */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Panel Izquierdo - Estado del Jugador */}
+        <div className="space-y-6">
+          {/* Tarjeta de Estado */}
+          <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 border border-gray-700 rounded-xl p-6 backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-2xl font-bold text-white flex items-center">
+                <FaUser className="mr-3 text-blue-400" />
+                Estado del Combatiente
+              </h3>
+              <div className="flex items-center space-x-2">
+                <FaHeart className="text-red-400" />
+                <span className="text-red-400 font-bold">100%</span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <div className="flex items-center mb-2">
+                  <FaCrosshairs className="text-green-400 mr-2" />
+                  <span className="text-gray-300">Precisión</span>
+                </div>
+                <div className="text-2xl font-bold text-green-400">
+                  {initialSession?.session_stats?.accuracy_percentage || 0}%
+                </div>
+              </div>
+              
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <div className="flex items-center mb-2">
+                  <FaBolt className="text-yellow-400 mr-2" />
+                  <span className="text-gray-300">Nivel</span>
+                </div>
+                <div className="text-2xl font-bold text-yellow-400">
+                  {initialSession?.session_stats?.level_reached || 0}
+                </div>
+              </div>
+              
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <div className="flex items-center mb-2">
+                  <FaSkull className="text-red-400 mr-2" />
+                  <span className="text-gray-300">Zombies Eliminados</span>
+                </div>
+                <div className="text-2xl font-bold text-red-400">
+                  {initialSession?.session_stats?.enemies_defeated || 0}
+                </div>
+              </div>
+              
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <div className="flex items-center mb-2">
+                  <FaTrophy className="text-purple-400 mr-2" />
+                  <span className="text-gray-300">Puntuación</span>
+                </div>
+                <div className="text-2xl font-bold text-purple-400">
+                  {initialSession?.session_stats?.final_score || 0}
+                </div>
+              </div>
+            </div>
+
+            {/* Materiales Compactos */}
+            {initialSession?.materials && (
+              <div className="bg-gray-800/30 rounded-lg p-4">
+                <div className="flex items-center mb-3">
+                  <FaBolt className="text-purple-400 mr-2" />
+                  <span className="text-gray-300 font-semibold">Materiales Disponibles</span>
+                </div>
+                <MaterialsDisplay 
+                  materials={initialSession.materials} 
+                  showTitle={false}
+                  compact={true}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Tarjeta de Arsenal */}
+          <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 border border-gray-700 rounded-xl p-6 backdrop-blur-sm">
+            <h3 className="text-2xl font-bold text-white flex items-center mb-4">
+              <FaShieldAlt className="mr-3 text-blue-400" />
+              Arsenal Disponible
+            </h3>
+            
+            <div className="space-y-4">
+              {/* NFTs */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-300 font-medium">NFTs Equipados</span>
+                  <span className="text-purple-400 font-bold">
+                    {initialSession?.equipped_items?.nfts?.length || 0}
+                  </span>
+                </div>
+                <div className="bg-gray-800/50 rounded-lg p-3">
+                  {initialSession?.equipped_items?.nfts?.length ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center text-green-400">
+                        <FaCheckCircle className="mr-2" />
+                        <span>NFTs listos para el combate</span>
+                      </div>
+                      {/* Mostrar detalles de los NFTs equipados */}
+                      {initialSession.equipped_items.nfts.map((nft: any, index: number) => (
+                        <div key={index} className="ml-4 p-2 bg-gray-700/50 rounded text-sm">
+                          <div className="text-purple-400 font-medium">{nft.name}</div>
+                          <div className="text-gray-400 text-xs">{nft.achievement_type}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center text-yellow-400">
+                        <FaExclamationTriangle className="mr-2" />
+                        <span>No hay NFTs equipados</span>
+                      </div>
+                      {/* Debug info */}
+                      <div className="text-xs text-gray-500 ml-4">
+                        Debug: equipped_items = {JSON.stringify(initialSession?.equipped_items)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Armas */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-300 font-medium">Armas Disponibles</span>
+                  <span className="text-blue-400 font-bold">
+                    {initialSession?.guns?.length || 0}
+                  </span>
+                </div>
+                <div className="bg-gray-800/50 rounded-lg p-3">
+                  {initialSession?.guns?.length ? (
+                    <div className="flex items-center text-green-400">
+                      <FaCheckCircle className="mr-2" />
+                      <span>Arsenal cargado</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center text-yellow-400">
+                      <FaExclamationTriangle className="mr-2" />
+                      <span>Sin armas disponibles</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Panel Derecho - Acciones */}
+        <div className="space-y-6">
+          {/* Botones de Acción */}
+          <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 border border-gray-700 rounded-xl p-6 backdrop-blur-sm">
+            <h3 className="text-2xl font-bold text-white flex items-center mb-6">
+              <FaPlay className="mr-3 text-green-400" />
+              Acciones de Combate
+            </h3>
+            
+            <div className="space-y-4">
+              <button
+                onClick={handleQuickPlay}
+                className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3 shadow-lg"
+              >
+                <FaPlay className="text-xl" />
+                <span className="text-xl">¡COMBATE RÁPIDO!</span>
+              </button>
+              
+              <button
+                onClick={handleCreateNewSession}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3 shadow-lg"
+              >
+                <FaAward className="text-xl" />
+                <span className="text-xl">Nueva Misión</span>
+              </button>
+              
+              <button
+                onClick={() => navigate('/lobby?section=nfts')}
+                className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3 shadow-lg"
+              >
+                <FaTrophy className="text-xl" />
+                <span className="text-xl">Gestionar NFTs</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Materiales del Jugador */}
+          {initialSession?.materials && (
+            <MaterialsDisplay 
+              materials={initialSession.materials} 
+              showTitle={false}
+            />
+          )}
+
+          {/* Estadísticas Rápidas */}
+          <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 border border-gray-700 rounded-xl p-6 backdrop-blur-sm">
+            <h3 className="text-2xl font-bold text-white flex items-center mb-4">
+              <FaClock className="mr-3 text-yellow-400" />
+              Estadísticas Rápidas
+            </h3>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-gray-800/50 rounded-lg p-3">
+                <div className="flex items-center mb-1">
+                  <FaClock className="text-orange-400 mr-2 text-sm" />
+                  <span className="text-gray-300 text-sm">Tiempo Total</span>
+                </div>
+                <div className="text-lg font-bold text-orange-400">
+                  {Math.floor((initialSession?.session_stats?.duration_seconds || 0) / 60)}m
+                </div>
+              </div>
+              
+              <div className="bg-gray-800/50 rounded-lg p-3">
+                <div className="flex items-center mb-1">
+                  <FaCrosshairs className="text-green-400 mr-2 text-sm" />
+                  <span className="text-gray-300 text-sm">Disparos Acertados</span>
+                </div>
+                <div className="text-lg font-bold text-green-400">
+                  {initialSession?.session_stats?.shots_hit || 0}
+                </div>
+              </div>
+              
+              <div className="bg-gray-800/50 rounded-lg p-3">
+                <div className="flex items-center mb-1">
+                  <FaSkull className="text-red-400 mr-2 text-sm" />
+                  <span className="text-gray-300 text-sm">Daño Total</span>
+                </div>
+                <div className="text-lg font-bold text-red-400">
+                  {initialSession?.session_stats?.total_damage_dealt || 0}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Barra de Advertencia */}
+      <div className="bg-gradient-to-r from-red-600 to-red-800 border border-red-500 rounded-lg p-4 text-center">
+        <div className="flex items-center justify-center space-x-3">
+          <FaExclamationTriangle className="text-2xl text-white animate-pulse" />
+          <span className="text-white font-bold text-lg">ADVERTENCIA</span>
+          <FaExclamationTriangle className="text-2xl text-white animate-pulse" />
+        </div>
+        <p className="text-red-100 mt-2">
+          La horda de zombies se acerca. Prepárate para el combate final.
+        </p>
+      </div>
+    </div>
+  );
+}; 

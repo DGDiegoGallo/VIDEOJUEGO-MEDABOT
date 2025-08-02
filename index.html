@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Medabot Game - Herramienta TDAH</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>" />
+</head>
+<body>
+  <!-- React App Container -->
+  <div id="root" class="w-screen h-screen"></div>
+  
+  <!-- Phaser Game Container (hidden by default, shown only in game mode) -->
+  <div id="game-container" class="absolute inset-0 z-10 hidden"></div>
+  
+  <!-- React UI Overlay -->
+  <div id="ui-overlay" class="absolute inset-0 pointer-events-none z-40">
+    <!-- React UI components will be rendered here -->
+  </div>
+  
+  <!-- Modal Container -->
+  <div id="modal-container" class="absolute inset-0 pointer-events-none z-50">
+    <!-- React modals will be rendered here -->
+  </div>
+  
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

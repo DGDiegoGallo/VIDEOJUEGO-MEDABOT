@@ -1,0 +1,772 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "documentId": "health_boost_medal_001",
+      "createdAt": "2025-07-28T14:30:15.123Z",
+      "updatedAt": "2025-07-28T14:30:15.123Z",
+      "publishedAt": "2025-07-28T14:30:15.140Z",
+      "token_id": "HEALTH_BOOST_1753725839828_1001",
+      "contract_address": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
+      "token_uri": "http://localhost:1337/api/nft-metadata/HEALTH_BOOST_1753725839828_1001",
+      "metadata": {
+        "name": "Medalla de Vitalidad",
+        "description": "Una medalla mística que fortalece la resistencia del portador. Aumenta la vida máxima en un 15%, permitiendo sobrevivir más tiempo en combate.",
+        "icon_name": "FaHeart",
+        "achievement_type": "power_enhancement",
+        "rarity": "common",
+        "game_effect": {
+          "type": "health_boost",
+          "value": 15,
+          "unit": "percentage"
+        },
+        "attributes": [
+          {
+            "trait_type": "Effect Type",
+            "value": "Health Boost"
+          },
+          {
+            "trait_type": "Rarity",
+            "value": "Common"
+          },
+          {
+            "trait_type": "Power Level",
+            "value": "+15% Health"
+          },
+          {
+            "trait_type": "Category",
+            "value": "Defensive"
+          },
+          {
+            "trait_type": "Minted Date",
+            "value": "28/7/2025"
+          }
+        ]
+      },
+      "network": "ethereum-goerli",
+      "owner_address": "0x1A2B3C4D5E6F7890ABCDEF1234567890ABCDEF12",
+      "is_listed_for_sale": "True",
+      "listing_price_eth": 0.025,
+      "minted_at": "2025-07-28T14:30:15.000Z",
+      "last_transfer_at": "2025-07-28T14:30:15.000Z",
+      "user_wallet": {
+        "id": 72,
+        "documentId": "wallet_health_boost_owner",
+        "wallet_address": "0x1A2B3C4D5E6F7890ABCDEF1234567890ABCDEF12",
+        "usdt_balance": 150.75,
+        "is_active": true,
+        "createdAt": "2025-07-28T14:25:10.000Z",
+        "updatedAt": "2025-07-28T14:25:10.000Z",
+        "publishedAt": "2025-07-28T14:25:10.020Z"
+      }
+    },
+    {
+      "id": 2,
+      "documentId": "weapon_damage_medal_002",
+      "createdAt": "2025-07-27T16:45:22.456Z",
+      "updatedAt": "2025-07-27T16:45:22.456Z",
+      "publishedAt": "2025-07-27T16:45:22.470Z",
+      "token_id": "WEAPON_DMG_1753625839828_2002",
+      "contract_address": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
+      "token_uri": "http://localhost:1337/api/nft-metadata/WEAPON_DMG_1753625839828_2002",
+      "metadata": {
+        "name": "Medalla del Guerrero",
+        "description": "Forjada en los campos de batalla más intensos. Esta medalla otorga un 8% de daño adicional a todas las armas, convirtiendo cada golpe en más letal.",
+        "icon_name": "FaSword",
+        "achievement_type": "power_enhancement",
+        "rarity": "common",
+        "game_effect": {
+          "type": "weapon_damage_boost",
+          "value": 8,
+          "unit": "percentage"
+        },
+        "attributes": [
+          {
+            "trait_type": "Effect Type",
+            "value": "Weapon Damage"
+          },
+          {
+            "trait_type": "Rarity",
+            "value": "Common"
+          },
+          {
+            "trait_type": "Power Level",
+            "value": "+8% Damage"
+          },
+          {
+            "trait_type": "Category",
+            "value": "Offensive"
+          },
+          {
+            "trait_type": "Minted Date",
+            "value": "27/7/2025"
+          }
+        ]
+      },
+      "network": "ethereum-goerli",
+      "owner_address": "0x2B3C4D5E6F7890ABCDEF1234567890ABCDEF1234",
+      "is_listed_for_sale": "True",
+      "listing_price_eth": 0.032,
+      "minted_at": "2025-07-27T16:45:22.000Z",
+      "last_transfer_at": "2025-07-27T16:45:22.000Z",
+      "user_wallet": {
+        "id": 73,
+        "documentId": "wallet_weapon_damage_owner",
+        "wallet_address": "0x2B3C4D5E6F7890ABCDEF1234567890ABCDEF1234",
+        "usdt_balance": 89.50,
+        "is_active": true,
+        "createdAt": "2025-07-27T16:40:15.000Z",
+        "updatedAt": "2025-07-27T16:40:15.000Z",
+        "publishedAt": "2025-07-27T16:40:15.035Z"
+      }
+    },
+    {
+      "id": 3,
+      "documentId": "triple_shot_medal_003",
+      "createdAt": "2025-07-26T09:15:33.789Z",
+      "updatedAt": "2025-07-26T09:15:33.789Z",
+      "publishedAt": "2025-07-26T09:15:33.805Z",
+      "token_id": "TRIPLE_SHOT_1753525839828_3003",
+      "contract_address": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
+      "token_uri": "http://localhost:1337/api/nft-metadata/TRIPLE_SHOT_1753525839828_3003",
+      "metadata": {
+        "name": "Medalla del Tirador Maestro",
+        "description": "Una reliquia legendaria de los antiguos maestros del combate a distancia. Permite disparar 3 proyectiles simultáneamente, triplicando el poder de fuego en cada ataque.",
+        "icon_name": "FaBullseye",
+        "achievement_type": "power_enhancement",
+        "rarity": "legendary",
+        "game_effect": {
+          "type": "multiple_projectiles",
+          "value": 3,
+          "unit": "count"
+        },
+        "attributes": [
+          {
+            "trait_type": "Effect Type",
+            "value": "Multiple Projectiles"
+          },
+          {
+            "trait_type": "Rarity",
+            "value": "Legendary"
+          },
+          {
+            "trait_type": "Power Level",
+            "value": "x3 Projectiles"
+          },
+          {
+            "trait_type": "Category",
+            "value": "Offensive"
+          },
+          {
+            "trait_type": "Minted Date",
+            "value": "26/7/2025"
+          },
+          {
+            "trait_type": "Special Ability",
+            "value": "Triple Shot"
+          }
+        ]
+      },
+      "network": "ethereum-goerli",
+      "owner_address": "0x3C4D5E6F7890ABCDEF1234567890ABCDEF123456",
+      "is_listed_for_sale": "True",
+      "listing_price_eth": 1.250,
+      "minted_at": "2025-07-26T09:15:33.000Z",
+      "last_transfer_at": "2025-07-26T09:15:33.000Z",
+      "user_wallet": {
+        "id": 74,
+        "documentId": "wallet_triple_shot_owner",
+        "wallet_address": "0x3C4D5E6F7890ABCDEF1234567890ABCDEF123456",
+        "usdt_balance": 2450.00,
+        "is_active": true,
+        "createdAt": "2025-07-26T09:10:20.000Z",
+        "updatedAt": "2025-07-26T09:10:20.000Z",
+        "publishedAt": "2025-07-26T09:10:20.045Z"
+      }
+    },
+    {
+      "id": 4,
+      "documentId": "mining_boost_medal_004",
+      "createdAt": "2025-07-25T11:20:44.567Z",
+      "updatedAt": "2025-07-25T11:20:44.567Z",
+      "publishedAt": "2025-07-25T11:20:44.580Z",
+      "token_id": "MINING_BOOST_1753425839828_4004",
+      "contract_address": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
+      "token_uri": "http://localhost:1337/api/nft-metadata/MINING_BOOST_1753425839828_4004",
+      "metadata": {
+        "name": "Medalla del Minero Experto",
+        "description": "Bendecida por los espíritus de las profundidades terrestres. Aumenta significativamente la eficiencia en la recolección de minerales, duplicando la cantidad obtenida por cada extracción.",
+        "icon_name": "FaGem",
+        "achievement_type": "power_enhancement",
+        "rarity": "epic",
+        "game_effect": {
+          "type": "mining_efficiency",
+          "value": 100,
+          "unit": "percentage"
+        },
+        "attributes": [
+          {
+            "trait_type": "Effect Type",
+            "value": "Mining Boost"
+          },
+          {
+            "trait_type": "Rarity",
+            "value": "Epic"
+          },
+          {
+            "trait_type": "Power Level",
+            "value": "+100% Mining"
+          },
+          {
+            "trait_type": "Category",
+            "value": "Utility"
+          },
+          {
+            "trait_type": "Minted Date",
+            "value": "25/7/2025"
+          },
+          {
+            "trait_type": "Special Ability",
+            "value": "Double Mining"
+          }
+        ]
+      },
+      "network": "ethereum-goerli",
+      "owner_address": "0x4D5E6F7890ABCDEF1234567890ABCDEF12345678",
+      "is_listed_for_sale": "True",
+      "listing_price_eth": 0.485,
+      "minted_at": "2025-07-25T11:20:44.000Z",
+      "last_transfer_at": "2025-07-25T11:20:44.000Z",
+      "user_wallet": {
+        "id": 75,
+        "documentId": "wallet_mining_boost_owner",
+        "wallet_address": "0x4D5E6F7890ABCDEF1234567890ABCDEF12345678",
+        "usdt_balance": 675.25,
+        "is_active": true,
+        "createdAt": "2025-07-25T11:15:30.000Z",
+        "updatedAt": "2025-07-25T11:15:30.000Z",
+        "publishedAt": "2025-07-25T11:15:30.055Z"
+      }
+    },
+    {
+      "id": 5,
+      "documentId": "speed_boost_medal_005",
+      "createdAt": "2025-07-24T13:35:55.234Z",
+      "updatedAt": "2025-07-24T13:35:55.234Z",
+      "publishedAt": "2025-07-24T13:35:55.250Z",
+      "token_id": "SPEED_BOOST_1753325839828_5005",
+      "contract_address": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
+      "token_uri": "http://localhost:1337/api/nft-metadata/SPEED_BOOST_1753325839828_5005",
+      "metadata": {
+        "name": "Medalla del Viento Veloz",
+        "description": "Imbuida con la esencia de los vientos más rápidos del mundo. Otorga un 13% de aumento en la velocidad de movimiento, permitiendo esquivar ataques y posicionarse estratégicamente.",
+        "icon_name": "FaBolt",
+        "achievement_type": "power_enhancement",
+        "rarity": "rare",
+        "game_effect": {
+          "type": "movement_speed",
+          "value": 13,
+          "unit": "percentage"
+        },
+        "attributes": [
+          {
+            "trait_type": "Effect Type",
+            "value": "Movement Speed"
+          },
+          {
+            "trait_type": "Rarity",
+            "value": "Rare"
+          },
+          {
+            "trait_type": "Power Level",
+            "value": "+13% Speed"
+          },
+          {
+            "trait_type": "Category",
+            "value": "Mobility"
+          },
+          {
+            "trait_type": "Minted Date",
+            "value": "24/7/2025"
+          },
+          {
+            "trait_type": "Special Ability",
+            "value": "Swift Movement"
+          }
+        ]
+      },
+      "network": "ethereum-goerli",
+      "owner_address": "0x5E6F7890ABCDEF1234567890ABCDEF1234567890",
+      "is_listed_for_sale": "True",
+      "listing_price_eth": 0.195,
+      "minted_at": "2025-07-24T13:35:55.000Z",
+      "last_transfer_at": "2025-07-24T13:35:55.000Z",
+      "user_wallet": {
+        "id": 76,
+        "documentId": "wallet_speed_boost_owner",
+        "wallet_address": "0x5E6F7890ABCDEF1234567890ABCDEF1234567890",
+        "usdt_balance": 320.80,
+        "is_active": true,
+        "createdAt": "2025-07-24T13:30:40.000Z",
+        "updatedAt": "2025-07-24T13:30:40.000Z",
+        "publishedAt": "2025-07-24T13:30:40.065Z"
+      }
+    },
+    {
+      "id": 6,
+      "documentId": "fire_rate_medal_006",
+      "createdAt": "2025-07-23T10:15:22.123Z",
+      "updatedAt": "2025-07-23T10:15:22.123Z",
+      "publishedAt": "2025-07-23T10:15:22.140Z",
+      "token_id": "FIRE_RATE_1753225839828_6006",
+      "contract_address": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
+      "token_uri": "http://localhost:1337/api/nft-metadata/FIRE_RATE_1753225839828_6006",
+      "metadata": {
+        "name": "Medalla del Gatling",
+        "description": "Una medalla que canaliza la energía de las armas automáticas más rápidas. Reduce el tiempo entre disparos en un 12%, permitiendo una cadencia de fuego devastadora.",
+        "icon_name": "FaFire",
+        "achievement_type": "power_enhancement",
+        "rarity": "rare",
+        "game_effect": {
+          "type": "fire_rate",
+          "value": 12,
+          "unit": "percentage"
+        },
+        "attributes": [
+          {
+            "trait_type": "Effect Type",
+            "value": "Fire Rate"
+          },
+          {
+            "trait_type": "Rarity",
+            "value": "Rare"
+          },
+          {
+            "trait_type": "Power Level",
+            "value": "+12% Fire Rate"
+          },
+          {
+            "trait_type": "Category",
+            "value": "Offensive"
+          },
+          {
+            "trait_type": "Minted Date",
+            "value": "23/7/2025"
+          },
+          {
+            "trait_type": "Special Ability",
+            "value": "Rapid Fire"
+          }
+        ]
+      },
+      "network": "ethereum-goerli",
+      "owner_address": "0x6F7890ABCDEF1234567890ABCDEF1234567890AB",
+      "is_listed_for_sale": "True",
+      "listing_price_eth": 0.275,
+      "minted_at": "2025-07-23T10:15:22.000Z",
+      "last_transfer_at": "2025-07-23T10:15:22.000Z",
+      "user_wallet": {
+        "id": 77,
+        "documentId": "wallet_fire_rate_owner",
+        "wallet_address": "0x6F7890ABCDEF1234567890ABCDEF1234567890AB",
+        "usdt_balance": 420.50,
+        "is_active": true,
+        "createdAt": "2025-07-23T10:10:15.000Z",
+        "updatedAt": "2025-07-23T10:10:15.000Z",
+        "publishedAt": "2025-07-23T10:10:15.025Z"
+      }
+    },
+    {
+      "id": 7,
+      "documentId": "experience_boost_medal_007",
+      "createdAt": "2025-07-22T14:25:33.456Z",
+      "updatedAt": "2025-07-22T14:25:33.456Z",
+      "publishedAt": "2025-07-22T14:25:33.470Z",
+      "token_id": "EXP_BOOST_1753125839828_7007",
+      "contract_address": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
+      "token_uri": "http://localhost:1337/api/nft-metadata/EXP_BOOST_1753125839828_7007",
+      "metadata": {
+        "name": "Medalla del Sabio",
+        "description": "Una medalla que absorbe la sabiduría de los antiguos maestros. Aumenta la experiencia obtenida en un 20%, acelerando el progreso del portador hacia la maestría.",
+        "icon_name": "FaGraduationCap",
+        "achievement_type": "power_enhancement",
+        "rarity": "epic",
+        "game_effect": {
+          "type": "experience_boost",
+          "value": 20,
+          "unit": "percentage"
+        },
+        "attributes": [
+          {
+            "trait_type": "Effect Type",
+            "value": "Experience Boost"
+          },
+          {
+            "trait_type": "Rarity",
+            "value": "Epic"
+          },
+          {
+            "trait_type": "Power Level",
+            "value": "+20% Experience"
+          },
+          {
+            "trait_type": "Category",
+            "value": "Utility"
+          },
+          {
+            "trait_type": "Minted Date",
+            "value": "22/7/2025"
+          },
+          {
+            "trait_type": "Special Ability",
+            "value": "Wisdom Absorption"
+          }
+        ]
+      },
+      "network": "ethereum-goerli",
+      "owner_address": "0x7890ABCDEF1234567890ABCDEF1234567890ABCD",
+      "is_listed_for_sale": "True",
+      "listing_price_eth": 0.650,
+      "minted_at": "2025-07-22T14:25:33.000Z",
+      "last_transfer_at": "2025-07-22T14:25:33.000Z",
+      "user_wallet": {
+        "id": 78,
+        "documentId": "wallet_exp_boost_owner",
+        "wallet_address": "0x7890ABCDEF1234567890ABCDEF1234567890ABCD",
+        "usdt_balance": 890.25,
+        "is_active": true,
+        "createdAt": "2025-07-22T14:20:20.000Z",
+        "updatedAt": "2025-07-22T14:20:20.000Z",
+        "publishedAt": "2025-07-22T14:20:20.035Z"
+      }
+    },
+    {
+      "id": 8,
+      "documentId": "magnetic_range_medal_008",
+      "createdAt": "2025-07-21T16:40:44.789Z",
+      "updatedAt": "2025-07-21T16:40:44.789Z",
+      "publishedAt": "2025-07-21T16:40:44.805Z",
+      "token_id": "MAGNETIC_1753025839828_8008",
+      "contract_address": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
+      "token_uri": "http://localhost:1337/api/nft-metadata/MAGNETIC_1753025839828_8008",
+      "metadata": {
+        "name": "Medalla del Imán Cósmico",
+        "description": "Una medalla que genera un campo magnético poderoso. Aumenta el rango de atracción de diamantes de experiencia en un 25%, facilitando la recolección de recursos.",
+        "icon_name": "FaMagnet",
+        "achievement_type": "power_enhancement",
+        "rarity": "rare",
+        "game_effect": {
+          "type": "magnetic_range",
+          "value": 25,
+          "unit": "percentage"
+        },
+        "attributes": [
+          {
+            "trait_type": "Effect Type",
+            "value": "Magnetic Range"
+          },
+          {
+            "trait_type": "Rarity",
+            "value": "Rare"
+          },
+          {
+            "trait_type": "Power Level",
+            "value": "+25% Magnetic Range"
+          },
+          {
+            "trait_type": "Category",
+            "value": "Utility"
+          },
+          {
+            "trait_type": "Minted Date",
+            "value": "21/7/2025"
+          },
+          {
+            "trait_type": "Special Ability",
+            "value": "Cosmic Magnetism"
+          }
+        ]
+      },
+      "network": "ethereum-goerli",
+      "owner_address": "0x890ABCDEF1234567890ABCDEF1234567890ABCDE",
+      "is_listed_for_sale": "True",
+      "listing_price_eth": 0.385,
+      "minted_at": "2025-07-21T16:40:44.000Z",
+      "last_transfer_at": "2025-07-21T16:40:44.000Z",
+      "user_wallet": {
+        "id": 79,
+        "documentId": "wallet_magnetic_owner",
+        "wallet_address": "0x890ABCDEF1234567890ABCDEF1234567890ABCDE",
+        "usdt_balance": 550.75,
+        "is_active": true,
+        "createdAt": "2025-07-21T16:35:30.000Z",
+        "updatedAt": "2025-07-21T16:35:30.000Z",
+        "publishedAt": "2025-07-21T16:35:30.045Z"
+      }
+    },
+    {
+      "id": 9,
+      "documentId": "critical_chance_medal_009",
+      "createdAt": "2025-07-20T12:30:55.123Z",
+      "updatedAt": "2025-07-20T12:30:55.123Z",
+      "publishedAt": "2025-07-20T12:30:55.140Z",
+      "token_id": "CRITICAL_1752925839828_9009",
+      "contract_address": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
+      "token_uri": "http://localhost:1337/api/nft-metadata/CRITICAL_1752925839828_9009",
+      "metadata": {
+        "name": "Medalla del Golpe Mortal",
+        "description": "Una medalla que canaliza la energía de los guerreros más letales. Otorga un 8% de probabilidad de golpes críticos, causando daño devastador a los enemigos.",
+        "icon_name": "FaSkullCrossbones",
+        "achievement_type": "power_enhancement",
+        "rarity": "epic",
+        "game_effect": {
+          "type": "critical_chance",
+          "value": 8,
+          "unit": "percentage"
+        },
+        "attributes": [
+          {
+            "trait_type": "Effect Type",
+            "value": "Critical Chance"
+          },
+          {
+            "trait_type": "Rarity",
+            "value": "Epic"
+          },
+          {
+            "trait_type": "Power Level",
+            "value": "+8% Critical"
+          },
+          {
+            "trait_type": "Category",
+            "value": "Offensive"
+          },
+          {
+            "trait_type": "Minted Date",
+            "value": "20/7/2025"
+          },
+          {
+            "trait_type": "Special Ability",
+            "value": "Lethal Strike"
+          }
+        ]
+      },
+      "network": "ethereum-goerli",
+      "owner_address": "0x90ABCDEF1234567890ABCDEF1234567890ABCDEF",
+      "is_listed_for_sale": "True",
+      "listing_price_eth": 0.750,
+      "minted_at": "2025-07-20T12:30:55.000Z",
+      "last_transfer_at": "2025-07-20T12:30:55.000Z",
+      "user_wallet": {
+        "id": 80,
+        "documentId": "wallet_critical_owner",
+        "wallet_address": "0x90ABCDEF1234567890ABCDEF1234567890ABCDEF",
+        "usdt_balance": 1200.00,
+        "is_active": true,
+        "createdAt": "2025-07-20T12:25:40.000Z",
+        "updatedAt": "2025-07-20T12:25:40.000Z",
+        "publishedAt": "2025-07-20T12:25:40.055Z"
+      }
+    },
+    {
+      "id": 10,
+      "documentId": "shield_strength_medal_010",
+      "createdAt": "2025-07-19T18:20:11.456Z",
+      "updatedAt": "2025-07-19T18:20:11.456Z",
+      "publishedAt": "2025-07-19T18:20:11.470Z",
+      "token_id": "SHIELD_1752825839828_1010",
+      "contract_address": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
+      "token_uri": "http://localhost:1337/api/nft-metadata/SHIELD_1752825839828_1010",
+      "metadata": {
+        "name": "Medalla del Escudo Impenetrable",
+        "description": "Una medalla que genera un campo de fuerza protector. Absorbe hasta 30 puntos de daño antes de que el portador reciba daño, proporcionando una defensa excepcional.",
+        "icon_name": "FaShieldAlt",
+        "achievement_type": "power_enhancement",
+        "rarity": "legendary",
+        "game_effect": {
+          "type": "shield_strength",
+          "value": 30,
+          "unit": "points"
+        },
+        "attributes": [
+          {
+            "trait_type": "Effect Type",
+            "value": "Shield Strength"
+          },
+          {
+            "trait_type": "Rarity",
+            "value": "Legendary"
+          },
+          {
+            "trait_type": "Power Level",
+            "value": "+30 Shield Points"
+          },
+          {
+            "trait_type": "Category",
+            "value": "Defensive"
+          },
+          {
+            "trait_type": "Minted Date",
+            "value": "19/7/2025"
+          },
+          {
+            "trait_type": "Special Ability",
+            "value": "Impenetrable Barrier"
+          }
+        ]
+      },
+      "network": "ethereum-goerli",
+      "owner_address": "0xA0BCDEF1234567890ABCDEF1234567890ABCDEF0",
+      "is_listed_for_sale": "True",
+      "listing_price_eth": 2.100,
+      "minted_at": "2025-07-19T18:20:11.000Z",
+      "last_transfer_at": "2025-07-19T18:20:11.000Z",
+      "user_wallet": {
+        "id": 81,
+        "documentId": "wallet_shield_owner",
+        "wallet_address": "0xA0BCDEF1234567890ABCDEF1234567890ABCDEF0",
+        "usdt_balance": 3500.00,
+        "is_active": true,
+        "createdAt": "2025-07-19T18:15:25.000Z",
+        "updatedAt": "2025-07-19T18:15:25.000Z",
+        "publishedAt": "2025-07-19T18:15:25.035Z"
+      }
+    },
+    {
+      "id": 11,
+      "documentId": "bullet_speed_medal_011",
+      "createdAt": "2025-07-18T09:45:22.789Z",
+      "updatedAt": "2025-07-18T09:45:22.789Z",
+      "publishedAt": "2025-07-18T09:45:22.805Z",
+      "token_id": "BULLET_SPEED_1752725839828_1111",
+      "contract_address": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
+      "token_uri": "http://localhost:1337/api/nft-metadata/BULLET_SPEED_1752725839828_1111",
+      "metadata": {
+        "name": "Medalla de la Velocidad Suprema",
+        "description": "Una medalla que imbuye los proyectiles con energía cinética pura. Aumenta la velocidad de las balas en un 18%, permitiendo alcanzar objetivos más rápidamente.",
+        "icon_name": "FaRocket",
+        "achievement_type": "power_enhancement",
+        "rarity": "rare",
+        "game_effect": {
+          "type": "bullet_speed",
+          "value": 18,
+          "unit": "percentage"
+        },
+        "attributes": [
+          {
+            "trait_type": "Effect Type",
+            "value": "Bullet Speed"
+          },
+          {
+            "trait_type": "Rarity",
+            "value": "Rare"
+          },
+          {
+            "trait_type": "Power Level",
+            "value": "+18% Bullet Speed"
+          },
+          {
+            "trait_type": "Category",
+            "value": "Offensive"
+          },
+          {
+            "trait_type": "Minted Date",
+            "value": "18/7/2025"
+          },
+          {
+            "trait_type": "Special Ability",
+            "value": "Supreme Velocity"
+          }
+        ]
+      },
+      "network": "ethereum-goerli",
+      "owner_address": "0xB1CDEF1234567890ABCDEF1234567890ABCDEF12",
+      "is_listed_for_sale": "True",
+      "listing_price_eth": 0.425,
+      "minted_at": "2025-07-18T09:45:22.000Z",
+      "last_transfer_at": "2025-07-18T09:45:22.000Z",
+      "user_wallet": {
+        "id": 82,
+        "documentId": "wallet_bullet_speed_owner",
+        "wallet_address": "0xB1CDEF1234567890ABCDEF1234567890ABCDEF12",
+        "usdt_balance": 680.50,
+        "is_active": true,
+        "createdAt": "2025-07-18T09:40:15.000Z",
+        "updatedAt": "2025-07-18T09:40:15.000Z",
+        "publishedAt": "2025-07-18T09:40:15.025Z"
+      }
+    },
+    {
+      "id": 12,
+      "documentId": "bullet_lifetime_medal_012",
+      "createdAt": "2025-07-17T15:15:33.123Z",
+      "updatedAt": "2025-07-17T15:15:33.123Z",
+      "publishedAt": "2025-07-17T15:15:33.140Z",
+      "token_id": "BULLET_LIFETIME_1752625839828_1212",
+      "contract_address": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
+      "token_uri": "http://localhost:1337/api/nft-metadata/BULLET_LIFETIME_1752625839828_1212",
+      "metadata": {
+        "name": "Medalla de la Persistencia",
+        "description": "Una medalla que mantiene los proyectiles activos por más tiempo. Aumenta la duración de las balas en un 25%, permitiendo alcanzar objetivos más distantes.",
+        "icon_name": "FaClock",
+        "achievement_type": "power_enhancement",
+        "rarity": "common",
+        "game_effect": {
+          "type": "bullet_lifetime",
+          "value": 25,
+          "unit": "percentage"
+        },
+        "attributes": [
+          {
+            "trait_type": "Effect Type",
+            "value": "Bullet Lifetime"
+          },
+          {
+            "trait_type": "Rarity",
+            "value": "Common"
+          },
+          {
+            "trait_type": "Power Level",
+            "value": "+25% Bullet Lifetime"
+          },
+          {
+            "trait_type": "Category",
+            "value": "Offensive"
+          },
+          {
+            "trait_type": "Minted Date",
+            "value": "17/7/2025"
+          },
+          {
+            "trait_type": "Special Ability",
+            "value": "Persistent Projectiles"
+          }
+        ]
+      },
+      "network": "ethereum-goerli",
+      "owner_address": "0xC2DEF1234567890ABCDEF1234567890ABCDEF123",
+      "is_listed_for_sale": "True",
+      "listing_price_eth": 0.085,
+      "minted_at": "2025-07-17T15:15:33.000Z",
+      "last_transfer_at": "2025-07-17T15:15:33.000Z",
+      "user_wallet": {
+        "id": 83,
+        "documentId": "wallet_bullet_lifetime_owner",
+        "wallet_address": "0xC2DEF1234567890ABCDEF1234567890ABCDEF123",
+        "usdt_balance": 125.75,
+        "is_active": true,
+        "createdAt": "2025-07-17T15:10:20.000Z",
+        "updatedAt": "2025-07-17T15:10:20.000Z",
+        "publishedAt": "2025-07-17T15:10:20.025Z"
+      }
+    }
+  ],
+  "meta": {
+    "pagination": {
+      "page": 1,
+      "pageSize": 25,
+      "pageCount": 1,
+      "total": 12
+    }
+  }
+}

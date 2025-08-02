@@ -1,0 +1,1277 @@
+                                                                 VIDEOJUEGO MEDABOT
+
+
+
+
+#036 VIDEOJUEGO MEDABOT
+
+Tema del proyecto: Educación, herramienta para el aprendizaje y tratamiento de TDH o
+      déficit de atención
+
+Descripción de las startups: Este proyecto fue implementado por Antara.
+
+
+Objetivos
+Objetivo general
+Desarrollar un videojuego innovador que se conecte con el mundo real a través de
+blockchain e IA, centrándose en la obtención de NFT en forma de medallas únicas como
+medida de logro. Este juego creará un entorno de mundo abierto donde la IA adaptará los
+desafíos de acuerdo con las habilidades principales especificadas en el perfil del usuario,
+fomentando el desarrollo y potenciación de dichas habilidades. Además de proporcionar
+una experiencia lúdica, el proyecto busca integrar aspectos educativos y terapéuticos,
+ofreciendo herramientas para el aprendizaje y el tratamiento de trastornos de la
+personalidad como el TDAH y el déficit de atención.
+
+Objetivos empresariales
+Desarrollar una experiencia de juego innovadora que combine la diversión con la
+educación y la terapia. Al integrar tecnologías de blockchain e inteligencia artificial, el
+juego busca no solo atraer a jugadores interesados en obtener NFT en forma de medallas
+únicas, sino también crear un modelo de negocio sostenible que fomente la participación
+activa y la comunidad. Además, se pretende establecer alianzas estratégicas con
+instituciones educativas y de salud para promover el uso del videojuego como herramienta
+de aprendizaje y tratamiento, ampliando así su alcance en el mercado y generando
+ingresos a través de microtransacciones y suscripciones.
+
+Objetivos tecnológicos
+Investigar y desarrollar un entorno de mundo abierto que utilice inteligencia artificial para
+personalizar la experiencia del usuario, adaptando los desafíos a las habilidades
+individuales de cada jugador. Este enfoque busca no solo mejorar la jugabilidad, sino
+también potenciar el desarrollo de habilidades específicas en los usuarios, ofreciendo un
+enfoque educativo que puede ser beneficioso para personas con trastornos como el
+                                                             VIDEOJUEGO MEDABOT
+
+
+
+TDAH. A través de esta integración tecnológica, se pretende crear un sistema que no solo
+entretenga, sino que también contribuya al bienestar emocional y cognitivo de los
+jugadores, estableciendo un nuevo estándar en la industria de los videojuegos.
+
+Objetivos específicos
+   ●​ Diseñar y desarrollar una plataforma tecnológica innovadora que integre
+      blockchain, IA y juego.
+
+   ●​ Crear mecánicas de juego que fomenten el desarrollo y potenciación de
+      habilidades únicas.
+
+   ●​ Desarrollar algoritmos de IA que analicen los perfiles de los usuarios y generen
+      desafíos personalizados.
+
+   ●​ Diseñar materiales educativos y recursos que apoyen el aprendizaje y el
+      tratamiento de trastornos de la personalidad.
+
+   ●​ Incorporar elementos de tutoría y feedback para ayudar a los usuarios a mejorar
+      sus habilidades.
+
+   ●​ Realizar estudios y experimentos para evaluar el impacto del juego en el
+      tratamiento de trastornos de la personalidad.
+
+   ●​ Diseñar un sistema de evaluación y seguimiento para monitorear el progreso de
+      los usuarios y la efectividad del juego.
+
+
+Funcionalidades
+   ●​ Plataforma tecnológica
+
+          ○​ Blockchain para nfts: Integrar una infraestructura blockchain que permita
+             la creación, obtención y comercio de NFTs en forma de medallas únicas.
+             Estas medallas serán tokens no fungibles que los jugadores pueden ganar
+             como medida de logro.
+
+          ○​ Seguridad y transparencia: Garantizar la seguridad y transparencia en las
+             transacciones y la propiedad de los NFTs mediante contratos inteligentes y
+             tecnologías de cifrado avanzadas.
+
+   ●​ Mecánicas de juego innovadoras
+
+          ○​ Mapa abierto adaptativo: Crear un entorno de mundo abierto donde los
+             jugadores pueden explorar libremente y encontrar desafíos y misiones.
+                                                          VIDEOJUEGO MEDABOT
+
+
+
+        ○​ Interacciones dinámicas: Incluir mecánicas de juego que permitan
+           interacciones dinámicas entre los jugadores y el entorno, como resolver
+           puzzles.
+
+  ●​ Personalización de desafíos
+
+        ○​ IA adaptativa: Implementar una IA que analice el perfil del usuario y
+           adapte los desafíos y misiones, basándose en las habilidades principales y
+           las áreas de mejora del jugador.
+
+        ○​ Perfil de habilidades: Permitir a los jugadores definir sus habilidades y
+           preferencias en su perfil, lo que ayudará a la IA a personalizar la
+           experiencia de juego.
+
+  ●​ Integración de aspectos educativos
+
+        ○​ Misiones educativas: Diseñar misiones y desafíos que incorporen
+           elementos educativos, promoviendo el aprendizaje de nuevas habilidades y
+           conocimientos.
+
+  ●​ Investigación y desarrollo terapéutico
+
+        ○​ Terapia mediante el juego: Desarrollar contenidos específicos para el
+           tratamiento de trastornos de la personalidad, como TDAH y déficit de
+           atención, basados en estudios y recomendaciones de expertos en
+           psicología y neurociencia.
+
+
+Beneficios
+  ●​ Motivación y desarrollo de habilidades: Los jugadores se ven incentivados a
+     mejorar sus habilidades para obtener medallas NFT.
+
+  ●​ Experiencia personalizada: La IA adapta los desafíos a las habilidades del
+     jugador, creando una experiencia única.
+
+  ●​ Aprendizaje significativo: El juego se convierte en una herramienta para el
+     aprendizaje y la adquisición de conocimientos.
+
+  ●​ Mejora del bienestar: El juego ofrece oportunidades para tratar trastornos como
+     el TDAH y el déficit de atención.
+
+
+Características
+  ●​ Medallas NTFs como medida de logro.
+                                                               VIDEOJUEGO MEDABOT
+
+
+
+   ●​ Sistema de desafíos que se adapta a las habilidades principales del usuario.
+
+   ●​ Elementos de interacción social y colaboración para aumentar la motivación y la
+      retención.
+
+   ●​ Retroalimentación y ajustes para adaptarse a los cambios en las habilidades del
+      usuario.
+
+
+Audiencia
+El proyecto tiene un alcance amplio y puede beneficiar a una variedad de personas y
+organizaciones interesadas en la intersección entre tecnología, juegos, educación y salud
+mental. Entre ellos se encuentra como objeto:
+
+   ●​ Gamers entusiastas y coleccionistas de ntfs: Jugadores apasionados por las
+      nuevas tecnologías y la economía digital.
+
+   ●​ Personas interesadas en el desarrollo personal y la automejora: Individuos
+      que buscan herramientas para desarrollar sus habilidades, superar desafíos y
+      alcanzar sus metas personales.
+
+   ●​ Estudiantes y profesionales en áreas stem: Jóvenes y adultos interesados en la
+      ciencia, la tecnología, la ingeniería y las matemáticas.
+
+   ●​ Pacientes con tdah y déficit de atención: Personas diagnosticadas con TDAH o
+      déficit de atención que buscan herramientas para mejorar su concentración,
+      organización y gestión del tiempo.
+
+   ●​ Educadores y profesionales de la salud: Maestros, terapeutas y otros
+      profesionales interesados en utilizar tecnologías innovadoras para mejorar la
+      educación y el tratamiento de trastornos de la personalidad.
+
+
+Tono de la aplicación
+El tono de la aplicación es inclusivo y motivador, diseñado para fomentar la participación
+activa y el desarrollo personal de los jugadores. La combinación de elementos lúdicos con
+aspectos educativos y terapéuticos crea un ambiente que no solo busca entretener, sino
+también empoderar a los usuarios a través de la obtención de logros significativos,
+representados por NFT en forma de medallas únicas. Este enfoque promueve una
+experiencia positiva y enriquecedora, donde los jugadores pueden explorar sus
+habilidades en un entorno adaptativo que responde a sus capacidades individuales.
+                                                           VIDEOJUEGO MEDABOT
+
+
+
+Datos necesarios para el ux
+Integraciones Necesarias: ¿Necesitas una integración con otros sistemas o
+    plataformas que utilizas, como CRM, ERP, o herramientas de marketing?
+
+●​ No.
+
+Acciones Clave: ¿Cuáles son las principales acciones que deseas que los usuarios
+   realicen en la web (comprar, registrarse, descargar contenido, etc.)?
+
+●​ Analizar e identificar patrones
+
+●​ Crear y gestionar filtros
+
+●​ Análisis de interacción y perfilado del usuario final
+
+●​ Generar informes y estadísticas
+
+Prioridad de Información: ¿Qué información es crucial que los usuarios encuentren
+   fácilmente en la web?
+
+El Navbar y Dashboard con:
+
+●​ Las fuentes analizadas
+
+●​ Los datos recogidos
+
+●​ El análisis de esos datos
+
+●​ Las sugerencias de marketing
+
+Manejo de Contenido Dinámico: ¿Hay contenido dinámico, como blogs o noticias,
+  que se actualizan regularmente?
+
+●​ No especifica.
+
+EXPERIENCIA DEL USUARIO:
+
+Sentimiento del Usuario: ¿Cómo se espera que los usuarios se sientan cuando usen
+   la web (confiados, inspirados, entretenidos, etc.)?
+
+●​ Sienten que su empresa progresa y se destaca de la competencia gracias a la
+   utilización de IA
+
+Facilidad de Uso: ¿Hay algún proceso específico que deba ser muy fácil y directo
+   para los usuarios (registro, compra, contacto, etc.)?
+                                                                 VIDEOJUEGO MEDABOT
+
+
+
+   ●​ Ingresar la fuente de datos (la web, la red social) de donde quiera que la IA recoja
+      información.
+
+   ●​ Indicarle qué información quiere sacar de esa fuente de datos.
+
+   ●​ Comprender fácil el análisis y las posibles soluciones que la IA le genera al
+      usuario.
+
+   Personalización: ¿Qué tan importante es la personalización de la experiencia del
+      usuario (contenido basado en el comportamiento, recomendaciones, etc.)?
+
+   ●​ No es tan importante, ya que el proyecto le sirve a cualquier empresa de cualquier
+      rubro.
+
+   Referencias y Ejemplos: ¿Existen ejemplos de webs que hagan algo similar?
+
+   ●​ Google Analytics
+
+   Consideraciones Culturales: ¿Hay algún aspecto cultural o regional que deba ser
+     considerado para garantizar una experiencia inclusiva y relevante?
+
+   ●​ Solamente tener en cuenta el vocabulario de un empresario promedio que quizás
+      no es experto ni entiende los tecnicismos del programa.
+
+   Errores a Evitar: ¿Qué errores o problemas de experiencia de usuario has observado
+      en otras webs que quieres evitar en la tuya?
+
+   ●​ Que le sea fácil e intuitivo al usuario y que sienta que puede manejar a la IA para
+      extraer la información que él necesita. No darle tanto control a la IA sino al usuario.
+
+Justificación
+
+La justificación de este proyecto radica en su capacidad para impulsar la innovación
+tecnológica, proporcionar beneficios educativos y terapéuticos, promover el desarrollo
+personal y contribuir a la construcción de una sociedad más equilibrada y centrada en el
+bienestar de sus miembros.
+                                                                                               VIDEOJUEGO MEDABOT
+
+
+
+ Funciones – servicios
+
+                                                     Funcionalidades
+
+  N°        Nombre          Dpto.                Descripción              Usuario                Observación
+
+                                       Correo electrónico.             Admin
+         Gestionar         Backend /
+R-001                                  Contraseña.                     Usuario      Gestionado por parte del usuario
+         usuario           / UX        Datos básicos.                  Registrado
+
+                                       Datos del desafío
+                                       Objetivos del desafío           Usuario
+R-002    Desafíos          Backend /                                                Desafíos creados y administrados
+                           / UX        Dificultad del desafío          Registrado   por el usuario
+                                       Características del desafío
+
+                                       Datos de la misión
+                                       Objetivos de la misión          Usuario      Misiones       generadas           y
+R-003    Misiones          Backend /                                   registrado
+                           / UX        Dificultad de la misión                      administradas por el sistema.
+                                       Características de la misión
+
+                                       Nombre del logro
+         Sistema      de                                               Usuario
+                           Backend /   Descripción del logro                        Logros      proporcionado   por    el
+R-004    logros
+                           / UX        Rareza del logro                registrado   servicio
+         (medallas)
+                                       NFT del logro
+
+                                       Logros obtenidos
+                                       Tiempo de juego                 Usuario
+         Estadísticas del Backend /                                    Registrado   Información        generada        y
+R-005                                  Desafios completados
+         usuario          / UX                                                      actualizada por el sistema
+                                       Actividades favoritas
+                                       Habilidades del jugador
+                                                                                        VIDEOJUEGO MEDABOT
+
+
+
+        Recomendación               Misiones
+R-006   de Desafíos y Backend /     Desafíos                        Usuario      Proporcionada       automáticamente
+        misiones      / UX          Habilidades del jugador         Registrado   según el historial del usuario.
+
+                                    Pagos
+                                    Transacciones                   Usuario
+        Administrar     Backend /                                   Registrado   Sistema     de     transacciones
+R-007                               Intercambio de componentes                   supervisados y validados por la
+        transacciones   / UX
+                                    Autenticación y autorización                 seguridad
+                                    Intercambio o comercio de NFT
+                                                                                            VIDEOJUEGO MEDABOT
+
+
+
+Matriz MoSCoW
+Priorida      Código      Nombre                                 Descripción
+   d
+
+Must                                     Es fundamental para la plataforma, ya que permite a los
+                       Gestionar
+have       R-001                         usuarios acceder y gestionar su información básica, lo que
+                       usuario
+                                         es esencial para la funcionalidad básica de la plataforma.
+
+                                         Es esencial para la plataforma, ya que permite a los usuarios
+           R-002       Desafíos          crear y administrar desafíos, lo que es el corazón de la
+                                         experiencia del usuario.
+
+                                         Es fundamental para la plataforma, ya que permite a los
+           R-003       Misiones          usuarios generar y administrar misiones, lo que es una parte
+                                         clave de la experiencia del juego.
+
+                       Sistema      de   Es esencial para la plataforma, ya que los usuarios pueden
+           R-004       logros            obtener logros y medallas, lo que es un motivador clave para
+                       (medallas)        la participación y el compromiso.
+
+                                         Es fundamental para la plataforma, ya que permite a los
+                       Administrar
+           R-007                         usuarios realizar transacciones de manera segura, lo que es
+                       transacciones
+                                         esencial para la confianza y la adopción de la plataforma.
+
+Should
+have                   Estadísticas del Es importante porque permite a los usuarios ver sus
+           R-005                        estadísticas y progreso, lo que puede ayudar a mejorar la
+                       usuario
+                                        experiencia del usuario y aumentar la participación.
+                                                                                                 VIDEOJUEGO MEDABOT
+
+
+
+
+                             Recomendación Es útil para la plataforma, ya que permite a los usuarios
+           R-006             de Desafíos y recibir recomendaciones personalizadas, lo que puede
+                             misiones      ayudar a mejorar la experiencia del usuario y aumentar la
+                                           participación.
+
+Could
+have
+
+
+
+
+Solución propuesta para IA
+
+
+ Nro de requerimiento: IA-001                            Nombre: Recomendación - Similitud de coseno
+
+ Tipo: Necesario                                         Requerimiento que lo utiliza o especializa:          ¿Crítico?
+                                                         Recomendar desafíos, tomando en cuenta los           Si
+                                                         intereses del jugador, y así mejorar la calidad de
+                                                         vida de las personas que sufren de trastornos
+                                                         como el TDAH y el déficit de atención
+
+ Prioridad de desarrollo: Alta                           Documentos de visualización asociados:
+                                                         Se necesita:
+                                                            ●​ Contenedor para los campos de entrada
+                                                            ●​ Contenedor para los datos de salida
+                                                                                                     VIDEOJUEGO MEDABOT
+
+
+
+Entrada:                                                       Salida:
+
+   ●​   intskillname (nombre de la habilidad)                     ●​ intchallname,(nombre del desafío)
+   ●​   intstatitems (items obtenidos)                            ●​ intachievname (nombre del logro o recompensa)
+   ●​   intskillrating (puntuación)
+   ●​   intchalldifficulty (nivel de dificultad del desafío)
+
+
+Descripción: intskillname: cadena de texto aleatoria - intskillrating: número entero aleatorio - intstatitems): cadena de texto
+aleatoria - intchalldifficulty : cadena de texto aleatoria
+Precondición: intskillname:(string) - intskillrating: (numeric) - intstatitems:(string) - install difficulty(string)
+Descripción: intachievname: cadena de texto aleatoria - intchallname cadena de texto aleatoria
+Postcondición: intachievname:(string) - intchallname (string)
+
+Manejo de situaciones anormales:
+
+Criterio de aceptación: La cantidad mínima de registros es de 1000.
+
+
+Nro de requerimiento: IA-002                                   Nombre: Recomendación - Similitud de coseno
+
+Tipo: necesario                                                Requerimiento que lo utiliza o especializa:      ¿Crítico?
+                                                               Recomendar misiones, tomando en cuenta los       Si
+                                                               intereses del jugador
+
+Prioridad de desarrollo: Alta                                  Documentos de visualización asociados:
+                                                               Se necesita:
+                                                                  ●​ Contenedor para los campos de entrada
+                                                                  ●​ Contenedor para los datos de salida
+
+Entrada:                                                       Salida:
+                                                                                                       VIDEOJUEGO MEDABOT
+
+
+
+
+     ●​   intskillname (nombre de la habilidad)                       ●​ intmissname (nombre de la misión)
+     ●​   intstatitems (items obtenidos)                              ●​ intachievname (nombre del logro o recompensa)
+     ●​   intskillrating (puntuación)
+     ●​   intmissdifficulty(nivel de dificultad de la misión)
+
+
+ Descripción: intskillname: cadena de texto aleatoria - intskillrating: número entero aleatorio - intmissdifficulty: cadena de texto
+ aleatoria - intstatitems): cadena de texto aleatoria
+ Precondición: intskillname:(string) - intskillrating: (numeric) - intmissdifficulty: (string) - intstatitems:(string)
+ Descripción: intachievname: cadena de texto aleatoria - intmissname: cadena de texto aleatoria
+ Postcondición: intachievname:(string) - intmissname(string)
+
+ Manejo de situaciones anormales:
+
+ Criterio de aceptación: la cantidad mínima de registros es de 1000.
+
+
+
+
+    N.º                          Tipo                                     Algoritmo                        Requisito asociado
+
+   IA-001       Sistema de recomendación                  similitud del coseno                        R-006
+
+   IA-002       Sistema de recomendación                  similitud del coseno                        R-006
+
+
+Requisitos RA (videojuegos)
+Objetivos de la experiencia interactiva:
+
+   ●​ Experiencia de juego innovadora que combina la diversión con la terapia.
+                                                                                                 VIDEOJUEGO MEDABOT
+
+
+
+Tipo de experiencia:
+
+Videojuego
+
+   ●​ Plataforma
+          ○​ Mobile
+   ●​ Género:
+
+          ○​   Acción / RPG
+
+      Es un género de videojuegos que comparten muchas características con los videojuegos de rol pero que, a diferencia
+      de estos, ofrecen combates en tiempo real. En este género prima más la habilidad que la estrategia en las luchas
+      contra los enemigos.
+
+          ○​ Casual
+
+       Los juegos casuales son aquellos juegos sencillos, aptos para todos los públicos y que se pueden disfrutar de rato en
+      rato, sin que haga falta ser constante.
+
+          ○​ Roguelite
+
+      Derivado del género Roguelike. “Lite” vendría a traducirse como “ligero”, es decir, que vendría a contar con las
+      características de roguelike pero sin llegar a cumplir con todas estas. Aunque pueda compartir elementos como las
+      mazmorras creadas de forma aleatoria o, incluso, una gestión de recursos, existen diferencias como una muerte que,
+      aunque permanente, nos haga iniciar nuestro camino con un personaje que ya incluye ciertas mejoras, jamás como si
+      fuese reiniciar la aventura de cero.
+
+   ●​ Estilo de arte: Existen 2 opciones para desarrollar, 2.5D o 3D.
+
+          ○​ 2.5D: Es un estilo visual o diseño de una escena que aparenta tener profundidad y volumen, aunque en realidad
+             es plana y se representa en dos dimensiones. Se trata de una técnica que permite crear imágenes
+             tridimensionales utilizando solo elementos en dos dimensiones.
+                                                                                                 VIDEOJUEGO MEDABOT
+
+
+
+         ○​ 3D: Los juegos 3D utilizan modelos tridimensionales para representar los objetos del mundo virtual.
+
+ver GDD: V1 del GDD (Game Desing Document)
+
+¿Contiene NFTs o Criptos?
+
+   NFTs: Los NFT son un tipo de token de criptomoneda que ofrecen la propiedad comprobable de un activo o una pieza de
+      contenido. A diferencia de los tokens normales, los NFT no son intercambiables entre sí porque son únicos o “no
+      fungibles”.
+                                                                  VIDEOJUEGO MEDABOT
+
+
+
+
+Políticas
+
+Las siguientes políticas establecen las normas y procedimientos que regulan el uso y
+acceso a la plataforma desarrollada. Su objetivo es garantizar la seguridad, integridad y
+confidencialidad de los datos, así como optimizar el funcionamiento de los sistemas.
+
+                                        Proceso
+
+    Proceso                             Regla                          Observación
+
+
+                    ●​ garantizar la seguridad y confidencialidad
+                       de los datos.
+
+    Usuario         ●​ prevenir accesos no autorizados.
+
+                    ●​ proteger     contra   posibles   brechas   de
+                       seguridad.
+                                                                                       VIDEOJUEGO MEDABOT
+
+
+
+
+Colecciones requeridas
+
+                                                           Posibles campos
+    N°        Colección
+                                          Nombre            Tipo                         Regla
+
+                            nombre de usuario            string
+
+                            contraseña                   string
+
+                                                                       ●​    nombres
+                                                                       ●​    Apellido
+                            Datos demográficos           object        ●​    Documento de identidad
+                                                                       ●​    Género
+    1          Usuario                                                 ●​    Fecha de nacimiento
+
+                            tipo de usuario              string
+
+                            Intereses                    array
+
+                            correo                       string
+
+                            Teléfono                     string
+
+                            Nombre de la habilidad       string
+
+    2         Habilidades   Id usuario                   string
+
+                            Puntuación en la habilidad   string
+
+                            tiempo de juego              string
+    3         Estadística
+                                                      VIDEOJUEGO MEDABOT
+
+
+
+               Id usuario                    string
+
+               Desafíos completados          array
+
+               Misiones completadas          array
+
+               Logros obtenidos              array
+
+               ítems obtenidos               string
+
+               Nombre del logro              string
+
+               Dificultad del logro          string
+4   Logros
+               Rareza del logro              array
+
+               NFT del logro                 string
+
+               Nombre del desafío            string
+
+               Objetivos del desafío         array
+
+               Dificultad del desafío        string
+5   Desafíos
+               Características del desafío   array
+
+               Requisitos del desafío        array
+
+               Número de intentos            string
+
+               Nombre de la misión           string
+6   Misiones   Objetivos de la misión        array
+                                                                VIDEOJUEGO MEDABOT
+
+
+
+                        Dificultad de la misión        string
+
+                        Características de la misión   string
+
+                        Requisitos de la misión        array
+
+                        Duración de la misión          string
+
+                        Tipo                           string
+
+                        Estado                         string
+
+                        Id usuario                     string
+
+    7   Transacciones   Fecha                          string
+
+                        Monto                          string
+
+                        Item                           string
+
+                        Hora                           string
+
+                        Id logro o token               string
+
+                        Descripción                    string
+          Contrato
+8
+         inteligente
+                        Nombre                         string
+
+                        imágenes                       string
+                                                                   VIDEOJUEGO MEDABOT
+
+
+
+                                                  ●​ Rareza
+              atributos                  object   ●​ Daño
+                                                  ●​ Durabilidad
+
+              Actualización              string
+
+              Creado en                  string
+
+              Nombre de usuario.         string
+
+              Nombre de la habilidad     string
+
+              Puntuación,                num
+
+              Nombre del logro.          string
+
+              Nombre del desafío.        string
+9   Interés
+
+              Dificultad del desafío.    string
+
+              Dificultad de la misión.   string
+
+              nombre de la misión        string
+
+              Ítems obtenidos            string
+                                                                                                    VIDEOJUEGO MEDABOT
+
+
+
+Relación de las colecciones
+
+                                                Relación de colecciones
+     Colección       Colecciones asociadas                                     Descripción
+
+     Habilidad                 logros            Un jugador obtiene logros al alcanzar ciertos niveles de habilidad
+
+      desafíos                 logros            Al completar desafíos, el jugador obtiene logros
+                               logros            Completar misiones otorga logros al jugador.
+     Misiones
+                              desafíos           Las misiones pueden involucrar varios desafíos
+      Logros               Identificación        El usuario posee logros
+                                                 Las transacciones dentro del juego pueden ser gestionadas por contratos
+   Transacciones       contratos inteligentes
+                                                 inteligentes.
+                                                       VIDEOJUEGO MEDABOT
+
+
+
+
+Reportes que debe emitir el sistema
+
+                                          Posibles campos
+ N°    Reporte
+                        Campos            Tipo          Descripción/ Regla
+
+                    Usuario           colección
+
+      Informe de                                     ●​ Logros recientes (rango
+      progreso del                                      de tiempo)
+1
+      jugador                                        ●​ Dificultad para completar
+                   Estadísticas       colección
+      (usuario)                                         desafíos
+                                                     ●​ Dificultad para completar
+                                                        misiones
+                                                            VIDEOJUEGO MEDABOT
+
+
+
+Diagramación:
+
+
+
+Diagrama de usuarios:
+
+
+
+      Usuarios                     Funciones                         Observaciones
+
+
+                        ●​ Gestionar      funciones     del
+                           sistema                              ●​ El administrador puede
+                        ●​ Manejar datos de usuarios               aplicar sanciones a los
+                        ●​ Administrar misiones y desafíos         usuarios si infringen alguna
+    Administrador       ●​ Manejar informes y estadística          norma de la comunidad.
+  (Panel de control)    ●​ Administrar transacciones
+
+
+
+                        ●​   Gestionar datos básicos y perfil
+                        ●​   Juega el videojuego
+                        ●​   Gestiona NFT´S
+       Usuario          ●​   Realiza transacciones
+      (Jugador)
+                                                                VIDEOJUEGO MEDABOT
+
+
+
+Diagrama de actividad del usuario: general.
+
+
+
+
+Descripción del diagrama:
+
+   1.​ El usuario ingresa a la pantalla de inicio de sesión
+   2.​ El usuario ingresa los datos de inicio de sesión
+   3.​ Se validan los datos ingresados
+           a.​ Si son válidos, se muestra el menú del sistema
+                  i.​ El usuario opera los módulos del sistema
+                 ii.​ El usuario sale del sistema
+           b.​ Si no lo son, se retorna a la página de inicio de sesión
+                                                            VIDEOJUEGO MEDABOT
+
+
+
+
+Diagrama de actividad del usuario. administrador (gestión de usuarios)
+
+
+
+
+Descripción del diagrama:
+
+   ●​ El administrador ingresa al sistema
+   ●​ El administrador ingresa al panel de configuración general.
+   ●​ El administrador ingresa a Gestión de usuarios
+   ●​ El administrador selecciona una de las siguientes opciones
+   ●​ Si el administrador selecciona gestionar datos de usuario
+   ●​ Si selecciona editar datos de perfil:
+          ○​ El administrador ingresa los nuevos datos y selecciona guardar.
+          ○​ El sistema guarda los cambios y envía una notificación al administrador
+   ●​ Si selecciona crear nuevo usuario de perfil:
+          ○​ El administrador ingresa los nuevos datos y selecciona guardar.
+          ○​ El sistema guarda los cambios y envía una notificación al administrador
+   ●​ Si selecciona eliminar datos de perfil:
+          ○​ El administrador confirma su selección
+          ○​ El sistema elimina los datos y envía una notificación al administrador
+   ●​ Si selecciona Consultar Usuario
+          ○​ El administrador ingresa la ID del usuario
+                                                              VIDEOJUEGO MEDABOT
+
+
+
+          ○​ El sistema envía la información relevante del usuario (Información de
+             Perfil, estadísticas, habilidades)
+
+   ●​ Si selecciona Sanciones
+          ○​ El administrador ingresa la ID del usuario
+          ○​ El administrador selecciona el tipo de sanción que aplica al usuario y
+              confirma la acción
+          ○​ El sistema actualiza el estado del jugador y envía una notificación de la
+              sanción.
+
+
+
+
+Diagrama de actividad del usuario. administrador (informes y estadísticas)
+
+
+
+
+Descripción del diagrama:
+
+   ●​ El administrador ingresa al sistema
+   ●​ El administrador Ingresa administración de plataforma
+                                                                 VIDEOJUEGO MEDABOT
+
+
+
+   ●​ El administrador selecciona el tipo de informe que quiere generar (Estadísticas
+      de jugadores, rendimiento de juego, transacciones, estadística general) y define
+      los parámetros de información y confirma la generación de reporte.
+
+   ●​ El sistema genera reporte con la información requerida de la base de datos del
+      juego y genera recomendaciones IA.
+
+   ●​ El usuario puede decidir si exportar la información
+          ○​ Si desea exportar el archivo, selecciona el formato
+          ○​ El sistema descarga el archivo y envía notificación al usuario
+
+
+
+
+Diagrama de actividad del usuario. gestión de usuario
+
+
+
+
+Descripción del diagrama:
+
+   ●​   El usuario ingresa al sistema
+   ●​   El sistema muestra la presentación del juego
+   ●​   El usuario (jugador) elige si quiere iniciar sesion de usuario para jugar
+   ●​   El usuario escoge una opción
+                                                              VIDEOJUEGO MEDABOT
+
+
+
+          ○​ Si el usuario elige Iniciar Sesión, ingresa los datos necesarios
+          ○​ El sistema valida los datos
+                 ■​ sI son válidos, el sistema almacena los datos
+                 ■​ El usuario recibe la notificación de inicio de sesión exitoso
+                 ■​ El usuario ingresa al juego
+                 ■​ Si los datos no son válidos, retorna al usuario a ingresar datos.
+          ○​ Si el usuario elige No Iniciar Sesión, ingresa en el juego.
+
+
+
+
+Diagrama de actividad del usuario. gestión de datos y de perfil
+
+
+
+
+Descripción del diagrama:
+
+   ●​ El usuario ingresa al sistema
+   ●​ El usuario ingresa al panel de gestión de datos y perfil
+   ●​ El usuario selecciona una de las siguientes opciones:
+   ●​ Si el usuario desea Actualizar información
+   ●​ Si el usuario sí desea actualizar la información, ingresa los datos nuevos y
+      selecciona guardar
+          ○​ El sistema guarda los cambios y envía una notificación al usuario
+   ●​ Si el usuario no desea actualizar la información, finaliza el proceso.
+   ●​ Si selecciona cambiar contraseña.
+                                                            VIDEOJUEGO MEDABOT
+
+
+
+          ○​ El usuario ingresa los nuevos datos y selecciona guardar.
+          ○​ El sistema confirma los cambios.
+          ○​ El sistema guarda los cambios y envía una notificación al usuario
+
+
+
+
+Diagrama de actividad del usuario. misiones
+
+
+
+
+Descripción del diagrama:
+
+   ●​ El usuario selecciona una misión
+   ●​ El sistema muestra los objetivos y detalles de la misión
+   ●​ El usuario inicia la misión y desarrolla los objetivos
+          ○​ Si el usuario completó la misión
+                  ■​ El sistema otorga el logro, evalúa los objetivos y el rendimiento
+                      durante la partida
+                  ■​ El usuario recibe la puntuación y detalles del rendimiento.
+
+          ○​ Si el usuario no completó la misión, puede elegir reiniciarla o
+             abandonarla
+                ■​ Si el usuario elige reiniciar, la partida comienza nuevamente
+                ■​ Si el usuario elige abandonar la partida, recibe su puntuación y
+                   rendimiento.
+                                                            VIDEOJUEGO MEDABOT
+
+
+
+
+Diagrama de actividad del usuario. desafíos
+
+
+
+
+Descripción del diagrama:
+
+   ●​ El usuario selecciona un desafío
+   ●​ El sistema muestra los objetivos y detalles del desafío
+   ●​ El usuario inicia el desafío y desarrolla los objetivos
+          ○​ Si el usuario completó el desafío
+                  ■​ El sistema otorga el logro, evalúa los objetivos y el rendimiento
+                      durante la partida
+                  ■​ El usuario recibe la puntuación y detalles del rendimiento.
+
+          ○​ Si el usuario no completó el desafío, puede elegir reiniciarla o
+             abandonarla
+                ■​ Si el usuario elige reiniciar, la partida comienza nuevamente
+                ■​ Si el usuario elige abandonar la partida, recibe su puntuación y
+                   rendimiento.
+                                                        VIDEOJUEGO MEDABOT
+
+
+
+Diagrama de actividad del usuario. evaluación de rendimiento
+
+
+
+
+Descripción del diagrama:
+
+   ●​   Ingresa al apartado de Evaluación de Rendimiento
+   ●​   El sistema procesa los datos y estadísticas del usuario
+   ●​   El sistema evalúa rendimiento y habilidades del usuario
+   ●​   Genera recomendaciones de IA para mejorar las habilidades del usuario
+   ●​   El usuario recibe la puntuación, resumen de rendimiento general y
+        recomendaciones
+                                                           VIDEOJUEGO MEDABOT
+
+
+
+Diagrama de actividad del usuario.Recomendaciones de Desafíos IA
+
+
+
+
+Descripción del diagrama:
+
+   ●​ El usuario ingresa al sistema
+   ●​ El sistema analiza las preferencias y actividad del jugador en la plataforma y
+      genera recomendaciones de desafíos y su información
+   ●​ El usuario revisa las recomendaciones
+                                                           VIDEOJUEGO MEDABOT
+
+
+
+Diagrama de actividad del usuario. Recomendaciones de Misiones IA
+
+
+
+
+Descripción del diagrama:
+
+   ●​ El usuario ingresa al sistema
+   ●​ El sistema analiza las preferencias y actividad del jugador en la plataforma y
+      genera recomendaciones de misiones y su información
+   ●​ El usuario revisa las recomendaciones
+                                                                VIDEOJUEGO MEDABOT
+
+
+
+Diagrama de flujo de datos: nivel 0
+
+
+
+
+Descripción del diagrama:
+
+Administrador
+
+   ●​ El administrador gestiona los procesos generales, gestionando los roles de
+      usuario y las transacciones del juego.
+
+   ●​ El sistema retorna actualización de perfiles de usuario
+
+Usuario
+
+   ●​ El usuario ingresa datos de gestión de perfil, gestiona transacciones y solicita
+      informes sobre su rendimiento durante las partidas.
+
+   ●​ El sistema gestiona los procesos de la transacción y genera los informes de
+      rendimiento del juego.
+                                                              VIDEOJUEGO MEDABOT
+
+
+
+Diagrama de flujo de datos: nivel 1
+
+
+
+
+Descripción del diagrama:
+
+          ●​ Los usuarios se registran e ingresan a la plataforma. El sistema valida los
+             datos y los almacena.
+                                                             VIDEOJUEGO MEDABOT
+
+
+
+           ●​ El usuario ingresa a las partidas disponibles, gestiona las transacciones
+              de NFT. Solicita y recibe resúmenes y recomendaciones de IA sobre su
+              rendimiento en el juego.
+           ●​ El administrador gestiona los roles de usuario; gestiona las misiones y
+              desafíos y administra las transacciones del juego.
+
+
+
+
+Acceso a la carpeta con la diagramación
+Acceder
+
+Customer journey (etapas)
+
+Las instituciones y demás usuarios están empezando a comprender el valor que tiene la
+innovación tecnológica como herramienta que ayuda al aprendizaje para el desarrollo y
+potenciación de habilidades y el tratamiento de trastornos de la personalidad como el
+TDAH y el déficit de atención.
+
+1. Descubrimiento
+
+Las personas descubren este tipo de plataformas por la necesidad que tienen de
+divertirse, aprender de manera lúdica o usarlo como tratamiento terapéutico. Esta
+herramienta despierta el interés de gran variedad de personas y organizaciones que se
+beneficiarán por la integración de tecnología, juegos, educación y salud mental. Entre
+ellos tenemos:
+
+   ●​ Gamers Entusiastas y Coleccionistas de NFTs: Jugadores apasionados por las
+      nuevas tecnologías y la economía digital.
+   ●​ Personas Interesadas en el Desarrollo Personal y la Automejora: Individuos
+      que buscan herramientas para desarrollar sus habilidades, superar desafíos y
+      alcanzar sus metas personales.
+   ●​ Estudiantes y Profesionales en Áreas STEM: Jóvenes y adultos interesados en
+      la ciencia, la tecnología, la ingeniería y las matemáticas.
+   ●​ Pacientes con TDAH y Déficit de Atención: Personas diagnosticadas con TDAH
+      o déficit de atención que buscan herramientas para mejorar su concentración,
+      organización y gestión del tiempo.
+   ●​ Educadores y Profesionales de la Salud: Maestros, terapeutas y otros
+      profesionales interesados en utilizar tecnologías innovadoras para mejorar la
+      educación y el tratamiento de trastornos de la personalidad.
+                                                                VIDEOJUEGO MEDABOT
+
+
+
+   2. Consideración
+
+   ●​ El usuario busca más información sobre la plataforma, sus características y
+      beneficios.
+
+   ●​ Compara la plataforma con otras opciones, analizando características, precios y
+      reseñas.
+
+   ●​ Prueba la plataforma a través de una versión gratuita o de prueba.
+
+   ●​ Evalúa si la plataforma cumple con sus necesidades y expectativas.
+
+   3. Decisión
+
+Los usuarios deciden utilizar esta plataforma innovadora por las herramientas
+personalizadas que se adapta a sus necesidades específicas. Además, se siente
+motivado a alcanzar sus objetivos y experimentar un sentido de logro, por la gamificación
+y la obtención de NTFs como recompensa. Tiene también la posibilidad de aprender y
+desarrollar habilidades de una manera divertida y atractiva, sumada a los beneficios
+terapéuticos para aquellos con TDAH. Todos estos beneficios hacen de esta plataforma
+una opción atractiva y eficaz.
+
+   4. Secuencia de actividades (experiencia de usuario)
+
+Administrador (experiencia de usuario)
+
+      ●​ Inicia sesión.
+
+      ●​   Ingresa al panel de configuración general y podrá acceder a:
+
+           o Gestión de usuarios:
+
+                   ■​ Gestión de datos de usuarios (podrá crear, editar o eliminar datos).
+
+                   ■​ Consultar usuario ( ingresando el ID del usuario).
+
+                   ■​ Gestionar sanciones (ingresa el id del jugador, selecciona tipo de
+                      advertencia, confirma sanción).
+
+                   ■​ Recibe notificación.
+
+           o Informes y estadísticas:
+
+                   ■​ Selecciona el tipo de informe que quiere generar (estadística de
+                      jugadores, rendimiento de juego, transacciones, estadística
+                      general).
+                                                               VIDEOJUEGO MEDABOT
+
+
+
+                 ■​ Define los parámetros.
+
+                 ■​ Confirma generación de reporte.
+
+                 ■​ Visualiza información.
+
+                 ■​ Decide si desea exportar y en qué formato o si no desea.
+
+                 ■​ Recibe notificación.
+
+
+
+
+Ver diagrama
+
+Usuario jugador (experiencia de usuario)
+
+     ●​ Inicia sesión.
+
+     ●​   Ingresa al panel de configuración general y podrá acceder a:
+
+          o Gestión de usuarios:
+
+                 ■​ El usuario decide si quiere iniciar sesión para jugar.
+
+                 ■​ Si el usuario elige No Iniciar Sesión ingresa al juego.
+
+                 ■​ Si el usuario elige Iniciar sesión: Ingresa datos del usuario, recibe
+                    notificación de éxito, ingresa al videojuego.
+                                                    VIDEOJUEGO MEDABOT
+
+
+
+o Gestión de datos y de perfil:
+
+        ■​ Podrá actualizar información.
+
+        ■​ Podrá cambiar contraseña.
+
+o Misiones:
+
+        ■​ Inicia sesión.
+
+        ■​ Desarrolla los objetivos.
+
+        ■​ Puede decidir abandonar la misión.
+
+        ■​ Recibe la puntuación y detalles del rendimiento.
+
+o Desafíos:
+
+        ■​ Selecciona un desafío.
+
+        ■​ .Inicia el desafío.
+
+        ■​ Desarrolla los objetivos.
+
+        ■​ El usuario puede decidir abandonar el desafío.
+
+        ■​ Recibe la puntuación y detalles del rendimiento.
+
+o Evaluación de rendimiento:
+
+        ■​ Al ingresar podrá visualizar puntuación, resumen de rendimiento
+           general y recomendaciones.
+
+○​ Recomendaciones de desafíos IA:
+
+        ■​ Ingresará al sistema.
+
+        ■​ Revisará las recomendaciones de desafíos y su información.
+
+○​ Recomendaciones de Misiones IA:
+
+        ■​ Ingresará al sistema.
+
+        ■​ Revisará las recomendaciones de misiones y su información.
+                                                              VIDEOJUEGO MEDABOT
+
+
+
+
+ver diagrama
+
+
+
+5. Fidelización
+
+Esta plataforma al combinar elementos lúdicos, personalizados y socialmente interactivos,
+generará una experiencia de aprendizaje altamente motivadora y satisfactoria. Creará una
+conexión con el usuario al tener la posibilidad de avanzar a su propio ritmo, competir de
+forma sana y colaborar con otros. El usuario se mantiene interesado a largo plazo en la
+plataforma, por la adaptación constante de los contenidos y la incorporación de nuevas
+herramientas, aprendiendo de manera placentera y enriquecedora.
+
+   6. Promoción
+
+La forma efectiva y divertida de aprender o mejorar sus habilidades con esta plataforma,
+motivará a las personas a compartir su descubrimiento con otros. La combinación de
+resultados tangibles, una interfaz intuitiva y un entorno de aprendizaje colaborativo
+fomentará un fuerte sentido de comunidad y lealtad. Al recomendar esta plataforma a sus
+conocidos, los usuarios no solo estarán compartiendo una herramienta útil, sino que
+                                                             VIDEOJUEGO MEDABOT
+
+
+
+también estarán reforzando su propia experiencia positiva y consolidando su pertenencia
+a esta comunidad digital.
+                                               VIDEOJUEGO MEDABOT
+
+
+
+Diagramas de documento y de esquema de datos
+
+
+
+
+Ver diagrama
+                                                               VIDEOJUEGO MEDABOT
+
+
+
+
+Esquema de base de datos en formato json
+
+Ver esquema
+
+Flujo de pantallas
+   1.​ Videojuego
+
+          ●​ Pantalla de registro (registrarse o iniciar sesión con alguna de las opciones)
+
+          ●​ Pantalla de iniciar sesión (una vez que hayas hecho el registro, no se
+             cerrará la cuenta de manera automática y podrás acceder de forma más
+             rápida)
+
+          ●​ HUD Aventura (interfaz de la aventura principal y dónde vas a pasar la
+             mayoría del tiempo. Minimapa, barra de herramientas, mira, mochila,
+             armas, joystic, barra de experiencia, misiones e indicadores de misiones y
+             fps, ms y ram)
+
+          ●​ HUD Batallas (minimapa, barra de vida propia y del jefe, mochila, armas,
+             joystic, ataques e indicador de enemigo)
+
+          ●​ Mochila (mochila con espacios y objetos consumibles)
+
+          ●​ Armas (sección de selección de armas)
+
+          ●​ Menú (menú de opciones. Volumen, gráficos, ayuda, combos, controles y
+             salir)
+
+
+
+
+Ver imagen completa
+Implementación del wireframe en Figma
+VIDEOJUEGO MEDABOT
+                     VIDEOJUEGO MEDABOT
+
+
+
+Ver Figma completo
+

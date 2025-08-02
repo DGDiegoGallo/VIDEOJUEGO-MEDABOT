@@ -1,0 +1,465 @@
+import { Scene } from 'phaser';
+import { Player } from '../managers/Player';
+import { EnemyManager } from '../managers/EnemyManager';
+import { BulletManager } from '../managers/BulletManager';
+import { ExperienceManager } from '../managers/ExperienceManager';
+import { VisualEffects } from '../managers/VisualEffects';
+import { WorldManager } from '../managers/WorldManager';
+import { GameEffectsManager } from '../managers/GameEffectsManager';
+import { CollisionManager } from '../managers/CollisionManager';
+import { CameraManager } from '../managers/CameraManager';
+import { TimerManager } from '../managers/TimerManager';
+import { MinimapManager } from '../managers/MinimapManager';
+import { UIManager } from '../managers/UIManager';
+import { SkillLevels, SkillOption } from '../types/game';
+
+export class MainScene extends Scene {
+  // Managers
+  private player!: Player;
+  private enemyManager!: EnemyManager;
+  private bulletManager!: BulletManager;
+  private experienceManager!: ExperienceManager;
+  private visualEffects!: VisualEffects;
+  private worldManager!: WorldManager;
+  private gameEffectsManager!: GameEffectsManager;
+  private collisionManager!: CollisionManager;
+  private cameraManager!: CameraManager;
+  private timerManager!: TimerManager;
+  private minimapManager!: MinimapManager;
+  private uiManager!: UIManager;
+
+  // Input
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+
+  // Game state
+  private score: number = 0;
+  private isGameOver: boolean = false;
+  private isLevelingUp: boolean = false;
+  private isPausedByMenu: boolean = false;
+
+  // Skills system
+  private skills: SkillLevels = {
+    rapidFire: 0,
+    magneticField: 0,
+    multiShot: 0
+  };
+
+  constructor() {
+    super({ key: 'MainScene' });
+  }
+
+  /**
+   * Pausa el juego por el menú
+   */
+  public pauseGame(): void {
+    this.isPausedByMenu = true;
+    this.timerManager.pause();
+    console.log('🎮 Juego pausado por menú');
+  }
+
+  /**
+   * Reanuda el juego después del menú
+   */
+  public resumeGame(): void {
+    this.isPausedByMenu = false;
+    this.timerManager.resume();
+    console.log('🎮 Juego reanudado');
+  }
+
+  create() {
+    // Inicializar managers
+    this.initializeManagers();
+    
+    // Configurar input
+    this.cursors = this.input.keyboard!.createCursorKeys();
+
+    // Configurar eventos
+    this.setupEvents();
+
+    // Inicializar sistemas
+    this.initializeSystems();
+
+    // Cargar efectos de NFT del usuario
+    this.loadUserNFTEffects();
+
+    console.log('🎮 MainScene inicializada con todos los managers');
+  }
+
+  /**
+   * Inicializa todos los managers
+   */
+  private initializeManagers(): void {
+    this.worldManager = new WorldManager(this);
+    this.player = new Player(this, 400, 300);
+    this.enemyManager = new EnemyManager(this);
+    this.bulletManager = new BulletManager(this);
+    this.experienceManager = new ExperienceManager(this);
+    this.visualEffects = new VisualEffects(this);
+    this.gameEffectsManager = new GameEffectsManager();
+    
+    // Conectar Player con WorldManager para wraparound
+    this.player.setWorldManager(this.worldManager);
+    
+    // Inicializar managers especializados
+    this.cameraManager = new CameraManager(this, this.player);
+    this.timerManager = new TimerManager(this);
+    this.minimapManager = new MinimapManager(this, this.worldManager, this.enemyManager, this.player);
+    this.uiManager = new UIManager(
+      this,
+      this.player,
+      this.experienceManager,
+      this.enemyManager,
+      this.timerManager,
+      this.minimapManager,
+      this.gameEffectsManager
+    );
+    
+    // Inicializar CollisionManager - CRÍTICO: debe ir después de todos los managers
+    this.collisionManager = new CollisionManager(
+      this,
+      this.player,
+      this.enemyManager,
+      this.bulletManager,
+      this.experienceManager,
+      this.worldManager,
+      this.visualEffects
+    );
+  }
+
+  /**
+   * Inicializa los sistemas del juego
+   */
+  private initializeSystems(): void {
+    // Inicializar cámara
+    this.cameraManager.startFollowing();
+
+    // Inicializar timers
+    this.timerManager.setCallbacks({
+      onGameTimeUpdate: (gameTime) => {
+        this.enemyManager.updateGameTime(gameTime);
+        this.uiManager.forceUpdate();
+        
+        // Emitir evento de actualización de UI con formato correcto
+        const uiData = this.uiManager.getData();
+        const playerPos = this.player.getPosition();
+        const minimapData = this.minimapManager.getData();
+        
+        const gameStats = {
+          health: uiData.health.current,
+          maxHealth: uiData.health.max,
+          score: uiData.score,
+          time: uiData.gameTime,
+          experience: uiData.experience.current,
+          maxExperience: uiData.experience.max,
+          level: uiData.level,
+          skills: uiData.skills,
+          world: {
+            playerX: playerPos.x,
+            playerY: playerPos.y,
+            activeChunks: minimapData.activeChunks.length,
+            totalChunks: minimapData.worldSize,
+            structures: 0
+          },
+          minimapData: minimapData,
+          equipment: uiData.equipment
+        };
+        
+        this.events.emit('updateUI', gameStats);
+      },
+      onShoot: () => {
+        this.autoShoot();
+      },
+      onGameOver: () => {
+        this.gameOver();
+      },
+      onGameWin: () => {
+        this.gameWin();
+      }
+    });
+    this.timerManager.createGameTimer();
+    this.timerManager.createShootingTimer();
+
+    // Inicializar spawn de enemigos
+    this.enemyManager.startAutoSpawn(() => {
+      const playerPos = this.player.getPosition();
+      this.enemyManager.spawnEnemy(playerPos.x, playerPos.y);
+    });
+
+    // Inicializar GameEffectsManager
+    this.gameEffectsManager.initialize(this.player, this.bulletManager, this.experienceManager);
+  }
+
+  update(_delta: number) {
+    if (this.isGameOver || this.isLevelingUp || this.isPausedByMenu) return;
+
+    // Manejar input del jugador
+    this.player.handleInput(this.cursors);
+
+    // Actualizar managers
+    this.updateManagers();
+  }
+
+  /**
+   * Actualiza todos los managers
+   */
+  private updateManagers(): void {
+    // Actualizar mundo procedural
+    const playerPos = this.player.getPosition();
+    this.worldManager.updateWorld(playerPos.x, playerPos.y);
+
+    // Actualizar enemigos
+    this.enemyManager.updateEnemies(playerPos.x, playerPos.y);
+
+    // Actualizar balas
+    this.bulletManager.updateBullets();
+
+    // Actualizar diamantes (atracción magnética)
+    this.experienceManager.updateDiamonds(playerPos.x, playerPos.y);
+
+    // Verificar colisiones - CRÍTICO: debe ejecutarse cada frame
+    this.collisionManager.checkAllCollisions();
+
+    // Limpiar objetos fuera de pantalla
+    this.bulletManager.cleanupOffscreenBullets();
+    this.enemyManager.cleanupOffscreenEnemies();
+    this.experienceManager.cleanupOffscreenDiamonds();
+
+    // Actualizar cámara
+    this.cameraManager.update();
+    
+    // Actualizar minimapa
+    const minimapData = this.minimapManager.update();
+    
+    // Actualizar UI
+    const uiData = this.uiManager.update();
+    
+    // Transformar datos del UIManager al formato que espera GamePage
+    const gameStats = {
+      health: uiData.health.current,
+      maxHealth: uiData.health.max,
+      score: uiData.score,
+      time: uiData.gameTime,
+      experience: uiData.experience.current,
+      maxExperience: uiData.experience.max,
+      level: uiData.level,
+      skills: uiData.skills,
+      world: {
+        playerX: playerPos.x,
+        playerY: playerPos.y,
+        activeChunks: minimapData.activeChunks.length,
+        totalChunks: minimapData.worldSize,
+        structures: 0 // TODO: obtener del WorldManager
+      },
+      minimapData: minimapData,
+      equipment: uiData.equipment
+    };
+    
+    // Emitir eventos de actualización
+    this.events.emit('updateUI', gameStats);
+  }
+
+  /**
+   * Dispara automáticamente hacia el enemigo más cercano
+   */
+  private autoShoot(): void {
+    if (this.isGameOver || this.isLevelingUp || this.isPausedByMenu) return;
+
+    const enemies = this.enemyManager.getEnemies();
+    const playerPos = this.player.getPosition();
+
+    if (enemies.length === 0) return;
+
+    const closestEnemy = this.enemyManager.getClosestEnemy(playerPos.x, playerPos.y);
+
+    if (closestEnemy) {
+      this.bulletManager.shootAtEnemy(playerPos.x, playerPos.y, closestEnemy.x, closestEnemy.y);
+    }
+  }
+
+  /**
+   * Configura los eventos del juego
+   */
+  private setupEvents(): void {
+    this.events.on('enemyKilled', (data: { score: number }) => {
+      this.score += data.score;
+      this.uiManager.addScore(data.score);
+      
+      // No re-emitir el evento para evitar bucle infinito
+      // this.events.emit('enemyKilled', data);
+    });
+
+    this.events.on('levelUp', () => {
+      this.levelUp();
+    });
+
+    this.events.on('gameOver', () => {
+      this.gameOver();
+    });
+  }
+
+  /**
+   * Carga los efectos de NFTs del usuario autenticado
+   */
+  private async loadUserNFTEffects(): Promise<void> {
+    try {
+      if (this.gameEffectsManager) {
+        console.log('🎮 Loading user NFT effects...');
+      }
+    } catch (error) {
+      console.error('❌ Error loading user NFT effects:', error);
+    }
+  }
+
+  /**
+   * Maneja la subida de nivel
+   */
+  private levelUp(): void {
+    if (this.isLevelingUp) return;
+
+    this.isLevelingUp = true;
+    this.timerManager.pauseForLevelUp();
+
+    // Crear efecto visual de subida de nivel
+    const playerPos = this.player.getPosition();
+    this.visualEffects.createLevelUpEffect(playerPos.x, playerPos.y);
+
+    // Emitir evento para mostrar modal de habilidades
+    this.events.emit('levelUpModal', {
+      availableSkills: this.getAvailableSkills(),
+      currentSkills: this.skills
+    });
+  }
+
+  /**
+   * Obtiene las habilidades disponibles para subir de nivel
+   */
+  private getAvailableSkills(): SkillOption[] {
+    const availableSkills: SkillOption[] = [];
+    
+    // Disparo Rápido
+    if (this.skills.rapidFire < 3) {
+      availableSkills.push({
+        id: 'rapidFire',
+        name: 'Disparo Rápido',
+        description: `Reduce el intervalo de disparo en ${(this.skills.rapidFire + 1) * 50}ms`,
+        icon: '⚡',
+        currentLevel: this.skills.rapidFire,
+        maxLevel: 3,
+        effect: 'fireRate'
+      });
+    }
+
+    // Campo Magnético
+    if (this.skills.magneticField < 3) {
+      availableSkills.push({
+        id: 'magneticField',
+        name: 'Campo Magnético',
+        description: `Aumenta el rango de atracción de diamantes en ${(this.skills.magneticField + 1) * 20}px`,
+        icon: '🧲',
+        currentLevel: this.skills.magneticField,
+        maxLevel: 3,
+        effect: 'magneticRange'
+      });
+    }
+
+    // Disparo Múltiple
+    if (this.skills.multiShot < 3) {
+      availableSkills.push({
+        id: 'multiShot',
+        name: 'Disparo Múltiple',
+        description: `Dispara ${(this.skills.multiShot + 1) + 1} balas simultáneamente`,
+        icon: '🎯',
+        currentLevel: this.skills.multiShot,
+        maxLevel: 3,
+        effect: 'projectileCount'
+      });
+    }
+
+    return availableSkills;
+  }
+
+  /**
+   * Selecciona una habilidad para subir de nivel
+   * @param skillId - ID de la habilidad seleccionada
+   */
+  public selectSkill(skillId: string): void {
+    if (this.skills[skillId as keyof SkillLevels] !== undefined) {
+      this.skills[skillId as keyof SkillLevels]++;
+      
+      // Actualizar efectos del juego
+      this.gameEffectsManager.updateGameSkills(this.skills);
+      
+      // Actualizar intervalo de disparo si es necesario
+      if (skillId === 'rapidFire') {
+        const newInterval = Math.max(100, 500 - (this.skills.rapidFire * 50));
+        this.timerManager.updateShootInterval(newInterval);
+      }
+      
+      // Actualizar número de balas si es necesario
+      if (skillId === 'multiShot') {
+        this.bulletManager.setBulletsPerShot(this.skills.multiShot + 1);
+      }
+      
+      console.log(`🎯 Habilidad ${skillId} mejorada a nivel ${this.skills[skillId as keyof SkillLevels]}`);
+    }
+
+    // Reanudar el juego
+    this.isLevelingUp = false;
+    this.timerManager.resumeAfterLevelUp();
+    this.scene.resume();
+  }
+
+  /**
+   * Destruye la escena y limpia recursos
+   */
+  destroy() {
+    // Destruir managers
+    this.player.destroy();
+    this.enemyManager.destroy();
+    this.bulletManager.destroy();
+    this.experienceManager.destroy();
+    this.visualEffects.destroy();
+    this.worldManager.destroy();
+    this.gameEffectsManager.destroy();
+    this.collisionManager.destroy();
+    this.cameraManager.destroy();
+    this.timerManager.destroy();
+    this.minimapManager.destroy();
+    this.uiManager.destroy();
+
+    console.log('🗑️ MainScene destruida');
+  }
+
+  /**
+   * Maneja el game over
+   */
+  private gameOver(): void {
+    if (this.isGameOver) return;
+
+    this.isGameOver = true;
+    this.timerManager.stop();
+
+    console.log('💀 Game Over - Puntaje final:', this.score);
+
+    // Emitir evento de game over
+    this.events.emit('gameOver', {
+      score: this.score,
+      gameTime: this.timerManager.getGameTime(),
+      level: this.experienceManager.getLevel()
+    });
+  }
+
+  /**
+   * Maneja la victoria del juego
+   */
+  private gameWin(): void {
+    console.log('🏆 ¡Victoria! - Puntaje final:', this.score);
+
+    // Emitir evento de victoria
+    this.events.emit('gameWin', {
+      score: this.score,
+      gameTime: this.timerManager.getGameTime(),
+      level: this.experienceManager.getLevel()
+    });
+  }
+}
