@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Sistema de Pausa</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .test-button:hover {
+            background: #45a049;
+        }
+        .test-button.danger {
+            background: #f44336;
+        }
+        .test-button.danger:hover {
+            background: #da190b;
+        }
+        .log-container {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        .log-info { color: #4CAF50; }
+        .log-warn { color: #ff9800; }
+        .log-error { color: #f44336; }
+        .log-debug { color: #2196F3; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test Sistema de Pausa - Medabot Game</h1>
+        
+        <div>
+            <h3>Controles de Prueba:</h3>
+            <button class="test-button" onclick="testPauseGame()">⏸️ Pausar Juego</button>
+            <button class="test-button" onclick="testResumeGame()">▶️ Reanudar Juego</button>
+            <button class="test-button" onclick="testLevelUp()">📈 Simular Level Up</button>
+            <button class="test-button" onclick="testSelectSkill()">🎯 Simular Selección de Habilidad</button>
+            <button class="test-button danger" onclick="clearLogs()">🗑️ Limpiar Logs</button>
+        </div>
+
+        <div>
+            <h3>Estado del Juego:</h3>
+            <div id="gameState">
+                <p>Estado: <span id="gameStatus">Desconocido</span></p>
+                <p>isPausedByMenu: <span id="pausedByMenu">Desconocido</span></p>
+                <p>isLevelingUp: <span id="levelingUp">Desconocido</span></p>
+                <p>isGameOver: <span id="gameOver">Desconocido</span></p>
+            </div>
+        </div>
+
+        <div>
+            <h3>Logs de Debug:</h3>
+            <div id="logContainer" class="log-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // Simular el sistema de pausa
+        let gameState = {
+            isPausedByMenu: false,
+            isLevelingUp: false,
+            isGameOver: false
+        };
+
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function updateGameState() {
+            document.getElementById('gameStatus').textContent = 
+                gameState.isGameOver ? 'GAME OVER' :
+                gameState.isLevelingUp ? 'LEVELING UP' :
+                gameState.isPausedByMenu ? 'PAUSADO' : 'JUGANDO';
+            
+            document.getElementById('pausedByMenu').textContent = gameState.isPausedByMenu;
+            document.getElementById('levelingUp').textContent = gameState.isLevelingUp;
+            document.getElementById('gameOver').textContent = gameState.isGameOver;
+        }
+
+        function testPauseGame() {
+            log('🎮 MainScene.pauseGame() llamado', 'debug');
+            gameState.isPausedByMenu = true;
+            log('⏸️ Timers pausados', 'info');
+            log('🎮 Juego pausado por menú - isPausedByMenu: true', 'info');
+            updateGameState();
+        }
+
+        function testResumeGame() {
+            log('🎮 MainScene.resumeGame() llamado', 'debug');
+            gameState.isPausedByMenu = false;
+            log('▶️ Timers reanudados', 'info');
+            log('🎮 Juego reanudado - isPausedByMenu: false', 'info');
+            updateGameState();
+        }
+
+        function testLevelUp() {
+            log('📈 Evento levelUp emitido', 'debug');
+            gameState.isLevelingUp = true;
+            log('📈 Timers pausados por subida de nivel', 'info');
+            log('🎮 Escena pausada durante level up', 'info');
+            updateGameState();
+        }
+
+        function testSelectSkill() {
+            log('🎯 Habilidad seleccionada', 'debug');
+            gameState.isLevelingUp = false;
+            log('📈 Timers reanudados después de subida de nivel', 'info');
+            log('🎮 Escena reanudada', 'info');
+            updateGameState();
+        }
+
+        function clearLogs() {
+            document.getElementById('logContainer').innerHTML = '';
+            log('🗑️ Logs limpiados', 'warn');
+        }
+
+        // Inicializar
+        updateGameState();
+        log('🧪 Sistema de prueba iniciado', 'info');
+        log('💡 Usa los botones para simular las acciones del juego', 'info');
+    </script>
+</body>
+</html> 

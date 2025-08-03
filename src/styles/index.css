@@ -191,7 +191,7 @@ body {
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 80px; /* Account for fixed navbar */
+  scroll-padding-top: 96px; /* Account for fixed navbar with more padding */
 }
 
 /* Enhanced smooth scrolling for all elements */

@@ -50,6 +50,9 @@ export class MinimapManager {
     const worldInfo = this.worldManager.getMinimapInfo();
     const enemyInfo = this.enemyManager.getRadarInfo(playerPos.x, playerPos.y);
 
+    // Debug: verificar que el minimapa se esté actualizando
+    console.log(`🗺️ MinimapManager: ${enemyInfo.length} enemigos detectados, chunk: ${worldInfo.playerChunk.x},${worldInfo.playerChunk.y}`);
+
     const minimapData: MinimapData = {
       playerChunk: worldInfo.playerChunk,
       worldSize: worldInfo.worldSize,

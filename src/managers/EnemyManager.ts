@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 import { Position, EnemyConfig, EnemyType } from '../types/game';
 import { WorldManager } from './WorldManager';
+import { SupplyBoxManager } from './SupplyBoxManager';
 
 /**
  * Clase que maneja toda la lógica relacionada con los enemigos
@@ -25,6 +26,7 @@ export class EnemyManager {
   private config: EnemyConfig;
   private spawnTimer: Phaser.Time.TimerEvent | null = null;
   private worldManager: WorldManager | null = null;
+  private supplyBoxManager: SupplyBoxManager | null = null;
 
   // Sistema de escalado de dificultad
   private gameTimeSeconds: number = 0;
@@ -99,6 +101,14 @@ export class EnemyManager {
    */
   public setWorldManager(worldManager: WorldManager): void {
     this.worldManager = worldManager;
+  }
+
+  /**
+   * Establece el SupplyBoxManager para crear cajas de suministros
+   * @param supplyBoxManager - Instancia del SupplyBoxManager
+   */
+  public setSupplyBoxManager(supplyBoxManager: SupplyBoxManager): void {
+    this.supplyBoxManager = supplyBoxManager;
   }
 
   /**
@@ -696,6 +706,12 @@ export class EnemyManager {
    * @param enemy - Sprite del enemigo a eliminar
    */
   removeEnemy(enemy: Phaser.GameObjects.Rectangle): void {
+    // Intentar crear caja de suministros antes de eliminar el enemigo
+    if (this.supplyBoxManager) {
+      const enemyType = enemy.getData('type');
+      this.supplyBoxManager.tryCreateSupplyBox(enemy.x, enemy.y, enemyType);
+    }
+
     // Limpiar efectos específicos del tipo de enemigo
     const enemyType = enemy.getData('type');
     if (enemyType === 'tank') {

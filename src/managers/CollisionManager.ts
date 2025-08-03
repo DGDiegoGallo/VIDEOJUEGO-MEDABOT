@@ -6,6 +6,7 @@ import { ExperienceManager } from './ExperienceManager';
 import { WorldManager } from './WorldManager';
 import { VisualEffects } from './VisualEffects';
 import { ExplosionManager } from './ExplosionManager';
+import { SupplyBoxManager } from './SupplyBoxManager';
 import { Structure, StructureType } from './StructureManager';
 
 export class CollisionManager {
@@ -17,6 +18,7 @@ export class CollisionManager {
   private worldManager: WorldManager;
   private visualEffects: VisualEffects;
   private explosionManager: ExplosionManager;
+  private supplyBoxManager: SupplyBoxManager | null = null;
 
   // Sets para evitar colisiones múltiples
   private collidingEnemies: Set<Phaser.GameObjects.Rectangle> = new Set();
@@ -36,7 +38,8 @@ export class CollisionManager {
     experienceManager: ExperienceManager,
     worldManager: WorldManager,
     visualEffects: VisualEffects,
-    explosionManager: ExplosionManager
+    explosionManager: ExplosionManager,
+    supplyBoxManager?: SupplyBoxManager
   ) {
     this.scene = scene;
     this.player = player;
@@ -46,6 +49,7 @@ export class CollisionManager {
     this.worldManager = worldManager;
     this.visualEffects = visualEffects;
     this.explosionManager = explosionManager;
+    this.supplyBoxManager = supplyBoxManager || null;
 
     this.setupPhysicsGroups();
   }
@@ -193,6 +197,9 @@ export class CollisionManager {
     // Verificar colisiones con estructuras normales (excluyendo barriles)
     this.checkBulletStructureCollisions(bullets);
     this.checkPlayerDiamondCollisions(playerPos, diamonds);
+    
+    // Verificar colisiones con cajas de suministros
+    this.checkPlayerSupplyBoxCollisions(playerPos);
   }
 
   /**
@@ -288,7 +295,8 @@ export class CollisionManager {
     this.player.createDamageEffect();
 
     if (!this.player.isAlive()) {
-      this.scene.events.emit('gameOver');
+      // No emitir evento gameOver aquí - MainScene se encarga de esto
+      console.log('💀 Jugador muerto - CollisionManager detectó muerte');
     }
   }
 
@@ -392,6 +400,32 @@ export class CollisionManager {
     if (leveledUp) {
       this.scene.events.emit('levelUp');
     }
+  }
+
+  /**
+   * Verifica colisiones entre el jugador y las cajas de suministros
+   * @param playerPos - Posición del jugador
+   */
+  private checkPlayerSupplyBoxCollisions(playerPos: { x: number; y: number }): void {
+    if (!this.supplyBoxManager) return;
+
+    const supplyBoxes = this.supplyBoxManager.getSupplyBoxes();
+    const playerRadius = 12; // Radio del jugador
+
+    supplyBoxes.forEach(supplyBox => {
+      const distance = Phaser.Math.Distance.Between(playerPos.x, playerPos.y, supplyBox.x, supplyBox.y);
+      const boxRadius = supplyBox.width / 2 || 16;
+
+      if (distance < (playerRadius + boxRadius)) {
+        // Recolectar la caja de suministros
+        const boxData = this.supplyBoxManager!.collectSupplyBox(supplyBox);
+        if (boxData) {
+          console.log('📦 Jugador recolectó caja de suministros:', boxData.materials);
+          // Emitir evento para mostrar modal SOLO cuando se recolecta
+          this.scene.events.emit('supplyBoxCollected', boxData);
+        }
+      }
+    });
   }
 
   /**

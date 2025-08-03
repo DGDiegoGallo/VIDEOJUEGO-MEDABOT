@@ -6,6 +6,7 @@ import { GameMenu } from '@/components/GameMenu';
 import { GameInstructions } from '@/components/GameInstructions';
 import { GameOverStats } from '@/components/GameOverStats';
 import { SkillSelectionModal } from '@/components/SkillSelectionModal';
+import { SupplyBoxModal } from '@/components/SupplyBoxModal';
 import { SkillOption } from '@/types/game';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { MainScene } from '@/scenes/MainScene';
@@ -83,6 +84,8 @@ export const GamePage: React.FC = () => {
   const [finalStats, setFinalStats] = useState<any>(null);
   const [showSkillModal, setShowSkillModal] = useState(false);
   const [showGameMenu, setShowGameMenu] = useState(false);
+  const [showSupplyBoxModal, setShowSupplyBoxModal] = useState(false);
+  const [supplyBoxMaterials, setSupplyBoxMaterials] = useState<any>({});
   const [currentLevel, setCurrentLevel] = useState(1);
   const [availableSkills, setAvailableSkills] = useState<SkillOption[]>([]);
   const [enemiesKilled, setEnemiesKilled] = useState(0);
@@ -123,8 +126,10 @@ export const GamePage: React.FC = () => {
   }, []);
 
   const handleGameOver = useCallback((stats: any) => {
+    console.log('🎮 GamePage: Recibido evento gameOver:', stats);
     setFinalStats(stats);
     setGameOver(true);
+    console.log('🎮 GamePage: Modal de game over activado');
   }, []);
 
   const handleEnemyKilled = useCallback(() => {
@@ -133,6 +138,12 @@ export const GamePage: React.FC = () => {
 
   const handleWorldLoading = useCallback((loading: boolean) => {
     setIsWorldLoading(loading);
+  }, []);
+
+  const handleSupplyBoxCollected = useCallback((boxData: any) => {
+    console.log('📦 GamePage: Caja de suministros recolectada:', boxData);
+    setSupplyBoxMaterials(boxData.materials);
+    setShowSupplyBoxModal(true);
   }, []);
 
   // Cargar equipamiento solo una vez cuando el usuario esté disponible
@@ -215,6 +226,7 @@ export const GamePage: React.FC = () => {
           mainScene.events.on('levelUpModal', handleLevelUp);
           mainScene.events.on('enemyKilled', handleEnemyKilled);
           mainScene.events.on('worldLoading', handleWorldLoading);
+          mainScene.events.on('supplyBoxCollected', handleSupplyBoxCollected);
         } else {
           console.error('❌ GamePage: No se pudo obtener MainScene');
         }
@@ -262,6 +274,7 @@ export const GamePage: React.FC = () => {
             mainScene.events.off('levelUp', handleLevelUp);
             mainScene.events.off('enemyKilled', handleEnemyKilled);
             mainScene.events.off('worldLoading', handleWorldLoading);
+            mainScene.events.off('supplyBoxCollected', handleSupplyBoxCollected);
           }
         } catch (error) {
           console.warn('Error cleaning up events:', error);
@@ -324,8 +337,9 @@ export const GamePage: React.FC = () => {
             restartedScene.events.on('updateUI', handleUIUpdate);
             restartedScene.events.on('gameOver', handleGameOver);
             restartedScene.events.on('levelUpModal', handleLevelUp);
-            restartedScene.events.on('enemyKilled', handleEnemyKilled);
-            restartedScene.events.on('worldLoading', handleWorldLoading);
+                      restartedScene.events.on('enemyKilled', handleEnemyKilled);
+          restartedScene.events.on('worldLoading', handleWorldLoading);
+          restartedScene.events.on('supplyBoxCollected', handleSupplyBoxCollected);
           }
         }, 100);
       }
@@ -336,6 +350,8 @@ export const GamePage: React.FC = () => {
     setFinalStats(null);
     setShowSkillModal(false);
     setShowGameMenu(false);
+    setShowSupplyBoxModal(false);
+    setSupplyBoxMaterials({});
     setCurrentLevel(1);
     setAvailableSkills([]);
     setEnemiesKilled(0);
@@ -353,21 +369,28 @@ export const GamePage: React.FC = () => {
   };
 
   const handleMainMenu = () => {
-    navigate('/');
+    navigate('/lobby');
   };
 
   const handleMenuToggle = useCallback(() => {
+    console.log('🎮 handleMenuToggle llamado, showGameMenu:', showGameMenu);
     if (gameRef.current) {
       const mainScene = gameRef.current.scene.getScene('MainScene') as MainScene;
       if (mainScene) {
         if (!showGameMenu) {
           // Abrir menú - pausar juego
+          console.log('🎮 Pausando juego...');
           mainScene.pauseGame();
         } else {
           // Cerrar menú - reanudar juego
+          console.log('🎮 Reanudando juego...');
           mainScene.resumeGame();
         }
+      } else {
+        console.error('❌ No se pudo obtener MainScene');
       }
+    } else {
+      console.error('❌ gameRef.current es null');
     }
     setShowGameMenu(prev => !prev);
   }, [showGameMenu]);
@@ -487,6 +510,13 @@ export const GamePage: React.FC = () => {
           onMainMenu={handleMainMenu}
         />
       )}
+
+      {/* Supply Box Modal */}
+      <SupplyBoxModal
+        isOpen={showSupplyBoxModal}
+        materials={supplyBoxMaterials}
+        onClose={() => setShowSupplyBoxModal(false)}
+      />
     </div>
   );
 };

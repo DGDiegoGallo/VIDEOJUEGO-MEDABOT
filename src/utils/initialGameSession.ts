@@ -25,22 +25,36 @@ export function createInitialGameSessionData(
       duration_seconds: 0,
       started_at: null,
       ended_at: null,
-      game_state: 'not_started'
+      game_state: 'not_started',
+      supply_boxes_total: 0
     },
     materials: {
-      iron: 0,
       steel: 0,
-      energy_crystals: 0
+      energy_cells: 0,
+      medicine: 0,
+      food: 0
     },
-    guns: [],
+    guns: [
+      {
+        id: "pistol_default",
+        name: "Pistola Básica",
+        damage: 25,
+        fire_rate: 1.0,
+        ammo_capacity: 12,
+        type: "pistol",
+        rarity: "common",
+        is_default: true
+      }
+    ],
     daily_quests_completed: {
       date: new Date().toISOString().split('T')[0],
       quests: []
     },
     equipped_items: {
       nfts: [], // NFT no equipado inicialmente
-      weapons: [],
-      active_effects: []
+      weapons: ["pistol_default"], // Pistola equipada por defecto
+      active_effects: [],
+      bandages: 1 // El usuario empieza con 1 vendaje
     },
     // Relación con el NFT creado (pero no equipado)
     user_nfts: [nftId]

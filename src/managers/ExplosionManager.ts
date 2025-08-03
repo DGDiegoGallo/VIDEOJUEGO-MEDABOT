@@ -279,7 +279,8 @@ export class ExplosionManager {
           console.log(`💥 Jugador recibe ${actualDamage} de daño por explosión`);
 
           if (!this.player.isAlive()) {
-            this.scene.events.emit('gameOver');
+            // No emitir evento gameOver aquí - MainScene se encarga de esto
+            console.log('💀 Jugador muerto por explosión - ExplosionManager detectó muerte');
           }
         }
       }
@@ -517,21 +518,69 @@ export class ExplosionManager {
   }
 
   /**
-   * Destruye estructuras dentro del radio de explosión usando StructureManager
+   * Destruye estructuras en un radio específico, manejando barriles correctamente
    */
   private destroyStructuresInRadius(x: number, y: number, radius: number): void {
     const structureManager = this.worldManager.getStructureManager();
-    const structuresDestroyed = structureManager.damageStructuresInArea(x, y, radius, 999); // Daño masivo para destruir
-
-    structuresDestroyed.forEach(structure => {
-      // Efecto visual de destrucción
-      this.visualEffects.createExplosionEffect(structure.x, structure.y);
-      console.log(`💥 Estructura destruida en (${structure.x}, ${structure.y})`);
+    
+    // Obtener todas las estructuras en el área
+    const allStructuresInArea = structureManager.getStructuresInArea(x, y, radius);
+    
+    // Separar barriles de otras estructuras
+    const barrelsInArea = allStructuresInArea.filter(structure => 
+      structure.getType() === StructureType.EXPLOSIVE_BARREL && 
+      structure.active && 
+      structure.health > 0
+    );
+    
+    const otherStructures = allStructuresInArea.filter(structure => 
+      structure.getType() !== StructureType.EXPLOSIVE_BARREL && 
+      structure.active && 
+      structure.health > 0
+    );
+    
+    console.log(`🔍 DEBUG: Estructuras en radio ${radius}px - Barriles: ${barrelsInArea.length}, Otras: ${otherStructures.length}`);
+    
+    // Destruir estructuras que NO son barriles
+    otherStructures.forEach(structure => {
+      const wasDestroyed = structure.takeDamage(999);
+      if (wasDestroyed) {
+        this.visualEffects.createExplosionEffect(structure.x, structure.y);
+        console.log(`💥 Estructura no-barril destruida en (${Math.round(structure.x)}, ${Math.round(structure.y)})`);
+      }
     });
-
-    if (structuresDestroyed.length > 0) {
-      console.log(`💥 Explosión destruyó ${structuresDestroyed.length} estructuras`);
-      this.visualEffects.showScoreText(x, y, `${structuresDestroyed.length} estructuras`, '#ff8800');
+    
+    // Manejar barriles con reacción en cadena
+    if (barrelsInArea.length > 0) {
+      console.log(`🔥 ${barrelsInArea.length} barriles detectados para reacción en cadena`);
+      
+      barrelsInArea.forEach((barrel, index) => {
+        const delay = index * 60 + Math.random() * 30; // 60-90ms entre daños
+        
+        this.scene.time.delayedCall(delay, () => {
+          if (barrel.active && barrel.scene && barrel.health > 0) {
+            console.log(`🔥 Aplicando daño por explosión a barril en (${Math.round(barrel.x)}, ${Math.round(barrel.y)}) - HP: ${barrel.health}/${barrel.maxHealth}`);
+            
+            // Usar el sistema de daño que maneja la explosión automáticamente
+            const wasDestroyed = this.damageBarrel(barrel, 1);
+            
+            if (wasDestroyed) {
+              console.log(`💥 Barril destruido por reacción en cadena - nueva explosión iniciada`);
+            } else {
+              console.log(`🔥 Barril dañado pero no destruido - HP restante: ${barrel.health}`);
+            }
+          }
+        });
+      });
+      
+      // Efecto visual de propagación de la reacción en cadena
+      this.createChainReactionEffect(x, y, barrelsInArea);
+    }
+    
+    const totalDestroyed = otherStructures.length;
+    if (totalDestroyed > 0) {
+      console.log(`💥 Explosión destruyó ${totalDestroyed} estructuras no-barriles`);
+      this.visualEffects.showScoreText(x, y, `${totalDestroyed} estructuras`, '#ff8800');
     }
   }
 
@@ -540,13 +589,28 @@ export class ExplosionManager {
    */
   private triggerChainReaction(x: number, y: number, radius: number): void {
     const structureManager = this.worldManager.getStructureManager();
-    const barrelsInArea = structureManager.getStructuresInArea(x, y, radius)
-      .filter(structure => 
-        structure.getType() === StructureType.EXPLOSIVE_BARREL && 
-        structure.active && 
-        structure.scene && 
-        structure.health > 0
-      );
+    
+    // Debug: obtener todas las estructuras en el área
+    const allStructuresInArea = structureManager.getStructuresInArea(x, y, radius);
+    console.log(`🔍 DEBUG: Todas las estructuras en radio ${radius}px desde (${Math.round(x)}, ${Math.round(y)}):`, allStructuresInArea.length);
+    
+    // Debug: mostrar tipos de estructuras encontradas
+    allStructuresInArea.forEach((structure, index) => {
+      console.log(`🔍 DEBUG: Estructura ${index + 1}: tipo=${structure.getType()}, pos=(${Math.round(structure.x)}, ${Math.round(structure.y)}), health=${structure.health}, active=${structure.active}`);
+    });
+    
+    // Obtener solo barriles explosivos
+    const barrelsInArea = allStructuresInArea.filter(structure => {
+      const isBarrel = structure.getType() === StructureType.EXPLOSIVE_BARREL;
+      const isActive = structure.active && structure.scene;
+      const hasHealth = structure.health > 0;
+      
+      console.log(`🔍 DEBUG: Barril candidato: tipo=${structure.getType()}, esBarril=${isBarrel}, activo=${isActive}, salud=${structure.health}, cumpleFiltros=${isBarrel && isActive && hasHealth}`);
+      
+      return isBarrel && isActive && hasHealth;
+    });
+
+    console.log(`🔍 DEBUG: Barriles filtrados encontrados: ${barrelsInArea.length}`);
 
     if (barrelsInArea.length > 0) {
       console.log(`🔥 REACCIÓN EN CADENA: ${barrelsInArea.length} barriles detectados en radio ${radius}px desde (${Math.round(x)}, ${Math.round(y)})`);
@@ -581,6 +645,15 @@ export class ExplosionManager {
       this.createChainReactionEffect(x, y, barrelsInArea);
     } else {
       console.log(`❌ Sin barriles en radio de explosión de ${radius}px`);
+      
+      // Debug adicional: verificar si hay barriles en el mundo
+      const allBarrels = structureManager.getStructuresByType(StructureType.EXPLOSIVE_BARREL);
+      console.log(`🔍 DEBUG: Total de barriles en el mundo: ${allBarrels.length}`);
+      
+      allBarrels.forEach((barrel, index) => {
+        const distance = Phaser.Math.Distance.Between(x, y, barrel.x, barrel.y);
+        console.log(`🔍 DEBUG: Barril ${index + 1}: pos=(${Math.round(barrel.x)}, ${Math.round(barrel.y)}), distancia=${Math.round(distance)}, radio=${radius}, enRadio=${distance <= radius}, health=${barrel.health}, active=${barrel.active}`);
+      });
     }
   }
 
@@ -775,7 +848,7 @@ export class ExplosionManager {
       damagePlayer: damagePlayer,
       damageEnemies: true,
       destroyStructures: true,
-      source: 'custom'
+      source: 'other'
     });
   }
 
@@ -793,7 +866,7 @@ export class ExplosionManager {
       damagePlayer: false,
       damageEnemies: true,
       destroyStructures: true,
-      source: 'test'
+      source: 'other'
     });
   }
 

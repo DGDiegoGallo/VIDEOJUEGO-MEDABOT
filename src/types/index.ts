@@ -39,3 +39,6 @@ export interface EventEmitter {
   off<K extends keyof GameEvents>(event: K, callback: EventCallback<GameEvents[K]>): void;
   emit<K extends keyof GameEvents>(event: K, data: GameEvents[K]): void;
 }
+
+// Re-exportar tipos de cajas de suministros
+export * from './supplyBox';

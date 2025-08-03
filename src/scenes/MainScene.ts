@@ -12,7 +12,9 @@ import { TimerManager } from '../managers/TimerManager';
 import { MinimapManager } from '../managers/MinimapManager';
 import { UIManager } from '../managers/UIManager';
 import { ExplosionManager } from '../managers/ExplosionManager';
+import { GameStateManager } from '../managers/GameStateManager';
 import { StructureType } from '../managers/StructureManager';
+import { SupplyBoxManager } from '../managers/SupplyBoxManager';
 import { SkillLevels, SkillOption, EnemyType } from '../types/game';
 
 export class MainScene extends Scene {
@@ -30,6 +32,8 @@ export class MainScene extends Scene {
   private minimapManager!: MinimapManager;
   private uiManager!: UIManager;
   private explosionManager!: ExplosionManager;
+  private gameStateManager!: GameStateManager;
+  private supplyBoxManager!: SupplyBoxManager;
 
   // Input
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -55,18 +59,28 @@ export class MainScene extends Scene {
    * Pausa el juego por el menú
    */
   public pauseGame(): void {
+    console.log('🎮 MainScene.pauseGame() llamado');
     this.isPausedByMenu = true;
     this.timerManager.pause();
-    console.log('🎮 Juego pausado por menú');
+    
+    // Pausar la escena de Phaser completamente
+    this.scene.pause();
+    
+    console.log('🎮 Juego pausado por menú - isPausedByMenu:', this.isPausedByMenu);
   }
 
   /**
    * Reanuda el juego después del menú
    */
   public resumeGame(): void {
+    console.log('🎮 MainScene.resumeGame() llamado');
     this.isPausedByMenu = false;
     this.timerManager.resume();
-    console.log('🎮 Juego reanudado');
+    
+    // Reanudar la escena de Phaser
+    this.scene.resume();
+    
+    console.log('🎮 Juego reanudado - isPausedByMenu:', this.isPausedByMenu);
   }
 
   create() {
@@ -138,6 +152,9 @@ export class MainScene extends Scene {
       this.visualEffects
     );
 
+    // Inicializar SupplyBoxManager
+    this.supplyBoxManager = new SupplyBoxManager(this);
+
     // Inicializar CollisionManager - CRÍTICO: debe ir después de todos los managers
     this.collisionManager = new CollisionManager(
       this,
@@ -147,8 +164,21 @@ export class MainScene extends Scene {
       this.experienceManager,
       this.worldManager,
       this.visualEffects,
-      this.explosionManager
+      this.explosionManager,
+      this.supplyBoxManager
     );
+
+    // Inicializar GameStateManager - debe ir después de TimerManager y ExperienceManager
+    this.gameStateManager = new GameStateManager(
+      this,
+      this.player,
+      this.timerManager,
+      this.experienceManager,
+      this.uiManager
+    );
+
+    // Conectar EnemyManager con SupplyBoxManager
+    this.enemyManager.setSupplyBoxManager(this.supplyBoxManager);
   }
 
   /**
@@ -193,13 +223,8 @@ export class MainScene extends Scene {
       },
       onShoot: () => {
         this.autoShoot();
-      },
-      onGameOver: () => {
-        this.gameOver();
-      },
-      onGameWin: () => {
-        this.gameWin();
       }
+      // GameStateManager se encarga de onGameOver y onGameWin
     });
     this.timerManager.createGameTimer();
     this.timerManager.createShootingTimer();
@@ -215,7 +240,7 @@ export class MainScene extends Scene {
 
     // Generar barriles explosivos iniciales usando StructureManager
     const playerPos = this.player.getPosition();
-    this.generateExplosiveBarrels(playerPos.x, playerPos.y, 5);
+    this.generateExplosiveBarrels(playerPos.x, playerPos.y, 8); // Aumentado de 5 a 8 barriles
 
     // Generar tanques de prueba en la primera zona
     console.log('🛡️ Generando tanques de prueba...');
@@ -231,7 +256,23 @@ export class MainScene extends Scene {
   }
 
   update(_delta: number) {
-    if (this.isGameOver || this.isLevelingUp || this.isPausedByMenu) return;
+    // Verificar estado del juego usando GameStateManager
+    if (this.gameStateManager.isGameOverState() || this.isLevelingUp || this.isPausedByMenu) {
+      // Debug: mostrar por qué se está pausando (solo ocasionalmente para no spam)
+      if (Math.random() < 0.001) { // Solo 0.1% de las veces
+        console.log('🎮 Update pausado:', {
+          isGameOver: this.gameStateManager.isGameOverState(),
+          isGameWon: this.gameStateManager.isGameWonState(),
+          isLevelingUp: this.isLevelingUp,
+          isPausedByMenu: this.isPausedByMenu
+        });
+      }
+      return;
+    }
+
+    // Verificar condiciones de game over/win
+    this.gameStateManager.checkPlayerDeath();
+    this.gameStateManager.checkGameWin();
 
     // Manejar input del jugador
     this.player.handleInput(this.cursors);
@@ -259,6 +300,7 @@ export class MainScene extends Scene {
     this.cameraManager.update();
     this.enemyManager.updateEnemies(playerPos.x, playerPos.y);
     this.experienceManager.updateDiamonds(playerPos.x, playerPos.y);
+    this.supplyBoxManager.cleanupOffscreenBoxes(playerPos.x, playerPos.y);
 
     // Incrementar contador
     this.updateCounter++;
@@ -322,7 +364,7 @@ export class MainScene extends Scene {
    * Dispara automáticamente hacia el enemigo más cercano
    */
   private autoShoot(): void {
-    if (this.isGameOver || this.isLevelingUp || this.isPausedByMenu) return;
+    if (this.gameStateManager.isGameOverState() || this.isLevelingUp || this.isPausedByMenu) return;
 
     const enemies = this.enemyManager.getEnemies();
     const playerPos = this.player.getPosition();
@@ -352,9 +394,7 @@ export class MainScene extends Scene {
       this.levelUp();
     });
 
-    this.events.on('gameOver', () => {
-      this.gameOver();
-    });
+    // GameStateManager se encarga del evento gameOver
 
     // Evento para manejar balas que golpean barriles
     this.events.on('bulletHitBarrel', (bullet: Phaser.GameObjects.Rectangle) => {
@@ -374,8 +414,8 @@ export class MainScene extends Scene {
       const freePosition = this.worldManager.findFreePositionForSpawn(
         centerX, 
         centerY, 
-        80,  // Radio mínimo de separación
-        300, // Radio máximo de búsqueda
+        40,  // Radio mínimo de separación (reducido de 80 a 40)
+        150, // Radio máximo de búsqueda (reducido de 300 a 150)
         15,  // Intentos máximos
         true // Incluir ríos en verificación
       );
@@ -451,6 +491,9 @@ export class MainScene extends Scene {
 
     this.isLevelingUp = true;
     this.timerManager.pauseForLevelUp();
+    
+    // Pausar la escena de Phaser durante level up
+    this.scene.pause();
 
     // Crear efecto visual de subida de nivel
     const playerPos = this.player.getPosition();
@@ -556,40 +599,9 @@ export class MainScene extends Scene {
     this.minimapManager.destroy();
     this.uiManager.destroy();
     this.explosionManager.destroy();
+    this.gameStateManager.destroy();
+    this.supplyBoxManager.destroy();
 
     console.log('🗑️ MainScene destruida');
-  }
-
-  /**
-   * Maneja el game over
-   */
-  private gameOver(): void {
-    if (this.isGameOver) return;
-
-    this.isGameOver = true;
-    this.timerManager.stop();
-
-    console.log('💀 Game Over - Puntaje final:', this.score);
-
-    // Emitir evento de game over
-    this.events.emit('gameOver', {
-      score: this.score,
-      gameTime: this.timerManager.getGameTime(),
-      level: this.experienceManager.getLevel()
-    });
-  }
-
-  /**
-   * Maneja la victoria del juego
-   */
-  private gameWin(): void {
-    console.log('🏆 ¡Victoria! - Puntaje final:', this.score);
-
-    // Emitir evento de victoria
-    this.events.emit('gameWin', {
-      score: this.score,
-      gameTime: this.timerManager.getGameTime(),
-      level: this.experienceManager.getLevel()
-    });
   }
 }

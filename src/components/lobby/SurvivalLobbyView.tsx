@@ -14,12 +14,15 @@ import {
   FaAward,
   FaExclamationTriangle,
   FaCheckCircle,
-  FaClock
+  FaClock,
+  FaHammer
 } from 'react-icons/fa';
 import { useAuthStore } from '@/stores/authStore';
 import { useGameSessionData } from '@/hooks/useGameSessionData';
 import { InitialSessionCard } from '@/components/game-session/InitialSessionCard';
 import { MaterialsDisplay } from '@/components/lobby/MaterialsDisplay';
+import { EquipmentDisplay } from '@/components/lobby/EquipmentDisplay';
+import { CraftingTable } from '@/components/lobby/CraftingTable';
 import type { GameSession } from '@/types/gameSession';
 
 export const SurvivalLobbyView: React.FC = () => {
@@ -28,6 +31,7 @@ export const SurvivalLobbyView: React.FC = () => {
   const [initialSession, setInitialSession] = useState<GameSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showSessionDetails, setShowSessionDetails] = useState(false);
+  const [showCraftingModal, setShowCraftingModal] = useState(false);
 
   // Obtener sesiones del usuario
   const { sessions, loading: sessionsLoading, refreshData } = useGameSessionData(user ? parseInt(user.id) : 0);
@@ -84,7 +88,7 @@ export const SurvivalLobbyView: React.FC = () => {
   }
 
   return (
-    <div className="w-full h-full text-white bg-black/40 rounded-lg p-6 overflow-y-auto">
+    <div className="w-full h-full text-white bg-black/40 rounded-lg p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
       {/* Header Principal */}
       <div className="text-center mb-8">
         <div className="flex items-center justify-center mb-4">
@@ -189,10 +193,30 @@ export const SurvivalLobbyView: React.FC = () => {
 
           {/* Tarjeta de Arsenal */}
           <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 border border-gray-700 rounded-xl p-6 backdrop-blur-sm">
-            <h3 className="text-2xl font-bold text-white flex items-center mb-4">
-              <FaShieldAlt className="mr-3 text-blue-400" />
-              Arsenal Disponible
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-2xl font-bold text-white flex items-center">
+                <FaShieldAlt className="mr-3 text-blue-400" />
+                Arsenal Disponible
+              </h3>
+              <button
+                onClick={() => setShowCraftingModal(true)}
+                className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center space-x-2"
+              >
+                <FaHammer />
+                <span>Mesa de Creación</span>
+              </button>
+            </div>
+            
+            {/* Equipment Display */}
+            {initialSession?.equipped_items && (
+              <div className="mb-6">
+                <EquipmentDisplay 
+                  equipped_items={initialSession.equipped_items} 
+                  showTitle={false}
+                  compact={true}
+                />
+              </div>
+            )}
             
             <div className="space-y-4">
               {/* NFTs */}
@@ -243,9 +267,18 @@ export const SurvivalLobbyView: React.FC = () => {
                 </div>
                 <div className="bg-gray-800/50 rounded-lg p-3">
                   {initialSession?.guns?.length ? (
-                    <div className="flex items-center text-green-400">
-                      <FaCheckCircle className="mr-2" />
-                      <span>Arsenal cargado</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center text-green-400">
+                        <FaCheckCircle className="mr-2" />
+                        <span>Arsenal cargado</span>
+                      </div>
+                      {/* Mostrar armas disponibles */}
+                      {initialSession.guns.map((gun: any, index: number) => (
+                        <div key={index} className="ml-4 p-2 bg-gray-700/50 rounded text-sm">
+                          <div className="text-blue-400 font-medium">{gun.name}</div>
+                          <div className="text-gray-400 text-xs">Daño: {gun.damage} | Cadencia: {gun.fire_rate}</div>
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <div className="flex items-center text-yellow-400">
@@ -356,6 +389,38 @@ export const SurvivalLobbyView: React.FC = () => {
           La horda de zombies se acerca. Prepárate para el combate final.
         </p>
       </div>
+
+      {/* Modal de Mesa de Creación */}
+      {showCraftingModal && initialSession?.materials && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-3xl font-bold text-white flex items-center">
+                  <FaHammer className="mr-3 text-orange-400" />
+                  Mesa de Creación
+                </h2>
+                <button
+                  onClick={() => setShowCraftingModal(false)}
+                  className="text-gray-400 hover:text-white text-2xl font-bold transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <CraftingTable 
+                materials={initialSession.materials}
+                onCraft={(recipeId) => {
+                  console.log('🎮 Crafting recipe:', recipeId);
+                  // Aquí se implementará la lógica de crafting
+                  // Por ahora solo es un log
+                  // setShowCraftingModal(false); // Cerrar modal después de craft
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }; 

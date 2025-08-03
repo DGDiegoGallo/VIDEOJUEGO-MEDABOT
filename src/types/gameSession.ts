@@ -18,6 +18,7 @@ export interface GameSession {
     shots_fired: number;
     shots_hit: number;
     accuracy_percentage: number;
+    supply_boxes_total: number;
     resources_collected?: {
       minerals: number;
       energy_orbs: number;
@@ -32,9 +33,10 @@ export interface GameSession {
     game_state?: string;
   };
   materials: {
-    iron: number;
     steel: number;
-    energy_crystals: number;
+    energy_cells: number;
+    medicine: number;
+    food: number;
   };
   guns: Array<{
     id: string;
@@ -57,6 +59,7 @@ export interface GameSession {
     nfts: any[];
     weapons: string[];
     active_effects: any[];
+    bandages: number;
   };
   // Relación con NFTs de Strapi
   user_nfts?: any[];

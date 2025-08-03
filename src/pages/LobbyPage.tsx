@@ -15,10 +15,11 @@ export const LobbyPage: React.FC = () => {
   const { user } = useAuthStore();
   const [section, setSection] = useState<LobbySection>('main');
   const [currentMaterials, setCurrentMaterials] = useState<{
-    iron: number;
     steel: number;
-    energy_crystals: number;
-  } | null>(null);
+    energy_cells: number;
+    medicine: number;
+    food: number;
+  } | undefined>(undefined);
 
   // Obtener sesiones del usuario para los materiales
   const { sessions } = useGameSessionData(user ? parseInt(user.id) : 0);
@@ -27,7 +28,14 @@ export const LobbyPage: React.FC = () => {
     if (sessions.length > 0) {
       const initialSession = sessions.find(s => s.session_name?.includes('Sesión Inicial')) || sessions[0];
       if (initialSession?.materials) {
-        setCurrentMaterials(initialSession.materials);
+        // Mapear los materiales existentes a la nueva estructura
+        const materials = initialSession.materials;
+        setCurrentMaterials({
+          steel: materials.steel || 0,
+          energy_cells: materials.energy_cells || 0,
+          medicine: materials.medicine || 0,
+          food: materials.food || 0
+        });
       }
     }
   }, [sessions]);
@@ -63,7 +71,7 @@ export const LobbyPage: React.FC = () => {
       />
 
       {/* Content */}
-      <div className="relative z-10 flex items-center justify-center w-full h-full pt-16 px-4">
+      <div className="relative z-10 flex items-center justify-center w-full h-full pt-24 px-4">
         {renderSection()}
       </div>
     </div>
