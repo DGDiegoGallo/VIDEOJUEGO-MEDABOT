@@ -75,6 +75,15 @@ export class MainScene extends Scene {
 
     // Configurar input
     this.cursors = this.input.keyboard!.createCursorKeys();
+    
+    // Tecla especial para crear explosiones de prueba (solo para testing)
+    this.input.keyboard!.on('keydown-SPACE', () => {
+      if (!this.isGameOver && !this.isLevelingUp && !this.isPausedByMenu) {
+        const playerPos = this.player.getPosition();
+        console.log('🧪 Creando explosión de prueba con ESPACIO');
+        this.explosionManager.createTestExplosion(playerPos.x + 50, playerPos.y);
+      }
+    });
 
     // Configurar eventos
     this.setupEvents();

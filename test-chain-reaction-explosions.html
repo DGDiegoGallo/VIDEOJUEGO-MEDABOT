@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: Chain Reaction Explosions</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #2c3e50;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            border: 2px solid #34495e;
+            margin: 20px auto;
+            display: block;
+        }
+        .info {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .controls {
+            background: #34495e;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .status {
+            background: #27ae60;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .buttons {
+            background: #8e44ad;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .buttons button {
+            background: #9b59b6;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .buttons button:hover {
+            background: #8e44ad;
+        }
+        .log {
+            background: #2c3e50;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            height: 120px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 11px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>🧪 Test: Chain Reaction Explosions</h1>
+        <p>Prueba del sistema de explosiones en cadena mejorado</p>
+        
+        <div class="controls">
+            <h3>Elementos:</h3>
+            <p><strong>🔵 Azul:</strong> Jugador</p>
+            <p><strong>🛢️ Marrón:</strong> Barriles explosivos</p>
+            <p><strong>🟡 Amarillo:</strong> Balas automáticas</p>
+            <p><strong>💥 Rojo:</strong> Explosiones</p>
+        </div>
+
+        <div class="buttons">
+            <h3>Explosiones de Prueba:</h3>
+            <button onclick="createGrenadeExplosion()">🎯 Granada</button>
+            <button onclick="createMissileExplosion()">🚀 Misil</button>
+            <button onclick="createCustomExplosion()">💥 Explosión Grande</button>
+            <button onclick="resetBarrels()">🔄 Resetear Barriles</button>
+        </div>
+
+        <div class="status">
+            <p><strong>Barriles:</strong> <span id="barrels">0</span> | <strong>Explosiones:</strong> <span id="explosions">0</span> | <strong>Cadenas:</strong> <span id="chains">0</span></p>
+        </div>
+
+        <div class="log" id="log">
+            <div>🔍 Log de explosiones en cadena:</div>
+        </div>
+    </div>
+
+    <div id="game-container"></div>
+
+    <script>
+        // Variables globales
+        let player, cursors, scene;
+        let bullets = [];
+        let barrels = [];
+        let explosionCount = 0;
+        let chainReactionCount = 0;
+        let shootTimer = 0;
+
+        // Configuración del juego
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game-container',
+            backgroundColor: '#1a252f',
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+
+        function preload() {
+            // No necesitamos cargar assets externos
+        }
+
+        function create() {
+            scene = this;
+            
+            // Crear jugador
+            player = this.add.rectangle(400, 300, 20, 20, 0x3498db);
+            this.physics.add.existing(player);
+            player.body.setCollideWorldBounds(true);
+
+            // Crear controles
+            cursors = this.input.keyboard.createCursorKeys();
+
+            // Crear configuración inicial de barriles
+            createBarrelFormations.call(this);
+
+            // Actualizar UI
+            updateStatus();
+            logEvent('🎮 Sistema de explosiones en cadena iniciado');
+            logEvent('💡 Haz clic en los botones para crear explosiones que activen barriles');
+        }
+
+        function createBarrelFormations() {
+            // Limpiar barriles existentes
+            barrels.forEach(barrel => {
+                if (barrel.additionalElements) {
+                    barrel.additionalElements.forEach(element => element.destroy());
+                }
+                barrel.destroy();
+            });
+            barrels = [];
+
+            // Formación 1: Línea de barriles (reacción en cadena lineal)
+            for (let i = 0; i < 5; i++) {
+                const barrel = createBarrel.call(scene, 150 + i * 60, 150, `Línea-${i + 1}`);
+                barrels.push(barrel);
+            }
+
+            // Formación 2: Círculo de barriles (reacción en cadena circular)
+            const centerX = 600;
+            const centerY = 200;
+            const radius = 80;
+            for (let i = 0; i < 6; i++) {
+                const angle = (i / 6) * Math.PI * 2;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                const barrel = createBarrel.call(scene, x, y, `Círculo-${i + 1}`);
+                barrels.push(barrel);
+            }
+
+            // Formación 3: Grupo compacto (explosión masiva)
+            const positions = [
+                { x: 200, y: 450 }, { x: 240, y: 430 }, { x: 180, y: 470 },
+                { x: 220, y: 480 }, { x: 160, y: 440 }
+            ];
+            positions.forEach((pos, i) => {
+                const barrel = createBarrel.call(scene, pos.x, pos.y, `Grupo-${i + 1}`);
+                barrels.push(barrel);
+            });
+
+            // Formación 4: Barriles dispersos (cadenas múltiples)
+            const dispersePositions = [
+                { x: 500, y: 400 }, { x: 580, y: 420 }, { x: 520, y: 480 },
+                { x: 600, y: 460 }, { x: 550, y: 380 }
+            ];
+            dispersePositions.forEach((pos, i) => {
+                const barrel = createBarrel.call(scene, pos.x, pos.y, `Disperso-${i + 1}`);
+                barrels.push(barrel);
+            });
+
+            updateStatus();
+            logEvent(`🏗️ Creadas 4 formaciones con ${barrels.length} barriles total`);
+        }
+
+        function createBarrel(x, y, label) {
+            // Crear barril visual mejorado
+            const barrel = this.add.rectangle(x, y, 24, 24, 0x8b4513);
+            barrel.setStrokeStyle(3, 0x654321);
+            
+            // Agregar física
+            this.physics.add.existing(barrel, true);
+            
+            // Propiedades del barril
+            barrel.health = 1;
+            barrel.maxHealth = 1;
+            barrel.isDestructible = true;
+            barrel.type = 'explosive_barrel';
+            barrel.label = label;
+
+            // Elementos visuales adicionales
+            const topRing = this.add.rectangle(x, y - 7, 26, 3, 0x654321);
+            const bottomRing = this.add.rectangle(x, y + 7, 26, 3, 0x654321);
+            
+            // Símbolo de peligro
+            const warning = this.add.triangle(x, y - 2, 0, -8, -7, 6, 7, 6, 0xffff00);
+            warning.setStrokeStyle(1, 0xff8800);
+            
+            // Texto TNT
+            const tntText = this.add.text(x, y + 4, 'TNT', {
+                fontSize: '8px',
+                color: '#ff0000',
+                fontStyle: 'bold'
+            }).setOrigin(0.5);
+
+            // Efecto de parpadeo
+            this.tweens.add({
+                targets: [warning, tntText],
+                alpha: 0.6,
+                duration: 1000,
+                yoyo: true,
+                repeat: -1
+            });
+
+            barrel.additionalElements = [topRing, bottomRing, warning, tntText];
+            return barrel;
+        }
+
+        function update(time, delta) {
+            // Mover jugador
+            if (cursors.left.isDown) {
+                player.body.setVelocityX(-200);
+            } else if (cursors.right.isDown) {
+                player.body.setVelocityX(200);
+            } else {
+                player.body.setVelocityX(0);
+            }
+
+            if (cursors.up.isDown) {
+                player.body.setVelocityY(-200);
+            } else if (cursors.down.isDown) {
+                player.body.setVelocityY(200);
+            } else {
+                player.body.setVelocityY(0);
+            }
+
+            // Disparo automático hacia barriles
+            shootTimer += delta;
+            if (shootTimer >= 500) {
+                shootTimer = 0;
+                autoShoot.call(this);
+            }
+
+            // Actualizar balas
+            updateBullets.call(this);
+
+            // Verificar colisiones
+            checkCollisions.call(this);
+        }
+
+        function autoShoot() {
+            if (barrels.length === 0) return;
+
+            // Encontrar barril más cercano
+            let closestBarrel = null;
+            let closestDistance = Infinity;
+
+            barrels.forEach(barrel => {
+                const distance = Phaser.Math.Distance.Between(
+                    player.x, player.y, barrel.x, barrel.y
+                );
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestBarrel = barrel;
+                }
+            });
+
+            if (closestBarrel) {
+                shootBullet.call(this, player.x, player.y, closestBarrel.x, closestBarrel.y);
+            }
+        }
+
+        function shootBullet(fromX, fromY, toX, toY) {
+            const bullet = this.add.rectangle(fromX, fromY, 6, 6, 0xf1c40f);
+            this.physics.add.existing(bullet);
+
+            const angle = Phaser.Math.Angle.Between(fromX, fromY, toX, toY);
+            const speed = 400;
+
+            bullet.body.setVelocity(
+                Math.cos(angle) * speed,
+                Math.sin(angle) * speed
+            );
+
+            bullets.push(bullet);
+        }
+
+        function updateBullets() {
+            bullets = bullets.filter(bullet => {
+                if (bullet.x < -50 || bullet.x > 850 || bullet.y < -50 || bullet.y > 650) {
+                    bullet.destroy();
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        function checkCollisions() {
+            bullets.forEach((bullet, bulletIndex) => {
+                barrels.forEach((barrel, barrelIndex) => {
+                    if (Phaser.Math.Distance.Between(bullet.x, bullet.y, barrel.x, barrel.y) < 20) {
+                        logEvent(`💥 Bala golpea ${barrel.label} - iniciando explosión`);
+                        
+                        // Remover bala
+                        bullet.destroy();
+                        bullets.splice(bulletIndex, 1);
+
+                        // Explotar barril
+                        explodeBarrel.call(this, barrel, barrelIndex);
+                    }
+                });
+            });
+        }
+
+        function explodeBarrel(barrel, barrelIndex) {
+            const explosionX = barrel.x;
+            const explosionY = barrel.y;
+
+            logEvent(`💥 EXPLOSIÓN: ${barrel.label} explota en (${Math.round(explosionX)}, ${Math.round(explosionY)})`);
+
+            // Remover barril
+            if (barrel.additionalElements) {
+                barrel.additionalElements.forEach(element => element.destroy());
+            }
+            barrel.destroy();
+            barrels.splice(barrelIndex, 1);
+
+            // Crear efecto de explosión
+            createExplosionEffect.call(this, explosionX, explosionY, 120);
+
+            // Buscar barriles en el radio de explosión para reacción en cadena
+            const chainBarrels = [];
+            barrels.forEach(otherBarrel => {
+                const distance = Phaser.Math.Distance.Between(explosionX, explosionY, otherBarrel.x, otherBarrel.y);
+                if (distance <= 120) {
+                    chainBarrels.push(otherBarrel);
+                }
+            });
+
+            if (chainBarrels.length > 0) {
+                chainReactionCount++;
+                logEvent(`🔥 CADENA: ${chainBarrels.length} barriles en radio de explosión`);
+                
+                // Explotar barriles en cadena con delay
+                chainBarrels.forEach((chainBarrel, index) => {
+                    const delay = (index + 1) * 100;
+                    logEvent(`🔗 Programando explosión de ${chainBarrel.label} en ${delay}ms`);
+                    
+                    this.time.delayedCall(delay, () => {
+                        const barrelIndex = barrels.indexOf(chainBarrel);
+                        if (barrelIndex !== -1) {
+                            explodeBarrel.call(this, chainBarrel, barrelIndex);
+                        }
+                    });
+                });
+            }
+
+            explosionCount++;
+            updateStatus();
+        }
+
+        function createExplosionEffect(x, y, radius) {
+            // Ondas de choque múltiples
+            for (let wave = 0; wave < 3; wave++) {
+                this.time.delayedCall(wave * 50, () => {
+                    const shockWave = this.add.circle(x, y, 5, 0xffffff, 0.8 - wave * 0.2);
+                    shockWave.setStrokeStyle(3, 0xff4500, 0.9);
+
+                    this.tweens.add({
+                        targets: shockWave,
+                        radius: radius * (0.8 + wave * 0.3),
+                        alpha: 0,
+                        duration: 400 + wave * 100,
+                        ease: 'Power2',
+                        onComplete: () => shockWave.destroy()
+                    });
+                });
+            }
+
+            // Explosión principal
+            const explosion = this.add.circle(x, y, radius * 0.3, 0xff4500, 0.8);
+            this.tweens.add({
+                targets: explosion,
+                scaleX: 2.5,
+                scaleY: 2.5,
+                alpha: 0,
+                duration: 600,
+                ease: 'Power3',
+                onComplete: () => explosion.destroy()
+            });
+
+            // Partículas
+            for (let i = 0; i < 16; i++) {
+                const angle = (i / 16) * Math.PI * 2;
+                const distance = 20 + Math.random() * 20;
+                const particleX = x + Math.cos(angle) * distance;
+                const particleY = y + Math.sin(angle) * distance;
+
+                const particle = this.add.rectangle(particleX, particleY, 4, 4, 0xff6600);
+                
+                this.tweens.add({
+                    targets: particle,
+                    x: x + Math.cos(angle) * radius,
+                    y: y + Math.sin(angle) * radius,
+                    alpha: 0,
+                    duration: 500,
+                    ease: 'Power2',
+                    onComplete: () => particle.destroy()
+                });
+            }
+
+            this.cameras.main.shake(300, 0.02);
+        }
+
+        // Funciones para botones
+        function createGrenadeExplosion() {
+            const x = 400 + (Math.random() - 0.5) * 200;
+            const y = 300 + (Math.random() - 0.5) * 200;
+            logEvent(`🎯 GRANADA lanzada en (${Math.round(x)}, ${Math.round(y)})`);
+            createExplosionEffect.call(scene, x, y, 100);
+            checkExplosionChainReaction(x, y, 100);
+        }
+
+        function createMissileExplosion() {
+            const x = 400 + (Math.random() - 0.5) * 300;
+            const y = 300 + (Math.random() - 0.5) * 300;
+            logEvent(`🚀 MISIL impacta en (${Math.round(x)}, ${Math.round(y)})`);
+            createExplosionEffect.call(scene, x, y, 150);
+            checkExplosionChainReaction(x, y, 150);
+        }
+
+        function createCustomExplosion() {
+            const x = 400 + (Math.random() - 0.5) * 400;
+            const y = 300 + (Math.random() - 0.5) * 400;
+            logEvent(`💥 EXPLOSIÓN GRANDE en (${Math.round(x)}, ${Math.round(y)})`);
+            createExplosionEffect.call(scene, x, y, 200);
+            checkExplosionChainReaction(x, y, 200);
+        }
+
+        function checkExplosionChainReaction(x, y, radius) {
+            const chainBarrels = [];
+            barrels.forEach(barrel => {
+                const distance = Phaser.Math.Distance.Between(x, y, barrel.x, barrel.y);
+                if (distance <= radius) {
+                    chainBarrels.push(barrel);
+                }
+            });
+
+            if (chainBarrels.length > 0) {
+                chainReactionCount++;
+                logEvent(`🔥 ACTIVACIÓN: ${chainBarrels.length} barriles activados por explosión externa`);
+                
+                chainBarrels.forEach((barrel, index) => {
+                    const delay = index * 80;
+                    scene.time.delayedCall(delay, () => {
+                        const barrelIndex = barrels.indexOf(barrel);
+                        if (barrelIndex !== -1) {
+                            explodeBarrel.call(scene, barrel, barrelIndex);
+                        }
+                    });
+                });
+            } else {
+                logEvent(`❌ Sin barriles en radio de ${radius}px`);
+            }
+
+            explosionCount++;
+            updateStatus();
+        }
+
+        function resetBarrels() {
+            logEvent('🔄 Reseteando todas las formaciones de barriles');
+            createBarrelFormations.call(scene);
+            explosionCount = 0;
+            chainReactionCount = 0;
+            updateStatus();
+        }
+
+        function updateStatus() {
+            document.getElementById('barrels').textContent = barrels.length;
+            document.getElementById('explosions').textContent = explosionCount;
+            document.getElementById('chains').textContent = chainReactionCount;
+        }
+
+        function logEvent(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // Inicializar juego
+        const game = new Phaser.Game(config);
+    </script>
+</body>
+</html>

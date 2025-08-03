@@ -103,7 +103,7 @@ export class ExplosionManager {
   }
 
   /**
-   * Daña un barril específico (ahora usa Structure) - ARREGLADO COMPLETAMENTE
+   * Daña un barril específico (ahora usa Structure) - SISTEMA DE CADENA MEJORADO
    */
   damageBarrel(barrel: Structure, damage: number): boolean {
     // Verificaciones de seguridad más estrictas
@@ -112,7 +112,8 @@ export class ExplosionManager {
       return false;
     }
 
-    console.log(`🔥 Dañando barril en (${Math.round(barrel.x)}, ${Math.round(barrel.y)}) - HP: ${barrel.health}/${barrel.maxHealth}`);
+    const previousHealth = barrel.health;
+    console.log(`🔥 Dañando barril en (${Math.round(barrel.x)}, ${Math.round(barrel.y)}) - HP: ${previousHealth}/${barrel.maxHealth} (daño: ${damage})`);
 
     const wasDestroyed = barrel.takeDamage(damage);
 
@@ -123,12 +124,14 @@ export class ExplosionManager {
 
     // Explotar inmediatamente si fue destruido
     if (wasDestroyed && barrel.active && barrel.scene) {
-      console.log(`💥 Barril destruido, iniciando explosión inmediata`);
+      console.log(`💥 BARRIL DESTRUIDO: ${previousHealth} → 0 HP - iniciando explosión que puede activar más barriles`);
       this.explodeBarrel(barrel);
       return true;
+    } else if (!wasDestroyed) {
+      console.log(`🔥 Barril dañado: ${previousHealth} → ${barrel.health} HP - aún no explota`);
     }
 
-    return false;
+    return wasDestroyed;
   }
 
   /**
@@ -325,8 +328,11 @@ export class ExplosionManager {
       this.destroyStructuresInRadius(x, y, radius);
     }
 
-    // Reacción en cadena con otros barriles
+    // CRÍTICO: Reacción en cadena con otros barriles - SIEMPRE se ejecuta
+    // Esto permite que granadas, misiles y otras explosiones activen barriles
     this.triggerChainReaction(x, y, radius);
+    
+    console.log(`🔗 Verificando reacción en cadena desde explosión ${source || 'desconocida'} en radio ${radius}px`);
   }
 
   /**
@@ -530,23 +536,114 @@ export class ExplosionManager {
   }
 
   /**
-   * Activa reacción en cadena con otros barriles usando StructureManager
+   * Activa reacción en cadena con otros barriles usando DAÑO - ARREGLADO COMPLETAMENTE
    */
   private triggerChainReaction(x: number, y: number, radius: number): void {
     const structureManager = this.worldManager.getStructureManager();
     const barrelsInArea = structureManager.getStructuresInArea(x, y, radius)
-      .filter(structure => structure.getType() === StructureType.EXPLOSIVE_BARREL && structure.health > 0);
-
-    // Explotar barriles con un pequeño delay para efecto visual
-    barrelsInArea.forEach((barrel, index) => {
-      this.scene.time.delayedCall(index * 100, () => {
-        this.explodeBarrel(barrel);
-      });
-    });
+      .filter(structure => 
+        structure.getType() === StructureType.EXPLOSIVE_BARREL && 
+        structure.active && 
+        structure.scene && 
+        structure.health > 0
+      );
 
     if (barrelsInArea.length > 0) {
-      console.log(`🔥 Reacción en cadena: ${barrelsInArea.length} barriles adicionales`);
+      console.log(`🔥 REACCIÓN EN CADENA: ${barrelsInArea.length} barriles detectados en radio ${radius}px desde (${Math.round(x)}, ${Math.round(y)})`);
+      
+      // DAÑAR barriles en lugar de explotarlos directamente
+      // Esto permite que el sistema de daño determine si explotan o no
+      barrelsInArea.forEach((barrel, index) => {
+        const delay = index * 60 + Math.random() * 30; // 60-90ms entre daños
+        
+        console.log(`💥 Programando DAÑO a barril ${index + 1}/${barrelsInArea.length} en (${Math.round(barrel.x)}, ${Math.round(barrel.y)}) con delay ${Math.round(delay)}ms`);
+        
+        this.scene.time.delayedCall(delay, () => {
+          // Verificar que el barril aún existe antes de dañarlo
+          if (barrel.active && barrel.scene && barrel.health > 0) {
+            console.log(`🔥 Aplicando daño por explosión a barril en (${Math.round(barrel.x)}, ${Math.round(barrel.y)}) - HP: ${barrel.health}/${barrel.maxHealth}`);
+            
+            // USAR EL SISTEMA DE DAÑO - esto automáticamente explota si llega a 0 HP
+            const wasDestroyed = this.damageBarrel(barrel, 1);
+            
+            if (wasDestroyed) {
+              console.log(`💥 Barril destruido por reacción en cadena - nueva explosión iniciada`);
+            } else {
+              console.log(`🔥 Barril dañado pero no destruido - HP restante: ${barrel.health}`);
+            }
+          } else {
+            console.log(`⚠️ Barril ya destruido, cancelando daño en cadena`);
+          }
+        });
+      });
+
+      // Efecto visual de propagación de la reacción en cadena
+      this.createChainReactionEffect(x, y, barrelsInArea);
+    } else {
+      console.log(`❌ Sin barriles en radio de explosión de ${radius}px`);
     }
+  }
+
+  /**
+   * Crea efectos visuales para la reacción en cadena - NUEVO
+   */
+  private createChainReactionEffect(originX: number, originY: number, barrels: Structure[]): void {
+    barrels.forEach((barrel, index) => {
+      const delay = index * 60; // Ligeramente antes que la explosión
+      
+      this.scene.time.delayedCall(delay, () => {
+        if (barrel.active && barrel.scene) {
+          // Línea de energía desde el origen hasta el barril
+          const energyLine = this.scene.add.line(
+            0, 0,
+            originX, originY,
+            barrel.x, barrel.y,
+            0xff6600, 0.8
+          );
+          energyLine.setLineWidth(3);
+          energyLine.setDepth(110);
+
+          // Animación de la línea de energía
+          this.scene.tweens.add({
+            targets: energyLine,
+            alpha: 0,
+            duration: 200,
+            ease: 'Power2',
+            onComplete: () => energyLine.destroy()
+          });
+
+          // Efecto de chispas viajando hacia el barril
+          for (let i = 0; i < 3; i++) {
+            const spark = this.scene.add.circle(originX, originY, 2, 0xffff00);
+            spark.setDepth(111);
+
+            this.scene.tweens.add({
+              targets: spark,
+              x: barrel.x + (Math.random() - 0.5) * 10,
+              y: barrel.y + (Math.random() - 0.5) * 10,
+              alpha: 0,
+              duration: 150 + i * 20,
+              ease: 'Power1',
+              onComplete: () => spark.destroy()
+            });
+          }
+
+          // Efecto de advertencia en el barril
+          const warningCircle = this.scene.add.circle(barrel.x, barrel.y, 15, 0xff0000, 0);
+          warningCircle.setStrokeStyle(2, 0xff0000, 0.8);
+          warningCircle.setDepth(109);
+
+          this.scene.tweens.add({
+            targets: warningCircle,
+            radius: 25,
+            alpha: 0,
+            duration: 300,
+            ease: 'Power2',
+            onComplete: () => warningCircle.destroy()
+          });
+        }
+      });
+    });
   }
 
   /**
@@ -629,9 +726,11 @@ export class ExplosionManager {
   }
 
   /**
-   * Crea una explosión de granada (método público para lanzagranadas)
+   * Crea una explosión de granada (método público para lanzagranadas) - MEJORADO
    */
   public createGrenadeExplosion(x: number, y: number): void {
+    console.log(`🎯 Creando explosión de granada en (${Math.round(x)}, ${Math.round(y)}) - puede activar barriles`);
+    
     this.createExplosion({
       x: x,
       y: y,
@@ -645,9 +744,11 @@ export class ExplosionManager {
   }
 
   /**
-   * Crea una explosión de misil (método público para armas pesadas)
+   * Crea una explosión de misil (método público para armas pesadas) - MEJORADO
    */
   public createMissileExplosion(x: number, y: number): void {
+    console.log(`🚀 Creando explosión de misil en (${Math.round(x)}, ${Math.round(y)}) - puede activar barriles`);
+    
     this.createExplosion({
       x: x,
       y: y,
@@ -661,9 +762,11 @@ export class ExplosionManager {
   }
 
   /**
-   * Crea una explosión personalizada (método público genérico)
+   * Crea una explosión personalizada (método público genérico) - MEJORADO
    */
   public createCustomExplosion(x: number, y: number, radius: number, damage: number, damagePlayer: boolean = false): void {
+    console.log(`💥 Creando explosión personalizada en (${Math.round(x)}, ${Math.round(y)}) - Radio: ${radius}, puede activar barriles`);
+    
     this.createExplosion({
       x: x,
       y: y,
@@ -672,7 +775,25 @@ export class ExplosionManager {
       damagePlayer: damagePlayer,
       damageEnemies: true,
       destroyStructures: true,
-      source: 'other'
+      source: 'custom'
+    });
+  }
+
+  /**
+   * Crea una explosión de prueba para testing - NUEVO
+   */
+  public createTestExplosion(x: number, y: number): void {
+    console.log(`🧪 Creando explosión de prueba en (${Math.round(x)}, ${Math.round(y)}) - debe activar barriles cercanos`);
+    
+    this.createExplosion({
+      x: x,
+      y: y,
+      radius: 120,
+      damage: 50,
+      damagePlayer: false,
+      damageEnemies: true,
+      destroyStructures: true,
+      source: 'test'
     });
   }
 
