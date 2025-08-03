@@ -293,12 +293,31 @@ export class CollisionManager {
     const enemyDied = this.enemyManager.damageEnemy(enemy, 1, false);
 
     if (enemyDied) {
-      // Enemigo eliminado
-      this.experienceManager.createDiamond(enemy.x, enemy.y);
-      this.scene.events.emit('enemyKilled', { score: 10 });
+      // Obtener el tipo de enemigo para crear el diamante apropiado
+      const enemyType = enemy.getData('type') || 'zombie';
+      
+      // Enemigo eliminado - crear diamante con valor apropiado
+      this.experienceManager.createDiamond(enemy.x, enemy.y, enemyType);
+      
+      // Calcular score basado en el tipo de enemigo
+      let scoreValue = 10; // Default
+      switch (enemyType) {
+        case 'zombie':
+        case 'fast_zombie':
+          scoreValue = 10;
+          break;
+        case 'dasher':
+          scoreValue = 50;
+          break;
+        case 'tank':
+          scoreValue = 350;
+          break;
+      }
+      
+      this.scene.events.emit('enemyKilled', { score: scoreValue });
 
       this.visualEffects.createExplosionEffect(enemy.x, enemy.y);
-      this.visualEffects.showScoreText(enemy.x, enemy.y, '+10');
+      this.visualEffects.showScoreText(enemy.x, enemy.y, `+${scoreValue}`);
     } else {
       // Enemigo dañado pero no eliminado
       const enemyType = enemy.getData('type');
@@ -332,8 +351,11 @@ export class CollisionManager {
    */
   private handlePlayerDiamondCollision(diamond: Phaser.GameObjects.Polygon): void {
     const playerPos = this.player.getPosition();
+    const experienceValue = diamond.getData('experienceValue') || 10;
+    const diamondColor = diamond.fillColor;
+    
     this.visualEffects.createCollectionEffect(diamond.x, diamond.y, playerPos.x, playerPos.y);
-    this.visualEffects.showScoreText(diamond.x, diamond.y, '+10 EXP', '#00ffff');
+    this.visualEffects.showScoreText(diamond.x, diamond.y, `+${experienceValue} EXP`, `#${diamondColor.toString(16).padStart(6, '0')}`);
 
     const leveledUp = this.experienceManager.collectDiamond(diamond);
 

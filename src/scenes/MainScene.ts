@@ -275,6 +275,9 @@ export class MainScene extends Scene {
         // Diagnóstico adicional de colisiones
         const collisionStats = this.collisionManager.getPhysicsGroupsStats();
         console.log(`🔍 Estadísticas colisiones: ${collisionStats.structures} estructuras, ${collisionStats.rivers} ríos, ${collisionStats.enemies} enemigos, ${collisionStats.barrels} barriles en grupos`);
+        
+        // Diagnóstico de experiencia
+        this.experienceManager.diagnoseDiamonds(playerPos.x, playerPos.y);
       }
     }
 

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Sistema de Experiencia Mejorado</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        
+        .info-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+            min-width: 300px;
+        }
+        
+        .info-section {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-left: 3px solid #00ffff;
+            background: rgba(0, 255, 255, 0.1);
+        }
+        
+        .enemy-info {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        
+        .diamond-info {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        
+        .controls {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        button {
+            background: #00ffff;
+            color: #000;
+            border: none;
+            padding: 8px 12px;
+            margin: 2px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background: #00cccc;
+        }
+        
+        .experience-bar {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+        
+        .experience-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ffff, #0080ff);
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="info-panel">
+        <div class="info-section">
+            <h3>🎮 Sistema de Experiencia</h3>
+            <div>Nivel: <span id="level">1</span></div>
+            <div>Experiencia: <span id="experience">0</span> / <span id="maxExperience">100</span></div>
+            <div class="experience-bar">
+                <div class="experience-fill" id="experienceBar" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <div class="info-section">
+            <h3>💎 Diamantes Activos</h3>
+            <div>Total: <span id="totalDiamonds">0</span></div>
+            <div class="diamond-info">
+                <span>🔴 Zombie (10 XP):</span>
+                <span id="zombieDiamonds">0</span>
+            </div>
+            <div class="diamond-info">
+                <span>🟣 Dasher (25 XP):</span>
+                <span id="dasherDiamonds">0</span>
+            </div>
+            <div class="diamond-info">
+                <span>🟡 Tank (60 XP):</span>
+                <span id="tankDiamonds">0</span>
+            </div>
+        </div>
+        
+        <div class="info-section">
+            <h3>👾 Enemigos Activos</h3>
+            <div>Total: <span id="totalEnemies">0</span></div>
+            <div class="enemy-info">
+                <span>🔴 Zombies:</span>
+                <span id="zombieCount">0</span>
+            </div>
+            <div class="enemy-info">
+                <span>🟣 Dashers:</span>
+                <span id="dasherCount">0</span>
+            </div>
+            <div class="enemy-info">
+                <span>🛡️ Tanks:</span>
+                <span id="tankCount">0</span>
+            </div>
+        </div>
+        
+        <div class="info-section">
+            <h3>🌍 Mundo Procedural</h3>
+            <div>Chunks Activos: <span id="activeChunks">0</span></div>
+            <div>Posición: (<span id="playerX">0</span>, <span id="playerY">0</span>)</div>
+            <div>Chunk: (<span id="chunkX">0</span>, <span id="chunkY">0</span>)</div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <h3>🎮 Controles de Prueba</h3>
+        <button onclick="spawnZombie()">Crear Zombie (10 XP)</button>
+        <button onclick="spawnDasher()">Crear Dasher (25 XP)</button>
+        <button onclick="spawnTank()">Crear Tank (60 XP)</button>
+        <br>
+        <button onclick="killAllEnemies()">Matar Todos los Enemigos</button>
+        <button onclick="collectAllDiamonds()">Recolectar Todos los Diamantes</button>
+        <br>
+        <button onclick="teleportToNewChunk()">Teletransportar a Nuevo Chunk</button>
+        <button onclick="resetExperience()">Resetear Experiencia</button>
+    </div>
+
+    <script type="module">
+        import { MainScene } from './src/scenes/MainScene.js';
+        import { EnemyType } from './src/types/game.js';
+        
+        // Variables globales para acceso desde botones
+        window.currentScene = null;
+        
+        // Configuración de Phaser
+        const config = {
+            type: Phaser.AUTO,
+            width: 1200,
+            height: 800,
+            backgroundColor: '#2d5016',
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: MainScene
+        };
+
+        // Inicializar juego
+        const game = new Phaser.Game(config);
+        
+        // Obtener referencia a la escena
+        game.scene.start('MainScene');
+        window.currentScene = game.scene.getScene('MainScene');
+        
+        // Funciones de control para los botones
+        window.spawnZombie = function() {
+            if (window.currentScene && window.currentScene.enemyManager) {
+                const playerPos = window.currentScene.player.getPosition();
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 150;
+                const x = playerPos.x + Math.cos(angle) * distance;
+                const y = playerPos.y + Math.sin(angle) * distance;
+                
+                window.currentScene.enemyManager.createEnemy(x, y, EnemyType.ZOMBIE);
+                console.log('🔴 Zombie creado para prueba');
+            }
+        };
+        
+        window.spawnDasher = function() {
+            if (window.currentScene && window.currentScene.enemyManager) {
+                const playerPos = window.currentScene.player.getPosition();
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 150;
+                const x = playerPos.x + Math.cos(angle) * distance;
+                const y = playerPos.y + Math.sin(angle) * distance;
+                
+                window.currentScene.enemyManager.createEnemy(x, y, EnemyType.DASHER);
+                console.log('🟣 Dasher creado para prueba');
+            }
+        };
+        
+        window.spawnTank = function() {
+            if (window.currentScene && window.currentScene.enemyManager) {
+                const playerPos = window.currentScene.player.getPosition();
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 150;
+                const x = playerPos.x + Math.cos(angle) * distance;
+                const y = playerPos.y + Math.sin(angle) * distance;
+                
+                window.currentScene.enemyManager.createEnemy(x, y, EnemyType.TANK);
+                console.log('🛡️ Tank creado para prueba');
+            }
+        };
+        
+        window.killAllEnemies = function() {
+            if (window.currentScene && window.currentScene.enemyManager) {
+                const enemies = window.currentScene.enemyManager.getEnemies();
+                enemies.forEach(enemy => {
+                    const enemyType = enemy.getData('type') || 'zombie';
+                    window.currentScene.experienceManager.createDiamond(enemy.x, enemy.y, enemyType);
+                    window.currentScene.enemyManager.removeEnemy(enemy);
+                });
+                console.log(`💀 ${enemies.length} enemigos eliminados - diamantes creados`);
+            }
+        };
+        
+        window.collectAllDiamonds = function() {
+            if (window.currentScene && window.currentScene.experienceManager) {
+                const diamonds = window.currentScene.experienceManager.getDiamonds();
+                diamonds.forEach(diamond => {
+                    window.currentScene.experienceManager.collectDiamond(diamond);
+                });
+                console.log(`💎 ${diamonds.length} diamantes recolectados`);
+            }
+        };
+        
+        window.teleportToNewChunk = function() {
+            if (window.currentScene && window.currentScene.player) {
+                const currentPos = window.currentScene.player.getPosition();
+                const newX = currentPos.x + (Math.random() - 0.5) * 1600; // ±800px (1 chunk)
+                const newY = currentPos.y + (Math.random() - 0.5) * 1600;
+                
+                window.currentScene.player.setPosition(newX, newY);
+                console.log(`🌍 Jugador teletransportado a (${Math.round(newX)}, ${Math.round(newY)})`);
+            }
+        };
+        
+        window.resetExperience = function() {
+            if (window.currentScene && window.currentScene.experienceManager) {
+                window.currentScene.experienceManager.setLevel(1);
+                window.currentScene.experienceManager.setExperience(0);
+                console.log('🔄 Experiencia reseteada');
+            }
+        };
+        
+        // Actualizar UI cada 100ms
+        setInterval(() => {
+            if (window.currentScene && window.currentScene.experienceManager && window.currentScene.enemyManager) {
+                const expManager = window.currentScene.experienceManager;
+                const enemyManager = window.currentScene.enemyManager;
+                const playerPos = window.currentScene.player.getPosition();
+                
+                // Actualizar experiencia
+                document.getElementById('level').textContent = expManager.getLevel();
+                document.getElementById('experience').textContent = expManager.getExperience();
+                document.getElementById('maxExperience').textContent = expManager.getMaxExperience();
+                
+                const percentage = expManager.getExperiencePercentage();
+                document.getElementById('experienceBar').style.width = percentage + '%';
+                
+                // Actualizar diamantes
+                const diamondStats = expManager.getStats();
+                document.getElementById('totalDiamonds').textContent = diamondStats.totalDiamonds;
+                document.getElementById('zombieDiamonds').textContent = diamondStats.diamondsByType.zombie || 0;
+                document.getElementById('dasherDiamonds').textContent = diamondStats.diamondsByType.dasher || 0;
+                document.getElementById('tankDiamonds').textContent = diamondStats.diamondsByType.tank || 0;
+                
+                // Actualizar enemigos
+                const enemyStats = enemyManager.getStats();
+                document.getElementById('totalEnemies').textContent = enemyStats.totalEnemies;
+                document.getElementById('zombieCount').textContent = enemyStats.zombieCount;
+                document.getElementById('dasherCount').textContent = enemyStats.dasherCount;
+                document.getElementById('tankCount').textContent = enemyStats.tankCount || 0;
+                
+                // Actualizar mundo
+                const worldInfo = window.currentScene.worldManager.getWorldInfo();
+                document.getElementById('activeChunks').textContent = worldInfo.activeChunks;
+                document.getElementById('playerX').textContent = Math.round(playerPos.x);
+                document.getElementById('playerY').textContent = Math.round(playerPos.y);
+                
+                const chunkX = Math.floor(playerPos.x / 800);
+                const chunkY = Math.floor(playerPos.y / 800);
+                document.getElementById('chunkX').textContent = chunkX;
+                document.getElementById('chunkY').textContent = chunkY;
+            }
+        }, 100);
+    </script>
+</body>
+</html>
