@@ -360,8 +360,8 @@ export class CollisionManager {
    * Útil cuando se generan nuevos chunks o se cambia de área
    */
   public forceUpdatePhysicsGroups(): void {
-    this.updatePhysicsGroups();
-    console.log('🔄 Grupos de física actualizados forzadamente');
+    // SISTEMA SIMPLIFICADO: Los grupos de física son estáticos
+    // No necesitan actualizaciones dinámicas
   }
 
   /**

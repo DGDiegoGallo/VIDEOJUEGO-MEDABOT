@@ -256,7 +256,7 @@ export class Player {
   }
 
   /**
-   * Maneja el input del teclado para mover al jugador
+   * Maneja el input del teclado para mover al jugador - SISTEMA SIMPLIFICADO
    * @param cursors - Teclas de dirección de Phaser
    */
   handleInput(cursors: Phaser.Types.Input.Keyboard.CursorKeys): void {
@@ -288,13 +288,8 @@ export class Player {
     // Aplicar velocidad
     body.setVelocity(velocityX, velocityY);
 
-    // Aplicar wraparound si tenemos WorldManager
-    if (this.worldManager) {
-      const newPosition = this.worldManager.applyWraparound(this.sprite.x, this.sprite.y);
-      if (newPosition.x !== this.sprite.x || newPosition.y !== this.sprite.y) {
-        this.sprite.setPosition(newPosition.x, newPosition.y);
-      }
-    }
+    // SISTEMA SIMPLIFICADO: Verificar límites del mundo
+    this.checkWorldBounds(body);
   }
 
   /**
@@ -306,13 +301,8 @@ export class Player {
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
     body.setVelocity(velocityX, velocityY);
 
-    // Aplicar wraparound si tenemos WorldManager
-    if (this.worldManager) {
-      const newPosition = this.worldManager.applyWraparound(this.sprite.x, this.sprite.y);
-      if (newPosition.x !== this.sprite.x || newPosition.y !== this.sprite.y) {
-        this.sprite.setPosition(newPosition.x, newPosition.y);
-      }
-    }
+    // SISTEMA SIMPLIFICADO: Verificar límites del mundo
+    this.checkWorldBounds(body);
   }
 
   /**
@@ -436,6 +426,33 @@ export class Player {
    */
   getConfig(): PlayerConfig {
     return { ...this.config };
+  }
+
+  /**
+   * Verifica y aplica los límites del mundo - SISTEMA SIMPLIFICADO
+   * @param body - Cuerpo físico del jugador
+   */
+  private checkWorldBounds(body: Phaser.Physics.Arcade.Body): void {
+    if (this.worldManager && typeof this.worldManager.getWorldBounds === 'function') {
+      try {
+        const bounds = this.worldManager.getWorldBounds();
+        let newX = this.sprite.x;
+        let newY = this.sprite.y;
+
+        // Mantener al jugador dentro de los límites del mundo
+        if (newX < bounds.minX) newX = bounds.minX;
+        if (newX > bounds.maxX) newX = bounds.maxX;
+        if (newY < bounds.minY) newY = bounds.minY;
+        if (newY > bounds.maxY) newY = bounds.maxY;
+
+        if (newX !== this.sprite.x || newY !== this.sprite.y) {
+          this.sprite.setPosition(newX, newY);
+          body.setVelocity(0, 0); // Detener movimiento al tocar el límite
+        }
+      } catch (error) {
+        console.warn('Error verificando límites del mundo:', error);
+      }
+    }
   }
 
   /**

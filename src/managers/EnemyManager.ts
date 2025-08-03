@@ -791,44 +791,15 @@ export class EnemyManager {
   }
 
   /**
-   * Verifica si hay enemigos fuera de los límites de la pantalla (ARREGLADO para mundo dinámico)
-   * @param margin - Margen adicional para considerar "fuera de pantalla"
+   * NO LIMPIA ENEMIGOS - Sistema simplificado mantiene todos los enemigos
+   * @param _margin - No usado en el sistema simplificado
    */
-  cleanupOffscreenEnemies(margin: number = 100): void {
-    // ARREGLADO: Usar coordenadas de cámara en lugar de coordenadas de pantalla
-    const camera = this.scene.cameras.main;
-    const cameraX = camera.scrollX;
-    const cameraY = camera.scrollY;
-    const gameWidth = this.scene.scale.width || 800;
-    const gameHeight = this.scene.scale.height || 600;
-
-    // Límites basados en la posición de la cámara
-    const leftBound = cameraX - margin;
-    const rightBound = cameraX + gameWidth + margin;
-    const topBound = cameraY - margin;
-    const bottomBound = cameraY + gameHeight + margin;
-
-    let removedCount = 0;
-
-    this.enemies.forEach((enemy, index) => {
-      if (!enemy.active) {
-        this.enemies.splice(index, 1);
-        removedCount++;
-        return;
-      }
-
-      // Verificar si está fuera de los límites de la cámara (no de la pantalla absoluta)
-      if (enemy.x < leftBound || enemy.x > rightBound ||
-        enemy.y < topBound || enemy.y > bottomBound) {
-        console.log(`🗑️ Enemigo eliminado por estar fuera de cámara: (${Math.round(enemy.x)}, ${Math.round(enemy.y)}) vs cámara (${Math.round(cameraX)}, ${Math.round(cameraY)})`);
-        this.removeEnemy(enemy);
-        removedCount++;
-      }
-    });
-
-    if (removedCount > 0) {
-      console.log(`🗑️ Limpiados ${removedCount} enemigos fuera de cámara`);
-    }
+  cleanupOffscreenEnemies(_margin: number = 100): void {
+    // SISTEMA SIMPLIFICADO: Los enemigos no se limpian automáticamente
+    // Solo se eliminan cuando mueren por daño
+    
+    // Solo limpiar enemigos inactivos (destruidos)
+    this.enemies = this.enemies.filter(enemy => enemy.active);
   }
 
   /**

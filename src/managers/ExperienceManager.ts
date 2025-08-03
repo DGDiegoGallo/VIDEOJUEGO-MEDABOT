@@ -592,47 +592,15 @@ export class ExperienceManager {
   }
 
   /**
-   * Verifica si hay diamantes fuera de los límites de la cámara (ARREGLADO para mundo dinámico)
-   * @param margin - Margen adicional para considerar "fuera de cámara"
+   * NO LIMPIA DIAMANTES - Sistema simplificado mantiene todos los diamantes
+   * @param _margin - No usado en el sistema simplificado
    */
-  cleanupOffscreenDiamonds(margin: number = 200): void {
-    // ARREGLADO: Usar coordenadas de cámara en lugar de coordenadas de pantalla
-    const camera = this.scene.cameras.main;
-    const cameraX = camera.scrollX;
-    const cameraY = camera.scrollY;
-    const gameWidth = this.scene.scale.width || 800;
-    const gameHeight = this.scene.scale.height || 600;
+  cleanupOffscreenDiamonds(_margin: number = 200): void {
+    // SISTEMA SIMPLIFICADO: Los diamantes no se limpian automáticamente
+    // Solo se eliminan cuando son recogidos por el jugador
     
-    // Límites basados en la posición de la cámara
-    const leftBound = cameraX - margin;
-    const rightBound = cameraX + gameWidth + margin;
-    const topBound = cameraY - margin;
-    const bottomBound = cameraY + gameHeight + margin;
-    
-    let removedCount = 0;
-
-    // Usar bucle hacia atrás para evitar problemas al eliminar elementos
-    for (let i = this.diamonds.length - 1; i >= 0; i--) {
-      const diamond = this.diamonds[i];
-      
-      if (!diamond || !diamond.active) {
-        this.diamonds.splice(i, 1);
-        removedCount++;
-        continue;
-      }
-
-      // Verificar si está fuera de los límites de la cámara (no de la pantalla absoluta)
-      if (diamond.x < leftBound || diamond.x > rightBound ||
-          diamond.y < topBound || diamond.y > bottomBound) {
-        console.log(`💎 Diamante eliminado por estar fuera de cámara: (${Math.round(diamond.x)}, ${Math.round(diamond.y)}) vs cámara (${Math.round(cameraX)}, ${Math.round(cameraY)})`);
-        this.removeDiamond(diamond);
-        removedCount++;
-      }
-    }
-
-    if (removedCount > 0) {
-      console.log(`💎 Limpiados ${removedCount} diamantes fuera de cámara`);
-    }
+    // Solo limpiar diamantes inactivos (destruidos)
+    this.diamonds = this.diamonds.filter(diamond => diamond.active);
   }
 
   /**

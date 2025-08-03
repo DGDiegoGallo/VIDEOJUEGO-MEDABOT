@@ -235,12 +235,12 @@ export class MainScene extends Scene {
   private lastChunkY: number = 0;
 
   /**
-   * Actualiza todos los managers (optimizado pero funcional)
+   * Actualiza todos los managers - SISTEMA SIMPLIFICADO
    */
   private updateManagers(): void {
     const playerPos = this.player.getPosition();
 
-    // Actualizaciones críticas (cada frame) - NUNCA LIMITAR ESTAS
+    // Actualizaciones críticas (cada frame)
     this.bulletManager.updateBullets();
     this.collisionManager.checkAllCollisions();
     this.cameraManager.update();
@@ -250,47 +250,16 @@ export class MainScene extends Scene {
     // Incrementar contador
     this.updateCounter++;
 
-    // Actualizaciones importantes (cada 2 frames para mejor rendimiento)
-    if (this.updateCounter % 2 === 0) {
-      // Actualizar mundo procedural
-      this.worldManager.updateWorld(playerPos.x, playerPos.y);
-
-      // ARREGLADO: Detectar cambio de chunk y forzar actualización de colisiones
-      const currentChunkX = Math.floor(playerPos.x / 800); // 800 es el chunkSize
-      const currentChunkY = Math.floor(playerPos.y / 800);
-
-      if (currentChunkX !== this.lastChunkX || currentChunkY !== this.lastChunkY) {
-        this.lastChunkX = currentChunkX;
-        this.lastChunkY = currentChunkY;
-
-        // Forzar actualización de grupos de física cuando cambia de chunk
-        this.collisionManager.forceUpdatePhysicsGroups();
-        console.log(`🔄 Cambio de chunk detectado: (${currentChunkX}, ${currentChunkY}) - Colisiones actualizadas`);
-      }
-
-      // Diagnóstico cada 5 segundos aprox (300 frames)
-      if (this.updateCounter % 300 === 0) {
-        this.worldManager.diagnoseWorld(playerPos.x, playerPos.y);
-
-        // Diagnóstico adicional de colisiones
-        const collisionStats = this.collisionManager.getPhysicsGroupsStats();
-        console.log(`🔍 Estadísticas colisiones: ${collisionStats.structures} estructuras, ${collisionStats.rivers} ríos, ${collisionStats.enemies} enemigos, ${collisionStats.barrels} barriles en grupos`);
-        
-        // Diagnóstico de experiencia
-        this.experienceManager.diagnoseDiamonds(playerPos.x, playerPos.y);
-      }
-    }
-
-    // Actualizaciones de limpieza (cada 3 frames)
-    if (this.updateCounter % 3 === 0) {
-      this.bulletManager.cleanupOffscreenBullets();
-      this.enemyManager.cleanupOffscreenEnemies();
-      this.experienceManager.cleanupOffscreenDiamonds();
+    // Actualizaciones de limpieza (cada 5 frames) - SOLO BALAS
+    if (this.updateCounter % 5 === 0) {
+      this.bulletManager.cleanupOffscreenBullets(this.worldManager); // Solo balas se limpian
+      this.enemyManager.cleanupOffscreenEnemies(); // Solo limpia inactivos
+      this.experienceManager.cleanupOffscreenDiamonds(); // Solo limpia inactivos
       this.explosionManager.cleanupOffscreenBarrels(playerPos.x, playerPos.y);
     }
 
-    // Actualizaciones de UI (cada 4 frames para mejor rendimiento)
-    if (this.updateCounter % 4 === 0) {
+    // Actualizaciones de UI (cada 6 frames)
+    if (this.updateCounter % 6 === 0) {
       const minimapData = this.minimapManager.update();
       const uiData = this.uiManager.update();
 

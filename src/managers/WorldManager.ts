@@ -1,17 +1,15 @@
 import { Scene } from 'phaser';
 
 /**
- * Configuración del mundo procedural
+ * Configuración del mundo estático simplificado
  */
 interface WorldConfig {
   chunkSize: number;
-  renderDistance: number;
   riverWidth: number;
   bridgeWidth: number;
   structureDensity: number;
   terrainSeed: number;
-  worldSize: number; // Tamaño del mundo para wraparound
-  autoGenerateChunks: number; // Número de chunks a generar automáticamente
+  worldSize: number; // Tamaño del mundo (NxN chunks)
 }
 
 /**
@@ -43,91 +41,101 @@ enum StructureType {
 }
 
 /**
- * Manager para la generación procedural del mundo
+ * Manager para el mundo estático simplificado
  * 
  * Responsabilidades:
- * - Generar chunks del mundo dinámicamente
+ * - Generar TODOS los chunks al inicio
  * - Crear ríos con ruido Perlin
  * - Colocar puentes automáticamente
  * - Generar estructuras procedurales
- * - Optimizar renderizado por distancia
+ * - Mantener todo permanente durante la partida
  */
 export class WorldManager {
   private scene: Scene;
   private config: WorldConfig;
   private chunks: Map<string, WorldChunk> = new Map();
+  private worldBounds: { minX: number; maxX: number; minY: number; maxY: number };
   private activeChunks: Set<string> = new Set();
   private lastPlayerChunk: { x: number; y: number } = { x: 0, y: 0 };
 
   // Grupos principales para organización
   private worldContainer!: Phaser.GameObjects.Container;
+  private allStructures: Phaser.GameObjects.GameObject[] = [];
+  private allRivers: Phaser.GameObjects.GameObject[] = [];
 
   constructor(scene: Scene, config?: Partial<WorldConfig>) {
     this.scene = scene;
     this.config = {
       chunkSize: 800,
-      renderDistance: 2, // Volver a 2 para mejor funcionalidad
       riverWidth: 60,
       bridgeWidth: 100,
-      structureDensity: 0.2, // Mantener reducido para rendimiento
+      structureDensity: 0.3, // Aumentar densidad ya que no hay problemas de rendimiento
       terrainSeed: Math.random() * 1000,
-      worldSize: 12, // Volver a mundo más grande pero controlado
-      autoGenerateChunks: 12, // Generar chunks iniciales
+      worldSize: 8, // Mundo 8x8 = 64 chunks total
       ...config
+    };
+
+    // Calcular límites del mundo
+    const halfWorld = (this.config.worldSize * this.config.chunkSize) / 2;
+    this.worldBounds = {
+      minX: -halfWorld,
+      maxX: halfWorld,
+      minY: -halfWorld,
+      maxY: halfWorld
     };
 
     this.initializeWorld();
   }
 
   /**
-   * Inicializa el sistema de mundo
+   * Inicializa el sistema de mundo - GENERA TODO AL INICIO
    */
   private initializeWorld(): void {
     // Crear contenedor principal del mundo con profundidad baja (fondo)
     this.worldContainer = this.scene.add.container(0, 0);
     this.worldContainer.setDepth(-100); // Muy atrás, detrás de todo
 
-    // Generar 12 chunks automáticamente en un patrón 4x3
-    this.generateInitialChunks();
+    // Generar TODOS los chunks del mundo de una vez
+    this.generateAllChunks();
 
-    console.log('🌍 WorldManager: Sistema de mundo inicializado con 12 chunks automáticos');
+    // Marcar todos los chunks como activos
+    this.chunks.forEach((chunk, chunkId) => {
+      this.activeChunks.add(chunkId);
+    });
+
+    console.log(`🌍 WorldManager: Mundo completo generado - ${this.chunks.size} chunks permanentes`);
+    console.log(`🏗️ Estructuras totales: ${this.allStructures.length}`);
+    console.log(`🌊 Ríos totales: ${this.allRivers.length}`);
+    console.log(`📏 Límites del mundo: (${this.worldBounds.minX}, ${this.worldBounds.minY}) a (${this.worldBounds.maxX}, ${this.worldBounds.maxY})`);
   }
 
   /**
-   * Genera los chunks iniciales en un patrón 3x3 (optimizado)
+   * Genera TODOS los chunks del mundo de una vez - SISTEMA SIMPLIFICADO
    */
-  private generateInitialChunks(): void {
-    const chunksPerRow = 3;
-    const chunksPerCol = 3;
-    const startX = -1; // Empezar desde -1 para centrar (3 chunks: -1, 0, 1)
-    const startY = -1;
+  private generateAllChunks(): void {
+    const worldSize = this.config.worldSize;
+    const startX = -Math.floor(worldSize / 2);
+    const startY = -Math.floor(worldSize / 2);
 
-    for (let x = startX; x < startX + chunksPerRow; x++) {
-      for (let y = startY; y < startY + chunksPerCol; y++) {
+    console.log(`🔧 Generando mundo completo ${worldSize}x${worldSize}...`);
+
+    for (let x = startX; x < startX + worldSize; x++) {
+      for (let y = startY; y < startY + worldSize; y++) {
         this.generateChunk(x, y);
-        this.activeChunks.add(`${x}_${y}`);
       }
     }
 
-    console.log(`🌍 Mundo inicial generado: ${chunksPerRow}x${chunksPerCol} chunks (${this.chunks.size} total)`);
+    console.log(`✅ Mundo completo generado: ${worldSize}x${worldSize} chunks (${this.chunks.size} total)`);
   }
 
   /**
-   * Actualiza el mundo basado en la posición del jugador
-   * @param playerX - Posición X del jugador
-   * @param playerY - Posición Y del jugador
+   * NO HACE NADA - El mundo es estático y permanente
+   * @param _playerX - Posición X del jugador (no usado)
+   * @param _playerY - Posición Y del jugador (no usado)
    */
-  updateWorld(playerX: number, playerY: number): void {
-    const currentChunk = this.getChunkCoordinates(playerX, playerY);
-
-    // Solo actualizar si el jugador cambió de chunk
-    if (currentChunk.x !== this.lastPlayerChunk.x || currentChunk.y !== this.lastPlayerChunk.y) {
-      this.lastPlayerChunk = currentChunk;
-
-      // Generar chunks necesarios y limpiar distantes (mundo dinámico optimizado)
-      this.generateNearbyChunksIfNeeded(currentChunk.x, currentChunk.y);
-      this.cleanupDistantChunks(currentChunk.x, currentChunk.y);
-    }
+  updateWorld(_playerX: number, _playerY: number): void {
+    // SISTEMA SIMPLIFICADO: No hay updates dinámicos
+    // Todo el mundo ya está generado y es permanente
   }
 
   /**
@@ -140,55 +148,8 @@ export class WorldManager {
   }
 
   /**
-   * Genera chunks cercanos al jugador si es necesario (optimizado y funcional)
+   * ELIMINADO - Ya no se necesita generación dinámica
    */
-  private generateNearbyChunksIfNeeded(centerX: number, centerY: number): void {
-    const distance = this.config.renderDistance;
-
-    // NO limpiar chunks activos - mantener todos los chunks generados como activos
-    // Solo agregar nuevos chunks al conjunto de activos
-
-    // Generar chunks dentro del rango de renderizado
-    for (let x = centerX - distance; x <= centerX + distance; x++) {
-      for (let y = centerY - distance; y <= centerY + distance; y++) {
-        const chunkId = `${x}_${y}`;
-
-        // Generar chunk si no existe
-        if (!this.chunks.has(chunkId)) {
-          this.generateChunk(x, y);
-          console.log(`🗺️ Nuevo chunk generado: ${chunkId} en (${x * this.config.chunkSize}, ${y * this.config.chunkSize})`);
-        }
-
-        // Activar chunk (mantener todos los chunks como activos para colisiones)
-        this.activeChunks.add(chunkId);
-
-        // Hacer visible el chunk
-        const chunk = this.chunks.get(chunkId);
-        if (chunk) {
-          if (chunk.terrain) chunk.terrain.setVisible(true);
-          if (chunk.rivers) chunk.rivers.setVisible(true);
-          if (chunk.bridges) chunk.bridges.setVisible(true);
-          if (chunk.structures) chunk.structures.setVisible(true);
-        }
-      }
-    }
-
-    // Solo ocultar visualmente chunks muy distantes (pero mantener física activa)
-    const hideDistance = distance + 2; // Ocultar solo chunks muy lejanos
-    this.chunks.forEach((chunk, chunkId) => {
-      const chunkDistance = Math.max(
-        Math.abs(chunk.x - centerX),
-        Math.abs(chunk.y - centerY)
-      );
-
-      if (chunkDistance > hideDistance) {
-        // Solo ocultar visualmente, NO desactivar física
-        if (chunk.terrain) chunk.terrain.setVisible(false);
-        if (chunk.bridges) chunk.bridges.setVisible(false);
-        // NO ocultar ríos y estructuras - necesarios para colisiones
-      }
-    });
-  }
 
   /**
    * Genera un chunk específico
@@ -220,12 +181,18 @@ export class WorldManager {
     chunk.generated = true;
     this.chunks.set(chunkId, chunk);
 
-    // Log de diagnóstico
-    const riverCount = chunk.rivers.children.entries.length;
-    const structureCount = chunk.structures.children.entries.length;
-    console.log(`✅ Chunk ${chunkId} generado: ${riverCount} ríos, ${structureCount} estructuras`);
+    // Agregar estructuras y ríos a las listas globales para colisiones
+    chunk.structures.children.entries.forEach(structure => {
+      if ((structure as any).body) {
+        this.allStructures.push(structure as Phaser.GameObjects.GameObject);
+      }
+    });
 
-    console.log(`🗺️ Chunk generado: ${chunkId} en (${worldX}, ${worldY})`);
+    chunk.rivers.children.entries.forEach(river => {
+      if ((river as any).body) {
+        this.allRivers.push(river as Phaser.GameObjects.GameObject);
+      }
+    });
   }
 
   /**
@@ -576,43 +543,8 @@ export class WorldManager {
   }
 
   /**
-   * Limpia chunks distantes para optimizar memoria (optimizado)
+   * ELIMINADO - No hay limpieza de chunks en el sistema simplificado
    */
-  private cleanupDistantChunks(centerX: number, centerY: number): void {
-    const maxDistance = this.config.renderDistance + 2; // Un poco más de margen
-    const chunksToRemove: string[] = [];
-
-    // Solo limpiar si tenemos demasiados chunks
-    if (this.chunks.size > 25) { // Límite de chunks en memoria
-      this.chunks.forEach((chunk, chunkId) => {
-        const distance = Math.max(
-          Math.abs(chunk.x - centerX),
-          Math.abs(chunk.y - centerY)
-        );
-
-        if (distance > maxDistance) {
-          chunksToRemove.push(chunkId);
-        }
-      });
-
-      // Remover chunks distantes
-      chunksToRemove.forEach(chunkId => {
-        const chunk = this.chunks.get(chunkId);
-        if (chunk) {
-          chunk.terrain.destroy(true);
-          chunk.rivers.destroy(true);
-          chunk.bridges.destroy(true);
-          chunk.structures.destroy(true);
-          this.chunks.delete(chunkId);
-          this.activeChunks.delete(chunkId);
-        }
-      });
-
-      if (chunksToRemove.length > 0) {
-        console.log(`🗑️ Limpiados ${chunksToRemove.length} chunks distantes (total: ${this.chunks.size})`);
-      }
-    }
-  }
 
   /**
    * Función de ruido 2D simplificada (implementación básica)
@@ -624,91 +556,27 @@ export class WorldManager {
   }
 
   /**
-   * Obtiene todas las estructuras con física de TODOS los chunks generados (NO incluye ríos ni puentes)
+   * Obtiene todas las estructuras con física - SISTEMA SIMPLIFICADO
    */
   getPhysicsStructures(): Phaser.GameObjects.GameObject[] {
-    const structures: Phaser.GameObjects.GameObject[] = [];
-    let totalChunks = 0;
-    let chunksWithStructures = 0;
-
-    // Usar TODOS los chunks generados, no solo los activos
-    this.chunks.forEach((chunk, chunkId) => {
-      if (chunk && chunk.generated) {
-        totalChunks++;
-        let chunkStructures = 0;
-        
-        // Agregar estructuras con física (cubos, torres, muros, plataformas)
-        chunk.structures.children.entries.forEach(structure => {
-          const gameObject = structure as Phaser.GameObjects.GameObject;
-          if (gameObject.body) { // Solo estructuras con física
-            structures.push(gameObject);
-            chunkStructures++;
-          }
-        });
-
-        if (chunkStructures > 0) {
-          chunksWithStructures++;
-        }
-
-        // NO agregar ríos aquí - los ríos solo son obstáculos para el jugador
-        // NO agregar puentes aquí - los puentes son completamente atravesables
-      }
-    });
-
-    // Log cada 60 frames (1 segundo aprox)
-    if (Math.random() < 0.016) { // ~1/60
-      console.log(`🏗️ Estructuras físicas: ${structures.length} total, ${chunksWithStructures}/${totalChunks} chunks con estructuras`);
-    }
-
-    return structures;
+    return this.allStructures;
   }
 
   /**
-   * Obtiene todos los ríos con física de TODOS los chunks generados (solo para colisiones del jugador)
+   * Obtiene todos los ríos con física - SISTEMA SIMPLIFICADO
    */
   getPhysicsRivers(): Phaser.GameObjects.GameObject[] {
-    const rivers: Phaser.GameObjects.GameObject[] = [];
-    let totalChunks = 0;
-    let chunksWithRivers = 0;
-
-    // Usar TODOS los chunks generados, no solo los activos
-    this.chunks.forEach((chunk, chunkId) => {
-      if (chunk && chunk.generated) {
-        totalChunks++;
-        let chunkRivers = 0;
-        
-        // Agregar ríos con física (obstáculos sólidos solo para el jugador)
-        chunk.rivers.children.entries.forEach(river => {
-          const gameObject = river as Phaser.GameObjects.GameObject;
-          if (gameObject.body) { // Solo ríos con física
-            rivers.push(gameObject);
-            chunkRivers++;
-          }
-        });
-
-        if (chunkRivers > 0) {
-          chunksWithRivers++;
-        }
-      }
-    });
-
-    // Log cada 60 frames (1 segundo aprox)
-    if (Math.random() < 0.016) { // ~1/60
-      console.log(`🌊 Ríos físicos: ${rivers.length} total, ${chunksWithRivers}/${totalChunks} chunks con ríos`);
-    }
-
-    return rivers;
+    return this.allRivers;
   }
 
   /**
-   * Obtiene todos los puentes (para verificación - NO tienen física)
+   * Obtiene todos los puentes (para verificación - NO tienen física) - SISTEMA SIMPLIFICADO
    */
   getPhysicsBridges(): Phaser.GameObjects.GameObject[] {
     const bridges: Phaser.GameObjects.GameObject[] = [];
 
-    this.activeChunks.forEach(chunkId => {
-      const chunk = this.chunks.get(chunkId);
-      if (chunk) {
+    this.chunks.forEach((chunk) => {
+      if (chunk && chunk.generated) {
         // Agregar puentes (NO tienen física - son completamente atravesables)
         chunk.bridges.children.entries.forEach(bridge => {
           const gameObject = bridge as Phaser.GameObjects.GameObject;
@@ -721,10 +589,10 @@ export class WorldManager {
   }
 
   /**
-   * Obtiene los IDs de los chunks activos
+   * Obtiene todos los chunks (todos están activos en el sistema simplificado)
    */
   getActiveChunks(): string[] {
-    return Array.from(this.activeChunks);
+    return Array.from(this.chunks.keys());
   }
 
   /**
@@ -735,13 +603,13 @@ export class WorldManager {
   }
 
   /**
-   * Obtiene información del mundo actual
+   * Obtiene información del mundo actual - SISTEMA SIMPLIFICADO
    */
   getWorldInfo(): { activeChunks: number; totalChunks: number; structures: number } {
     return {
-      activeChunks: this.activeChunks.size,
+      activeChunks: this.chunks.size, // Todos los chunks están activos
       totalChunks: this.chunks.size,
-      structures: this.getPhysicsStructures().length
+      structures: this.allStructures.length
     };
   }
 
@@ -767,23 +635,25 @@ export class WorldManager {
   }
 
   /**
-   * Aplica wraparound al mundo (DESACTIVADO para mundo dinámico infinito)
-   * @param x - Posición X del jugador
-   * @param y - Posición Y del jugador
-   * @returns Nueva posición sin wraparound (mundo infinito)
+   * Verifica si una posición está dentro de los límites del mundo
+   * @param x - Posición X
+   * @param y - Posición Y
+   * @returns true si está dentro de los límites
    */
-  applyWraparound(x: number, y: number): { x: number; y: number } {
-    // DESACTIVADO: Permitir mundo infinito dinámico
-    // El wraparound estaba limitando el mundo y causando teletransporte
-    
-    // Mundo infinito sin límites - log desactivado para mejor rendimiento
-    
-    // Devolver la posición original sin modificar
-    return { x, y };
+  isWithinBounds(x: number, y: number): boolean {
+    return x >= this.worldBounds.minX && x <= this.worldBounds.maxX &&
+           y >= this.worldBounds.minY && y <= this.worldBounds.maxY;
   }
 
   /**
-   * Obtiene información del mundo para el mini mapa
+   * Obtiene los límites del mundo
+   */
+  getWorldBounds(): { minX: number; maxX: number; minY: number; maxY: number } {
+    return { ...this.worldBounds };
+  }
+
+  /**
+   * Obtiene información del mundo para el mini mapa - SISTEMA SIMPLIFICADO
    */
   getMinimapInfo(): {
     playerChunk: { x: number; y: number };
@@ -794,7 +664,7 @@ export class WorldManager {
     return {
       playerChunk: this.lastPlayerChunk,
       worldSize: this.config.worldSize,
-      activeChunks: Array.from(this.activeChunks),
+      activeChunks: Array.from(this.activeChunks || []),
       playerPosition: {
         x: this.lastPlayerChunk.x,
         y: this.lastPlayerChunk.y
@@ -835,41 +705,6 @@ export class WorldManager {
   }
 
   /**
-   * Verifica si una posición está dentro de los límites del mundo
+   * ELIMINADAS - Funciones no necesarias en el sistema simplificado
    */
-  isWithinWorldBounds(x: number, y: number): boolean {
-    const halfWorldSize = (this.config.worldSize * this.config.chunkSize) / 2;
-    return x >= -halfWorldSize && x <= halfWorldSize &&
-      y >= -halfWorldSize && y <= halfWorldSize;
-  }
-
-
-
-  /**
-   * Precarga un chunk específico (versión pública para LoadingManager)
-   */
-  preloadChunk(chunkX: number, chunkY: number): void {
-    const chunkId = `${chunkX}_${chunkY}`;
-    if (!this.chunks.has(chunkId) && this.isWithinWorldBounds(chunkX * this.config.chunkSize, chunkY * this.config.chunkSize)) {
-      this.generateChunk(chunkX, chunkY);
-    }
-  }
-
-  /**
-   * Recrea los grupos de un chunk si están corruptos
-   */
-  recreateChunkGroups(chunk: WorldChunk): void {
-    if (!chunk.terrain || chunk.terrain.scene === null) {
-      chunk.terrain = this.scene.add.group();
-    }
-    if (!chunk.rivers || chunk.rivers.scene === null) {
-      chunk.rivers = this.scene.add.group();
-    }
-    if (!chunk.bridges || chunk.bridges.scene === null) {
-      chunk.bridges = this.scene.add.group();
-    }
-    if (!chunk.structures || chunk.structures.scene === null) {
-      chunk.structures = this.scene.add.group();
-    }
-  }
 }

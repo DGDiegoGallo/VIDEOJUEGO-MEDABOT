@@ -283,16 +283,14 @@ export class BulletManager {
   }
 
   /**
-   * Verifica si hay balas fuera de los límites de la pantalla
-   * @param _margin - Margen adicional para considerar "fuera de pantalla" (no usado en mundo infinito)
+   * Limpia balas que están fuera de los límites del mundo - SISTEMA SIMPLIFICADO
+   * @param worldManager - WorldManager para obtener los límites del mundo
    */
-  cleanupOffscreenBullets(_margin: number = 50): void {
-    // En mundo infinito, solo limpiamos balas muy distantes del jugador
-    // para evitar problemas de memoria
-    const camera = this.scene.cameras.main;
-    const cameraX = camera.scrollX;
-    const cameraY = camera.scrollY;
-    const maxDistance = 1000; // Distancia máxima permitida
+  cleanupOffscreenBullets(worldManager?: any): void {
+    if (!worldManager) return;
+
+    const worldBounds = worldManager.getWorldBounds();
+    const margin = 50; // Margen para limpiar balas que salen del mundo
 
     this.bullets.forEach((bullet, index) => {
       if (!bullet.active) {
@@ -300,8 +298,11 @@ export class BulletManager {
         return;
       }
 
-      const distance = Phaser.Math.Distance.Between(bullet.x, bullet.y, cameraX, cameraY);
-      if (distance > maxDistance) {
+      // Verificar si la bala está fuera de los límites del mundo
+      if (bullet.x < worldBounds.minX - margin ||
+        bullet.x > worldBounds.maxX + margin ||
+        bullet.y < worldBounds.minY - margin ||
+        bullet.y > worldBounds.maxY + margin) {
         this.removeBullet(bullet);
       }
     });
