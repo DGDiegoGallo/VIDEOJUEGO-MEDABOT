@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import { Position, EnemyConfig, EnemyType } from '../types/game';
+import { WorldManager } from './WorldManager';
 
 /**
  * Clase que maneja toda la lógica relacionada con los enemigos
@@ -23,6 +24,7 @@ export class EnemyManager {
   private scene: Scene;
   private config: EnemyConfig;
   private spawnTimer: Phaser.Time.TimerEvent | null = null;
+  private worldManager: WorldManager | null = null;
 
   // Sistema de escalado de dificultad
   private gameTimeSeconds: number = 0;
@@ -89,6 +91,14 @@ export class EnemyManager {
     };
 
     this.currentSpawnInterval = this.config.spawnInterval;
+  }
+
+  /**
+   * Establece el WorldManager para verificación de espacios libres
+   * @param worldManager - Instancia del WorldManager
+   */
+  public setWorldManager(worldManager: WorldManager): void {
+    this.worldManager = worldManager;
   }
 
   /**
@@ -231,6 +241,7 @@ export class EnemyManager {
 
   /**
    * Obtiene una posición aleatoria en los bordes de la pantalla relativa al jugador
+   * Ahora verifica que la posición esté libre de obstáculos
    * @param playerX - Posición X del jugador
    * @param playerY - Posición Y del jugador
    * @returns Posición de spawn
@@ -238,33 +249,52 @@ export class EnemyManager {
   private getRandomSpawnPosition(playerX: number, playerY: number): Position {
     const spawnDistance = 400; // Distancia desde el jugador para hacer spawn
     const margin = 50;
+    const maxAttempts = 20; // Máximo intentos para encontrar posición libre
 
-    const side = Math.floor(Math.random() * 4);
-    let x: number, y: number;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const side = Math.floor(Math.random() * 4);
+      let x: number, y: number;
 
-    switch (side) {
-      case 0: // Top
-        x = playerX + (Math.random() - 0.5) * spawnDistance * 2;
-        y = playerY - spawnDistance - margin;
-        break;
-      case 1: // Right
-        x = playerX + spawnDistance + margin;
-        y = playerY + (Math.random() - 0.5) * spawnDistance * 2;
-        break;
-      case 2: // Bottom
-        x = playerX + (Math.random() - 0.5) * spawnDistance * 2;
-        y = playerY + spawnDistance + margin;
-        break;
-      case 3: // Left
-        x = playerX - spawnDistance - margin;
-        y = playerY + (Math.random() - 0.5) * spawnDistance * 2;
-        break;
-      default:
-        x = playerX;
-        y = playerY;
+      switch (side) {
+        case 0: // Top
+          x = playerX + (Math.random() - 0.5) * spawnDistance * 2;
+          y = playerY - spawnDistance - margin;
+          break;
+        case 1: // Right
+          x = playerX + spawnDistance + margin;
+          y = playerY + (Math.random() - 0.5) * spawnDistance * 2;
+          break;
+        case 2: // Bottom
+          x = playerX + (Math.random() - 0.5) * spawnDistance * 2;
+          y = playerY + spawnDistance + margin;
+          break;
+        case 3: // Left
+          x = playerX - spawnDistance - margin;
+          y = playerY + (Math.random() - 0.5) * spawnDistance * 2;
+          break;
+        default:
+          x = playerX;
+          y = playerY;
+      }
+
+      // Verificar si la posición está libre usando WorldManager
+      if (this.worldManager) {
+        const enemyRadius = 25; // Radio de verificación para enemigos
+        if (this.worldManager.isPositionFreeOfObstacles(x, y, enemyRadius, true)) {
+          return { x, y };
+        }
+      } else {
+        // Fallback si no hay WorldManager
+        return { x, y };
+      }
     }
 
-    return { x, y };
+    // Si no se encuentra posición libre, usar posición básica sin verificación
+    console.warn(`⚠️ No se pudo encontrar posición libre para enemigo cerca del jugador (${playerX}, ${playerY})`);
+    return {
+      x: playerX + spawnDistance,
+      y: playerY
+    };
   }
 
   /**

@@ -12,6 +12,7 @@ import { TimerManager } from '../managers/TimerManager';
 import { MinimapManager } from '../managers/MinimapManager';
 import { UIManager } from '../managers/UIManager';
 import { ExplosionManager } from '../managers/ExplosionManager';
+import { StructureType } from '../managers/StructureManager';
 import { SkillLevels, SkillOption, EnemyType } from '../types/game';
 
 export class MainScene extends Scene {
@@ -101,6 +102,9 @@ export class MainScene extends Scene {
 
     // Conectar Player con WorldManager para wraparound
     this.player.setWorldManager(this.worldManager);
+    
+    // Conectar EnemyManager con WorldManager para verificación de espacios libres
+    this.enemyManager.setWorldManager(this.worldManager);
 
     // Inicializar managers especializados
     this.cameraManager = new CameraManager(this, this.player);
@@ -200,9 +204,9 @@ export class MainScene extends Scene {
     // Inicializar GameEffectsManager
     this.gameEffectsManager.initialize(this.player, this.bulletManager, this.experienceManager);
 
-    // Generar barriles explosivos iniciales
+    // Generar barriles explosivos iniciales usando StructureManager
     const playerPos = this.player.getPosition();
-    this.explosionManager.generateRandomBarrels(playerPos.x, playerPos.y, 5);
+    this.generateExplosiveBarrels(playerPos.x, playerPos.y, 5);
 
     // Generar tanques de prueba en la primera zona
     console.log('🛡️ Generando tanques de prueba...');
@@ -278,7 +282,7 @@ export class MainScene extends Scene {
           playerY: playerPos.y,
           activeChunks: minimapData.activeChunks.length,
           totalChunks: minimapData.worldSize,
-          structures: this.worldManager.getPhysicsStructures().length
+          structures: this.worldManager.getStructureManager().getStats().total
         },
         minimapData: minimapData,
         equipment: uiData.equipment
@@ -286,6 +290,17 @@ export class MainScene extends Scene {
 
       // Emitir eventos de actualización
       this.events.emit('updateUI', gameStats);
+    }
+
+    // Debug de barriles cada 10 segundos (600 frames)
+    if (this.updateCounter % 600 === 0) {
+      const barrelStats = this.explosionManager.getBarrelStats();
+      if (barrelStats.total > 0) {
+        console.log(`🛢️ Barriles: ${barrelStats.healthy}/${barrelStats.active}/${barrelStats.total} (healthy/active/total)`);
+        if (barrelStats.healthy > 0) {
+          console.log(`🛢️ Posiciones: ${barrelStats.positions.slice(0, 3).map(p => `(${p.x},${p.y}:${p.health}HP)`).join(', ')}${barrelStats.positions.length > 3 ? '...' : ''}`);
+        }
+      }
     }
 
     // Resetear contador para evitar overflow
@@ -336,6 +351,41 @@ export class MainScene extends Scene {
     this.events.on('bulletHitBarrel', (bullet: Phaser.GameObjects.Rectangle) => {
       this.bulletManager.removeBullet(bullet);
     });
+  }
+
+  /**
+   * Genera barriles explosivos usando el StructureManager con verificación de espacios libres
+   */
+  private generateExplosiveBarrels(centerX: number, centerY: number, count: number): void {
+    let successfulBarrels = 0;
+    const maxAttempts = count * 3; // Más intentos para encontrar posiciones libres
+
+    for (let attempt = 0; attempt < maxAttempts && successfulBarrels < count; attempt++) {
+      // Buscar posición libre usando WorldManager
+      const freePosition = this.worldManager.findFreePositionForSpawn(
+        centerX, 
+        centerY, 
+        80,  // Radio mínimo de separación
+        300, // Radio máximo de búsqueda
+        15,  // Intentos máximos
+        true // Incluir ríos en verificación
+      );
+
+      if (freePosition) {
+        this.worldManager.createStructureAt(freePosition.x, freePosition.y, StructureType.EXPLOSIVE_BARREL, {
+          hasPhysics: true,
+          isDestructible: true,
+          health: 1
+        });
+        successfulBarrels++;
+      }
+    }
+
+    if (successfulBarrels < count) {
+      console.log(`⚠️ Solo se pudieron generar ${successfulBarrels}/${count} barriles explosivos debido a falta de espacio`);
+    } else {
+      console.log(`💥 Generados ${successfulBarrels} barriles explosivos usando StructureManager con verificación de espacios`);
+    }
   }
 
   /**

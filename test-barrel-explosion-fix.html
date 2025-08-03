@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: Barrel Explosion Fix</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #2c3e50;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            border: 2px solid #34495e;
+            margin: 20px auto;
+            display: block;
+        }
+        .info {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .controls {
+            background: #34495e;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .status {
+            background: #27ae60;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>🧪 Test: Barrel Explosion Fix</h1>
+        <p>Prueba del sistema de explosión de barriles arreglado</p>
+        
+        <div class="controls">
+            <h3>Controles:</h3>
+            <p><strong>Flechas:</strong> Mover jugador</p>
+            <p><strong>Automático:</strong> Disparo hacia enemigos</p>
+            <p><strong>Objetivo:</strong> Disparar a los barriles rojos para que exploten</p>
+        </div>
+
+        <div class="status">
+            <p><strong>Estado:</strong> <span id="status">Inicializando...</span></p>
+            <p><strong>Barriles:</strong> <span id="barrels">0</span></p>
+            <p><strong>Explosiones:</strong> <span id="explosions">0</span></p>
+        </div>
+    </div>
+
+    <div id="game-container"></div>
+
+    <script>
+        // Configuración del juego
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game-container',
+            backgroundColor: '#1a252f',
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+
+        // Variables globales
+        let player, cursors;
+        let bullets = [];
+        let barrels = [];
+        let enemies = [];
+        let explosionCount = 0;
+        let shootTimer = 0;
+
+        function preload() {
+            // No necesitamos cargar assets externos
+        }
+
+        function create() {
+            // Crear jugador
+            player = this.add.rectangle(400, 300, 20, 20, 0x3498db);
+            this.physics.add.existing(player);
+            player.body.setCollideWorldBounds(true);
+
+            // Crear controles
+            cursors = this.input.keyboard.createCursorKeys();
+
+            // Crear barriles de prueba
+            createTestBarrels.call(this);
+
+            // Crear enemigos de prueba
+            createTestEnemies.call(this);
+
+            // Actualizar UI
+            updateStatus();
+        }
+
+        function createTestBarrels() {
+            const positions = [
+                { x: 200, y: 200 },
+                { x: 600, y: 200 },
+                { x: 400, y: 150 },
+                { x: 300, y: 400 },
+                { x: 500, y: 450 }
+            ];
+
+            positions.forEach(pos => {
+                const barrel = createBarrel.call(this, pos.x, pos.y);
+                barrels.push(barrel);
+            });
+
+            console.log(`🛢️ Creados ${barrels.length} barriles de prueba`);
+        }
+
+        function createBarrel(x, y) {
+            // Crear barril visual mejorado
+            const barrel = this.add.rectangle(x, y, 24, 24, 0x8b4513);
+            barrel.setStrokeStyle(3, 0x654321);
+            
+            // Agregar física
+            this.physics.add.existing(barrel, true); // true = static body
+            
+            // Propiedades del barril
+            barrel.health = 1;
+            barrel.maxHealth = 1;
+            barrel.isDestructible = true;
+
+            // Crear elementos visuales adicionales
+            const topRing = this.add.rectangle(x, y - 7, 26, 3, 0x654321);
+            const bottomRing = this.add.rectangle(x, y + 7, 26, 3, 0x654321);
+            
+            // Símbolo de peligro
+            const warning = this.add.triangle(x, y - 2, 0, -8, -7, 6, 7, 6, 0xffff00);
+            warning.setStrokeStyle(1, 0xff8800);
+            
+            // Texto TNT
+            const tntText = this.add.text(x, y + 4, 'TNT', {
+                fontSize: '8px',
+                color: '#ff0000',
+                fontStyle: 'bold',
+                fontFamily: 'Arial'
+            }).setOrigin(0.5);
+
+            // Efecto de parpadeo
+            this.tweens.add({
+                targets: [warning, tntText],
+                alpha: 0.6,
+                duration: 1000,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+
+            // Almacenar referencias a elementos adicionales
+            barrel.additionalElements = [topRing, bottomRing, warning, tntText];
+
+            return barrel;
+        }
+
+        function createTestEnemies() {
+            const positions = [
+                { x: 150, y: 300 },
+                { x: 650, y: 300 },
+                { x: 400, y: 100 }
+            ];
+
+            positions.forEach(pos => {
+                const enemy = this.add.rectangle(pos.x, pos.y, 16, 16, 0xe74c3c);
+                this.physics.add.existing(enemy);
+                enemy.body.setVelocity(
+                    (Math.random() - 0.5) * 100,
+                    (Math.random() - 0.5) * 100
+                );
+                enemy.body.setBounce(1, 1);
+                enemy.body.setCollideWorldBounds(true);
+                enemies.push(enemy);
+            });
+
+            console.log(`👹 Creados ${enemies.length} enemigos de prueba`);
+        }
+
+        function update(time, delta) {
+            // Mover jugador
+            if (cursors.left.isDown) {
+                player.body.setVelocityX(-200);
+            } else if (cursors.right.isDown) {
+                player.body.setVelocityX(200);
+            } else {
+                player.body.setVelocityX(0);
+            }
+
+            if (cursors.up.isDown) {
+                player.body.setVelocityY(-200);
+            } else if (cursors.down.isDown) {
+                player.body.setVelocityY(200);
+            } else {
+                player.body.setVelocityY(0);
+            }
+
+            // Disparo automático
+            shootTimer += delta;
+            if (shootTimer >= 300) { // Cada 300ms
+                shootTimer = 0;
+                autoShoot.call(this);
+            }
+
+            // Actualizar balas
+            updateBullets.call(this);
+
+            // Verificar colisiones
+            checkCollisions.call(this);
+        }
+
+        function autoShoot() {
+            if (enemies.length === 0 && barrels.length === 0) return;
+
+            // Encontrar objetivo más cercano (enemigo o barril)
+            let closestTarget = null;
+            let closestDistance = Infinity;
+
+            [...enemies, ...barrels].forEach(target => {
+                const distance = Phaser.Math.Distance.Between(
+                    player.x, player.y, target.x, target.y
+                );
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestTarget = target;
+                }
+            });
+
+            if (closestTarget) {
+                shootBullet.call(this, player.x, player.y, closestTarget.x, closestTarget.y);
+            }
+        }
+
+        function shootBullet(fromX, fromY, toX, toY) {
+            const bullet = this.add.rectangle(fromX, fromY, 6, 6, 0xf1c40f);
+            this.physics.add.existing(bullet);
+
+            // Calcular dirección
+            const angle = Phaser.Math.Angle.Between(fromX, fromY, toX, toY);
+            const speed = 400;
+
+            bullet.body.setVelocity(
+                Math.cos(angle) * speed,
+                Math.sin(angle) * speed
+            );
+
+            bullets.push(bullet);
+        }
+
+        function updateBullets() {
+            bullets = bullets.filter(bullet => {
+                // Remover balas fuera de pantalla
+                if (bullet.x < -50 || bullet.x > 850 || bullet.y < -50 || bullet.y > 650) {
+                    bullet.destroy();
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        function checkCollisions() {
+            // Colisiones bala-barril
+            bullets.forEach((bullet, bulletIndex) => {
+                barrels.forEach((barrel, barrelIndex) => {
+                    if (Phaser.Math.Distance.Between(bullet.x, bullet.y, barrel.x, barrel.y) < 20) {
+                        console.log(`💥 Colisión detectada: bala vs barril en (${Math.round(barrel.x)}, ${Math.round(barrel.y)})`);
+                        
+                        // Remover bala
+                        bullet.destroy();
+                        bullets.splice(bulletIndex, 1);
+
+                        // Dañar barril
+                        damageBarrel.call(this, barrel, barrelIndex);
+                    }
+                });
+            });
+
+            // Colisiones bala-enemigo
+            bullets.forEach((bullet, bulletIndex) => {
+                enemies.forEach((enemy, enemyIndex) => {
+                    if (Phaser.Math.Distance.Between(bullet.x, bullet.y, enemy.x, enemy.y) < 15) {
+                        // Remover bala y enemigo
+                        bullet.destroy();
+                        bullets.splice(bulletIndex, 1);
+                        
+                        enemy.destroy();
+                        enemies.splice(enemyIndex, 1);
+                        
+                        console.log(`🎯 Enemigo eliminado`);
+                    }
+                });
+            });
+        }
+
+        function damageBarrel(barrel, barrelIndex) {
+            if (!barrel.isDestructible || barrel.health <= 0) return;
+
+            const previousHealth = barrel.health;
+            barrel.health -= 1;
+
+            console.log(`🔥 Barril dañado: ${previousHealth} → ${barrel.health} HP`);
+
+            // Efecto visual de daño
+            this.tweens.add({
+                targets: barrel,
+                scaleX: 1.2,
+                scaleY: 1.2,
+                duration: 100,
+                yoyo: true,
+                ease: 'Power2'
+            });
+
+            // Si fue destruido, explotar
+            if (barrel.health <= 0) {
+                console.log(`💥 Barril destruido, iniciando explosión`);
+                explodeBarrel.call(this, barrel, barrelIndex);
+            }
+        }
+
+        function explodeBarrel(barrel, barrelIndex) {
+            console.log(`💥 Barril explotando en (${Math.round(barrel.x)}, ${Math.round(barrel.y)})`);
+
+            const explosionX = barrel.x;
+            const explosionY = barrel.y;
+            const explosionRadius = 120;
+
+            // Remover barril y sus elementos adicionales
+            if (barrel.additionalElements) {
+                barrel.additionalElements.forEach(element => element.destroy());
+            }
+            barrel.destroy();
+            barrels.splice(barrelIndex, 1);
+
+            // Crear efecto visual de explosión
+            createExplosionEffect.call(this, explosionX, explosionY, explosionRadius);
+
+            // Dañar enemigos en el radio
+            enemies = enemies.filter(enemy => {
+                const distance = Phaser.Math.Distance.Between(explosionX, explosionY, enemy.x, enemy.y);
+                if (distance <= explosionRadius) {
+                    enemy.destroy();
+                    console.log(`💥 Enemigo eliminado por explosión`);
+                    return false;
+                }
+                return true;
+            });
+
+            // Reacción en cadena con otros barriles
+            barrels.forEach((otherBarrel, otherIndex) => {
+                const distance = Phaser.Math.Distance.Between(explosionX, explosionY, otherBarrel.x, otherBarrel.y);
+                if (distance <= explosionRadius && otherBarrel.health > 0) {
+                    console.log(`🔥 Reacción en cadena: barril en (${Math.round(otherBarrel.x)}, ${Math.round(otherBarrel.y)})`);
+                    this.time.delayedCall(100, () => {
+                        if (barrels.includes(otherBarrel)) {
+                            damageBarrel.call(this, otherBarrel, barrels.indexOf(otherBarrel));
+                        }
+                    });
+                }
+            });
+
+            explosionCount++;
+            updateStatus();
+        }
+
+        function createExplosionEffect(x, y, radius) {
+            // Ondas de choque
+            for (let wave = 0; wave < 3; wave++) {
+                this.time.delayedCall(wave * 50, () => {
+                    const shockWave = this.add.circle(x, y, 5, 0xffffff, 0.8 - wave * 0.2);
+                    shockWave.setStrokeStyle(3, 0xff4500, 0.9);
+
+                    this.tweens.add({
+                        targets: shockWave,
+                        radius: radius * (0.8 + wave * 0.3),
+                        alpha: 0,
+                        duration: 400 + wave * 100,
+                        ease: 'Power2',
+                        onComplete: () => shockWave.destroy()
+                    });
+                });
+            }
+
+            // Explosión principal
+            const explosion = this.add.circle(x, y, radius * 0.3, 0xff4500, 0.8);
+            this.tweens.add({
+                targets: explosion,
+                scaleX: 2.5,
+                scaleY: 2.5,
+                alpha: 0,
+                duration: 600,
+                ease: 'Power3',
+                onComplete: () => explosion.destroy()
+            });
+
+            // Partículas
+            for (let i = 0; i < 16; i++) {
+                const angle = (i / 16) * Math.PI * 2;
+                const distance = 20 + Math.random() * 20;
+                const particleX = x + Math.cos(angle) * distance;
+                const particleY = y + Math.sin(angle) * distance;
+
+                const particle = this.add.rectangle(particleX, particleY, 4, 4, 0xff6600);
+                
+                this.tweens.add({
+                    targets: particle,
+                    x: x + Math.cos(angle) * radius,
+                    y: y + Math.sin(angle) * radius,
+                    alpha: 0,
+                    duration: 500,
+                    ease: 'Power2',
+                    onComplete: () => particle.destroy()
+                });
+            }
+
+            // Sacudida de cámara
+            this.cameras.main.shake(300, 0.02);
+        }
+
+        function updateStatus() {
+            document.getElementById('status').textContent = 'Funcionando correctamente';
+            document.getElementById('barrels').textContent = barrels.length;
+            document.getElementById('explosions').textContent = explosionCount;
+        }
+
+        // Inicializar juego
+        const game = new Phaser.Game(config);
+    </script>
+</body>
+</html>

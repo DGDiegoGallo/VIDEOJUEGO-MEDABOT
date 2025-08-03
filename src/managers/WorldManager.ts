@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import { StructureManager, StructureType, Structure } from './StructureManager';
 
 /**
  * Configuración del mundo estático simplificado
@@ -30,15 +31,7 @@ interface WorldChunk {
   verticalRiverX?: number;
 }
 
-/**
- * Tipos de estructuras que pueden aparecer
- */
-enum StructureType {
-  CUBE = 'cube',
-  TOWER = 'tower',
-  WALL = 'wall',
-  PLATFORM = 'platform'
-}
+// StructureType ahora se importa desde StructureManager
 
 /**
  * Manager para el mundo estático simplificado
@@ -60,7 +53,7 @@ export class WorldManager {
 
   // Grupos principales para organización
   private worldContainer!: Phaser.GameObjects.Container;
-  private allStructures: Phaser.GameObjects.GameObject[] = [];
+  private structureManager!: StructureManager;
   private allRivers: Phaser.GameObjects.GameObject[] = [];
 
   constructor(scene: Scene, config?: Partial<WorldConfig>) {
@@ -95,6 +88,9 @@ export class WorldManager {
     this.worldContainer = this.scene.add.container(0, 0);
     this.worldContainer.setDepth(-100); // Muy atrás, detrás de todo
 
+    // Inicializar StructureManager
+    this.structureManager = new StructureManager(this.scene);
+
     // Generar TODOS los chunks del mundo de una vez
     this.generateAllChunks();
 
@@ -103,8 +99,9 @@ export class WorldManager {
       this.activeChunks.add(chunkId);
     });
 
+    const structureStats = this.structureManager.getStats();
     console.log(`🌍 WorldManager: Mundo completo generado - ${this.chunks.size} chunks permanentes`);
-    console.log(`🏗️ Estructuras totales: ${this.allStructures.length}`);
+    console.log(`🏗️ Estructuras totales: ${structureStats.total} (${structureStats.withPhysics} con física)`);
     console.log(`🌊 Ríos totales: ${this.allRivers.length}`);
     console.log(`📏 Límites del mundo: (${this.worldBounds.minX}, ${this.worldBounds.minY}) a (${this.worldBounds.maxX}, ${this.worldBounds.maxY})`);
   }
@@ -181,13 +178,8 @@ export class WorldManager {
     chunk.generated = true;
     this.chunks.set(chunkId, chunk);
 
-    // Agregar estructuras y ríos a las listas globales para colisiones
-    chunk.structures.children.entries.forEach(structure => {
-      if ((structure as any).body) {
-        this.allStructures.push(structure as Phaser.GameObjects.GameObject);
-      }
-    });
-
+    // Agregar ríos a la lista global para colisiones
+    // Las estructuras ahora se manejan via StructureManager
     chunk.rivers.children.entries.forEach(river => {
       if ((river as any).body) {
         this.allRivers.push(river as Phaser.GameObjects.GameObject);
@@ -370,7 +362,7 @@ export class WorldManager {
   }
 
   /**
-   * Genera estructuras procedurales (arreglado para generar estructuras)
+   * Genera estructuras procedurales usando StructureManager con verificación de espacios libres
    */
   private generateStructures(chunk: WorldChunk, worldX: number, worldY: number): void {
     const size = this.config.chunkSize;
@@ -383,16 +375,38 @@ export class WorldManager {
 
     console.log(`🏗️ Generando ${structureCount} estructuras en chunk (${worldX}, ${worldY})`);
 
-    for (let i = 0; i < structureCount; i++) {
-      const structX = worldX + Math.random() * size;
-      const structY = worldY + Math.random() * size;
+    let successfulStructures = 0;
+    const maxAttempts = structureCount * 3; // Más intentos para encontrar posiciones libres
 
-      // Simplificar verificación de ríos - solo evitar si está MUY cerca
+    for (let attempt = 0; attempt < maxAttempts && successfulStructures < structureCount; attempt++) {
+      // Generar posición aleatoria dentro del chunk
+      const centerX = worldX + size * 0.5;
+      const centerY = worldY + size * 0.5;
+      const maxDistance = size * 0.4; // Mantener estructuras dentro del 80% del chunk
+      
+      const angle = Math.random() * Math.PI * 2;
+      const distance = Math.random() * maxDistance;
+      const structX = centerX + Math.cos(angle) * distance;
+      const structY = centerY + Math.sin(angle) * distance;
+
+      // Verificar que no esté cerca de ríos
       const isNearRiver = this.isNearRiver(structX, structY, chunk);
-      if (isNearRiver && Math.random() > 0.5) continue; // 50% probabilidad de evitar ríos
+      if (isNearRiver) continue;
 
+      // Verificar que no esté muy cerca de otras estructuras
+      const minSeparation = 60; // Distancia mínima entre estructuras
+      if (!this.structureManager.isPositionFree(structX, structY, minSeparation)) {
+        continue;
+      }
+
+      // Crear la estructura
       const structureType = this.getRandomStructureType();
-      this.createStructure(chunk, structX, structY, structureType);
+      this.createStructureViaManager(chunk, structX, structY, structureType);
+      successfulStructures++;
+    }
+
+    if (successfulStructures < structureCount) {
+      console.log(`⚠️ Solo se pudieron generar ${successfulStructures}/${structureCount} estructuras en chunk (${worldX}, ${worldY}) debido a falta de espacio`);
     }
   }
 
@@ -422,125 +436,22 @@ export class WorldManager {
   }
 
   /**
-   * Crea una estructura específica
+   * Crea una estructura usando el StructureManager
    */
-  private createStructure(chunk: WorldChunk, x: number, y: number, type: StructureType): void {
-    switch (type) {
-      case StructureType.CUBE:
-        this.createCubeStructure(chunk, x, y);
-        break;
-      case StructureType.TOWER:
-        this.createTowerStructure(chunk, x, y);
-        break;
-      case StructureType.WALL:
-        this.createWallStructure(chunk, x, y);
-        break;
-      case StructureType.PLATFORM:
-        this.createPlatformStructure(chunk, x, y);
-        break;
-    }
+  private createStructureViaManager(chunk: WorldChunk, x: number, y: number, type: StructureType): void {
+    const structure = this.structureManager.createStructure({
+      type,
+      x,
+      y,
+      hasPhysics: true,
+      isDestructible: type === StructureType.EXPLOSIVE_BARREL
+    });
+
+    // Agregar referencia al chunk para organización (opcional)
+    chunk.structures.add(structure);
   }
 
-  /**
-   * Crea una estructura tipo cubo
-   */
-  private createCubeStructure(chunk: WorldChunk, x: number, y: number): void {
-    const size = 30 + Math.random() * 40;
-    const color = 0x7f8c8d;
-
-    const cube = this.scene.add.rectangle(x, y, size, size, color);
-    cube.setStrokeStyle(2, 0x34495e);
-    cube.setDepth(-60); // Estructuras por encima de puentes pero debajo del jugador
-
-    // Agregar física para colisiones
-    this.scene.physics.add.existing(cube, true); // true = static body
-
-    // Agregar sombra
-    const shadow = this.scene.add.rectangle(x + 3, y + 3, size, size, 0x2c3e50, 0.3);
-    shadow.setDepth(-65); // Sombra más atrás que la estructura
-
-    chunk.structures.add(shadow);
-    chunk.structures.add(cube);
-  }
-
-  /**
-   * Crea una estructura tipo torre
-   */
-  private createTowerStructure(chunk: WorldChunk, x: number, y: number): void {
-    const width = 25 + Math.random() * 15;
-    const height = 60 + Math.random() * 40;
-    const color = 0x95a5a6;
-
-    const tower = this.scene.add.rectangle(x, y, width, height, color);
-    tower.setStrokeStyle(2, 0x7f8c8d);
-    tower.setDepth(-60); // Estructuras por encima de puentes pero debajo del jugador
-
-    // Agregar física para colisiones
-    this.scene.physics.add.existing(tower, true); // true = static body
-
-    // Agregar techo
-    const roofWidth = width + 10;
-    const roof = this.scene.add.triangle(x, y - height / 2 - 8, 0, 16, roofWidth / 2, 0, -roofWidth / 2, 0, 0xe74c3c);
-    roof.setDepth(-60); // Misma profundidad que la torre
-    this.scene.physics.add.existing(roof, true);
-
-    chunk.structures.add(tower);
-    chunk.structures.add(roof);
-  }
-
-  /**
-   * Crea una estructura tipo muro
-   */
-  private createWallStructure(chunk: WorldChunk, x: number, y: number): void {
-    const length = 80 + Math.random() * 60;
-    const height = 20 + Math.random() * 20;
-    const isHorizontal = Math.random() > 0.5;
-
-    const wall = this.scene.add.rectangle(
-      x, y,
-      isHorizontal ? length : height,
-      isHorizontal ? height : length,
-      0x8e44ad
-    );
-
-    wall.setStrokeStyle(2, 0x6c3483);
-    wall.setDepth(-60); // Estructuras por encima de puentes pero debajo del jugador
-
-    // Agregar física para colisiones
-    this.scene.physics.add.existing(wall, true); // true = static body
-
-    chunk.structures.add(wall);
-  }
-
-  /**
-   * Crea una estructura tipo plataforma
-   */
-  private createPlatformStructure(chunk: WorldChunk, x: number, y: number): void {
-    const width = 50 + Math.random() * 30;
-    const height = 15;
-    const color = 0xf39c12;
-
-    const platform = this.scene.add.rectangle(x, y, width, height, color);
-    platform.setStrokeStyle(2, 0xe67e22);
-    platform.setDepth(-60); // Estructuras por encima de puentes pero debajo del jugador
-
-    // Agregar física para colisiones
-    this.scene.physics.add.existing(platform, true); // true = static body
-
-    // Agregar soportes
-    const support1 = this.scene.add.rectangle(x - width / 3, y + 15, 8, 20, 0xd68910);
-    const support2 = this.scene.add.rectangle(x + width / 3, y + 15, 8, 20, 0xd68910);
-
-    support1.setDepth(-60); // Misma profundidad que la plataforma
-    support2.setDepth(-60); // Misma profundidad que la plataforma
-
-    this.scene.physics.add.existing(support1, true);
-    this.scene.physics.add.existing(support2, true);
-
-    chunk.structures.add(platform);
-    chunk.structures.add(support1);
-    chunk.structures.add(support2);
-  }
+  // Métodos de creación de estructuras eliminados - ahora se usa StructureManager
 
   /**
    * ELIMINADO - No hay limpieza de chunks en el sistema simplificado
@@ -558,8 +469,8 @@ export class WorldManager {
   /**
    * Obtiene todas las estructuras con física - SISTEMA SIMPLIFICADO
    */
-  getPhysicsStructures(): Phaser.GameObjects.GameObject[] {
-    return this.allStructures;
+  getPhysicsStructures(): Structure[] {
+    return this.structureManager.getPhysicsStructures();
   }
 
   /**
@@ -606,10 +517,11 @@ export class WorldManager {
    * Obtiene información del mundo actual - SISTEMA SIMPLIFICADO
    */
   getWorldInfo(): { activeChunks: number; totalChunks: number; structures: number } {
+    const structureStats = this.structureManager.getStats();
     return {
       activeChunks: this.chunks.size, // Todos los chunks están activos
       totalChunks: this.chunks.size,
-      structures: this.allStructures.length
+      structures: structureStats.total
     };
   }
 
@@ -617,6 +529,11 @@ export class WorldManager {
    * Destruye el WorldManager y limpia la memoria
    */
   destroy(): void {
+    // Destruir StructureManager primero
+    if (this.structureManager) {
+      this.structureManager.destroy();
+    }
+
     this.chunks.forEach(chunk => {
       chunk.terrain.destroy(true);
       chunk.rivers.destroy(true);
@@ -700,11 +617,108 @@ export class WorldManager {
     
     const allStructures = this.getPhysicsStructures();
     const allRivers = this.getPhysicsRivers();
+    const structureStats = this.structureManager.getStats();
     console.log(`  Estructuras físicas globales: ${allStructures.length}`);
+    console.log(`  Estadísticas estructuras:`, structureStats);
     console.log(`  Ríos físicos globales: ${allRivers.length}`);
   }
 
   /**
-   * ELIMINADAS - Funciones no necesarias en el sistema simplificado
+   * Obtiene el StructureManager para acceso directo
    */
+  public getStructureManager(): StructureManager {
+    return this.structureManager;
+  }
+
+  /**
+   * Crea una estructura específica en una posición
+   */
+  public createStructureAt(x: number, y: number, type: StructureType, config?: Partial<{ hasPhysics: boolean; isDestructible: boolean; health: number }>): Structure {
+    return this.structureManager.createStructure({
+      type,
+      x,
+      y,
+      hasPhysics: config?.hasPhysics ?? true,
+      isDestructible: config?.isDestructible ?? false,
+      health: config?.health ?? 1
+    });
+  }
+
+  /**
+   * Obtiene estructuras en un área específica
+   */
+  public getStructuresInArea(x: number, y: number, radius: number): Structure[] {
+    return this.structureManager.getStructuresInArea(x, y, radius);
+  }
+
+  /**
+   * Verifica si una posición está libre de obstáculos (estructuras y ríos)
+   * @param x - Posición X a verificar
+   * @param y - Posición Y a verificar
+   * @param radius - Radio de verificación
+   * @param includeRivers - Si incluir ríos en la verificación
+   * @returns true si la posición está libre
+   */
+  public isPositionFreeOfObstacles(x: number, y: number, radius: number, includeRivers: boolean = true): boolean {
+    // Verificar estructuras
+    if (!this.structureManager.isPositionFree(x, y, radius)) {
+      return false;
+    }
+
+    // Verificar ríos si se solicita
+    if (includeRivers) {
+      for (const river of this.allRivers) {
+        const riverSprite = river as Phaser.GameObjects.Rectangle;
+        const distance = Phaser.Math.Distance.Between(x, y, riverSprite.x, riverSprite.y);
+        
+        // Considerar el tamaño del río para la verificación
+        const riverRadius = Math.max(riverSprite.width, riverSprite.height) / 2;
+        if (distance < (radius + riverRadius)) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Encuentra una posición libre de obstáculos cerca de una ubicación objetivo
+   * @param targetX - Posición X objetivo
+   * @param targetY - Posición Y objetivo
+   * @param minRadius - Radio mínimo de separación
+   * @param maxRadius - Radio máximo de búsqueda
+   * @param maxAttempts - Número máximo de intentos
+   * @param includeRivers - Si incluir ríos en la verificación
+   * @returns Posición libre o null si no se encuentra
+   */
+  public findFreePositionForSpawn(
+    targetX: number, 
+    targetY: number, 
+    minRadius: number = 50, 
+    maxRadius: number = 200, 
+    maxAttempts: number = 30,
+    includeRivers: boolean = true
+  ): { x: number; y: number } | null {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      // Generar posición aleatoria en un anillo alrededor del objetivo
+      const angle = Math.random() * Math.PI * 2;
+      const distance = minRadius + Math.random() * (maxRadius - minRadius);
+      
+      const x = targetX + Math.cos(angle) * distance;
+      const y = targetY + Math.sin(angle) * distance;
+      
+      // Verificar límites del mundo
+      if (!this.isWithinBounds(x, y)) {
+        continue;
+      }
+      
+      // Verificar si la posición está libre de obstáculos
+      if (this.isPositionFreeOfObstacles(x, y, minRadius, includeRivers)) {
+        return { x, y };
+      }
+    }
+    
+    return null; // No se encontró posición libre
+  }
 }

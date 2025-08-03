@@ -6,6 +6,7 @@ import { ExperienceManager } from './ExperienceManager';
 import { WorldManager } from './WorldManager';
 import { VisualEffects } from './VisualEffects';
 import { ExplosionManager } from './ExplosionManager';
+import { Structure, StructureType } from './StructureManager';
 
 export class CollisionManager {
   private scene: Scene;
@@ -108,11 +109,12 @@ export class CollisionManager {
     this.structureGroup.clear(false, false);
     this.riverGroup.clear(false, false);
 
-    // Agregar estructuras actuales
+    // Agregar estructuras actuales usando StructureManager - EXCLUYENDO BARRILES EXPLOSIVOS
     const structures = this.worldManager.getPhysicsStructures();
     structures.forEach(structure => {
-      // Verificar que el objeto aún existe antes de agregarlo
-      if (structure && structure.scene && !structure.scene.sys.isDestroyed) {
+      // Verificar que la estructura aún existe antes de agregarla
+      // Y que NO sea un barril explosivo (los barriles se manejan por separado)
+      if (structure && structure.scene && structure.active && structure.getType() !== StructureType.EXPLOSIVE_BARREL) {
         this.structureGroup!.add(structure);
       }
     });
@@ -121,7 +123,7 @@ export class CollisionManager {
     const rivers = this.worldManager.getPhysicsRivers();
     rivers.forEach(river => {
       // Verificar que el objeto aún existe antes de agregarlo
-      if (river && river.scene && !river.scene.sys.isDestroyed) {
+      if (river && river.scene && (river as any).active !== false) {
         this.riverGroup!.add(river);
       }
     });
@@ -132,7 +134,7 @@ export class CollisionManager {
       const enemies = this.enemyManager.getEnemies();
       enemies.forEach(enemy => {
         // Verificar que el enemigo aún existe antes de agregarlo
-        if (enemy && enemy.scene && !enemy.scene.sys.isDestroyed) {
+        if (enemy && enemy.scene && (enemy as any).active !== false) {
           this.enemyGroup!.add(enemy);
         }
       });
@@ -163,7 +165,9 @@ export class CollisionManager {
     if (this.updateCounter % 300 === 0) { // ~5 segundos
       const structures = this.worldManager.getPhysicsStructures();
       const rivers = this.worldManager.getPhysicsRivers();
-      console.log(`🔍 Colisiones NATIVAS: ${structures.length} estructuras, ${rivers.length} ríos, jugador en (${Math.round(playerPos.x)}, ${Math.round(playerPos.y)})`);
+      const structureManager = this.worldManager.getStructureManager();
+      const stats = structureManager.getStats();
+      console.log(`🔍 Colisiones NATIVAS: ${structures.length} estructuras (${JSON.stringify(stats.byType)}), ${rivers.length} ríos, jugador en (${Math.round(playerPos.x)}, ${Math.round(playerPos.y)})`);
     }
 
     // Resetear contador para evitar overflow
@@ -179,11 +183,16 @@ export class CollisionManager {
     // Solo verificar colisiones que no maneja Phaser automáticamente
     this.checkPlayerEnemyCollisions(playerPos, enemies);
     this.checkBulletEnemyCollisions(bullets, enemies);
+    
+    // CRÍTICO: Verificar colisiones con barriles explosivos ANTES que estructuras normales
+    // para evitar procesamiento doble
+    if (bullets.length > 0) {
+      this.explosionManager.checkBulletBarrelCollisions(bullets);
+    }
+    
+    // Verificar colisiones con estructuras normales (excluyendo barriles)
     this.checkBulletStructureCollisions(bullets);
     this.checkPlayerDiamondCollisions(playerPos, diamonds);
-    
-    // Verificar colisiones con barriles explosivos
-    this.explosionManager.checkBulletBarrelCollisions(bullets);
   }
 
   /**
@@ -235,16 +244,16 @@ export class CollisionManager {
     bullets.forEach(bullet => {
       if (!this.collidingBullets.has(bullet)) {
         // Verificar colisión con grupo de estructuras
-        this.scene.physics.overlap(bullet, this.structureGroup, (bulletObj, structureObj) => {
+        this.scene.physics.overlap(bullet, this.structureGroup, (_, structureObj) => {
           this.collidingBullets.add(bullet);
-          this.handleBulletStructureCollision(bullet, structureObj as Phaser.GameObjects.GameObject);
+          this.handleBulletStructureCollision(bullet, structureObj as Structure);
         });
 
         // Verificar colisión con grupo de ríos
         if (this.riverGroup) {
-          this.scene.physics.overlap(bullet, this.riverGroup, (bulletObj, riverObj) => {
+          this.scene.physics.overlap(bullet, this.riverGroup, (_, riverObj) => {
             this.collidingBullets.add(bullet);
-            this.handleBulletStructureCollision(bullet, riverObj as Phaser.GameObjects.GameObject);
+            this.handleBulletRiverCollision(bullet, riverObj as Phaser.GameObjects.GameObject);
           });
         }
       }
@@ -337,9 +346,39 @@ export class CollisionManager {
   }
 
   /**
-   * Maneja la colisión entre bala y estructura
+   * Maneja la colisión entre bala y estructura - ARREGLADO PARA EXCLUIR BARRILES
    */
-  private handleBulletStructureCollision(bullet: Phaser.GameObjects.Rectangle, _structure: Phaser.GameObjects.GameObject): void {
+  private handleBulletStructureCollision(bullet: Phaser.GameObjects.Rectangle, structure: Structure): void {
+    // VERIFICACIÓN CRÍTICA: Si es un barril explosivo, no procesarlo aquí
+    if (structure.getType() === StructureType.EXPLOSIVE_BARREL) {
+      console.log(`⚠️ Barril explosivo detectado en colisión de estructura - ignorando (debe ser manejado por ExplosionManager)`);
+      return;
+    }
+
+    this.bulletManager.removeBullet(bullet);
+    this.visualEffects.createBulletHitEffect(bullet.x, bullet.y);
+
+    console.log(`🎯 Bala golpea estructura ${structure.getType()} en (${Math.round(structure.x)}, ${Math.round(structure.y)})`);
+
+    // Si la estructura es destructible, aplicar daño
+    if (structure.isDestructible) {
+      const wasDestroyed = structure.takeDamage(1);
+      
+      if (wasDestroyed) {
+        // Remover estructura del WorldManager
+        const structureManager = this.worldManager.getStructureManager();
+        structureManager.removeStructure(structure);
+        
+        // Crear efecto de destrucción
+        this.visualEffects.showScoreText(structure.x, structure.y, 'DESTROYED', '#ff6666');
+      }
+    }
+  }
+
+  /**
+   * Maneja la colisión entre bala y río
+   */
+  private handleBulletRiverCollision(bullet: Phaser.GameObjects.Rectangle, _river: Phaser.GameObjects.GameObject): void {
     this.bulletManager.removeBullet(bullet);
     this.visualEffects.createBulletHitEffect(bullet.x, bullet.y);
   }

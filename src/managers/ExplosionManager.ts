@@ -3,6 +3,7 @@ import { Player } from './Player';
 import { EnemyManager } from './EnemyManager';
 import { WorldManager } from './WorldManager';
 import { VisualEffects } from './VisualEffects';
+import { Structure, StructureType } from './StructureManager';
 
 /**
  * Configuración de una explosión
@@ -18,17 +19,7 @@ interface ExplosionConfig {
   source?: 'barrel' | 'grenade' | 'missile' | 'other';
 }
 
-/**
- * Representa un barril explosivo
- */
-interface ExplosiveBarrel {
-  sprite: Phaser.GameObjects.Rectangle;
-  x: number;
-  y: number;
-  health: number;
-  maxHealth: number;
-  exploded: boolean;
-}
+// ExplosiveBarrel interface eliminada - ahora se usa Structure con StructureType.EXPLOSIVE_BARREL
 
 /**
  * Manager para manejar explosiones y barriles explosivos
@@ -47,9 +38,8 @@ export class ExplosionManager {
   private worldManager: WorldManager;
   private visualEffects: VisualEffects;
 
-  // Barriles explosivos
-  private barrels: ExplosiveBarrel[] = [];
-  private barrelGroup?: Phaser.Physics.Arcade.StaticGroup;
+  // Los barriles explosivos ahora se manejan via StructureManager
+  // No necesitamos arrays separados
 
   // Configuración
   private readonly BARREL_HEALTH = 3;
@@ -69,66 +59,29 @@ export class ExplosionManager {
     this.worldManager = worldManager;
     this.visualEffects = visualEffects;
 
-    this.setupBarrelGroup();
+    console.log('💥 ExplosionManager: Inicializado con StructureManager');
   }
 
   /**
-   * Configura el grupo de física para barriles
+   * Crea un barril explosivo usando StructureManager
    */
-  private setupBarrelGroup(): void {
-    this.barrelGroup = this.scene.physics.add.staticGroup();
-    console.log('💥 ExplosionManager: Grupo de barriles configurado');
-  }
-
-  /**
-   * Crea un barril explosivo en una posición específica
-   */
-  createBarrel(x: number, y: number): ExplosiveBarrel {
-    // Crear sprite del barril (placeholder rojo con detalles)
-    const barrelSprite = this.scene.add.rectangle(x, y, 32, 40, 0x8b4513);
-    barrelSprite.setStrokeStyle(2, 0x654321);
-    barrelSprite.setDepth(-50); // Por encima de estructuras pero debajo del jugador
-
-    // Agregar detalles visuales del barril
-    const topRing = this.scene.add.rectangle(x, y - 12, 32, 4, 0x654321);
-    const bottomRing = this.scene.add.rectangle(x, y + 12, 32, 4, 0x654321);
-    const warningSymbol = this.scene.add.text(x, y, '💥', {
-      fontSize: '16px',
-      color: '#ff0000'
-    }).setOrigin(0.5);
-
-    topRing.setDepth(-49);
-    bottomRing.setDepth(-49);
-    warningSymbol.setDepth(-48);
-
-    // Agregar física al barril
-    this.scene.physics.add.existing(barrelSprite, true); // static body
-    this.barrelGroup?.add(barrelSprite);
-
-    // Crear objeto barril
-    const barrel: ExplosiveBarrel = {
-      sprite: barrelSprite,
+  createBarrel(x: number, y: number): Structure {
+    const structureManager = this.worldManager.getStructureManager();
+    const barrel = structureManager.createStructure({
+      type: StructureType.EXPLOSIVE_BARREL,
       x: x,
       y: y,
-      health: this.BARREL_HEALTH,
-      maxHealth: this.BARREL_HEALTH,
-      exploded: false
-    };
+      hasPhysics: true,
+      isDestructible: true,
+      health: this.BARREL_HEALTH
+    });
 
-    // Almacenar referencias en el sprite para limpieza
-    barrelSprite.setData('topRing', topRing);
-    barrelSprite.setData('bottomRing', bottomRing);
-    barrelSprite.setData('warningSymbol', warningSymbol);
-    barrelSprite.setData('barrelData', barrel);
-
-    this.barrels.push(barrel);
-
-    console.log(`🛢️ Barril creado en (${x}, ${y}) con ${this.BARREL_HEALTH} HP`);
+    console.log(`🛢️ Barril creado en (${x}, ${y}) con ${this.BARREL_HEALTH} HP usando StructureManager`);
     return barrel;
   }
 
   /**
-   * Genera barriles explosivos aleatoriamente en el mundo
+   * Genera barriles explosivos aleatoriamente en el mundo usando StructureManager
    */
   generateRandomBarrels(centerX: number, centerY: number, count: number = 3): void {
     const spawnRadius = 400;
@@ -140,47 +93,37 @@ export class ExplosionManager {
       const x = centerX + Math.cos(angle) * distance;
       const y = centerY + Math.sin(angle) * distance;
 
-      // Verificar que no esté muy cerca de estructuras
-      const structures = this.worldManager.getPhysicsStructures();
-      let tooClose = false;
-
-      for (const structure of structures) {
-        const structDistance = Phaser.Math.Distance.Between(x, y, structure.x || 0, structure.y || 0);
-        if (structDistance < 60) {
-          tooClose = true;
-          break;
-        }
-      }
-
-      if (!tooClose) {
+      // Verificar que no esté muy cerca de otras estructuras
+      const structuresInArea = this.worldManager.getStructuresInArea(x, y, 60);
+      
+      if (structuresInArea.length === 0) {
         this.createBarrel(x, y);
       }
     }
   }
 
   /**
-   * Daña un barril específico
+   * Daña un barril específico (ahora usa Structure) - ARREGLADO COMPLETAMENTE
    */
-  damageBarrel(barrel: ExplosiveBarrel, damage: number): boolean {
-    if (barrel.exploded) return false;
-
-    barrel.health -= damage;
-
-    // Efecto visual de daño
-    this.visualEffects.showScoreText(barrel.x, barrel.y, `-${damage}`, '#ff6666');
-
-    // Cambiar color del barril según la salud
-    const healthPercent = barrel.health / barrel.maxHealth;
-    if (healthPercent > 0.6) {
-      barrel.sprite.setFillStyle(0x8b4513); // Marrón normal
-    } else if (healthPercent > 0.3) {
-      barrel.sprite.setFillStyle(0xa0522d); // Marrón más claro (dañado)
-    } else {
-      barrel.sprite.setFillStyle(0xcd853f); // Marrón claro (muy dañado)
+  damageBarrel(barrel: Structure, damage: number): boolean {
+    // Verificaciones de seguridad más estrictas
+    if (!barrel || !barrel.scene || !barrel.active || !barrel.isDestructible || barrel.health <= 0) {
+      console.log(`⚠️ Barril inválido para daño: active=${barrel?.active}, health=${barrel?.health}, destructible=${barrel?.isDestructible}`);
+      return false;
     }
 
-    // Explotar si la salud llega a 0
-    if (barrel.health <= 0) {
+    console.log(`🔥 Dañando barril en (${Math.round(barrel.x)}, ${Math.round(barrel.y)}) - HP: ${barrel.health}/${barrel.maxHealth}`);
+
+    const wasDestroyed = barrel.takeDamage(damage);
+
+    // Efectos visuales mejorados de daño (solo si el barril aún existe)
+    if (barrel.active && barrel.scene) {
+      this.createBarrelDamageEffect(barrel, damage);
+    }
+
+    // Explotar inmediatamente si fue destruido
+    if (wasDestroyed && barrel.active && barrel.scene) {
+      console.log(`💥 Barril destruido, iniciando explosión inmediata`);
       this.explodeBarrel(barrel);
       return true;
     }
@@ -189,19 +132,106 @@ export class ExplosionManager {
   }
 
   /**
-   * Hace explotar un barril específico
+   * Crea efectos visuales cuando un barril recibe daño - MEJORADO Y ROBUSTO
    */
-  private explodeBarrel(barrel: ExplosiveBarrel): void {
-    if (barrel.exploded) return;
+  private createBarrelDamageEffect(barrel: Structure, damage: number): void {
+    // Verificar que el barril aún existe
+    if (!barrel || !barrel.active) return;
 
-    barrel.exploded = true;
+    // Texto de daño
+    this.visualEffects.showScoreText(barrel.x, barrel.y - 15, `-${damage} HP`, '#ff6666');
 
-    console.log(`💥 Barril explotando en (${barrel.x}, ${barrel.y})`);
+    // Chispas al recibir daño
+    for (let i = 0; i < 6; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 15 + Math.random() * 10;
+      const sparkX = barrel.x + Math.cos(angle) * distance;
+      const sparkY = barrel.y + Math.sin(angle) * distance;
 
-    // Crear explosión
+      const spark = this.scene.add.rectangle(sparkX, sparkY, 2, 2, 0xffaa00);
+      spark.setDepth(50);
+
+      this.scene.tweens.add({
+        targets: spark,
+        x: sparkX + Math.cos(angle) * 20,
+        y: sparkY + Math.sin(angle) * 20,
+        alpha: 0,
+        duration: 300,
+        ease: 'Power2',
+        onComplete: () => {
+          if (spark && spark.scene) {
+            spark.destroy();
+          }
+        }
+      });
+    }
+
+    // Efecto de humo si está muy dañado
+    const healthPercent = barrel.health / barrel.maxHealth;
+    if (healthPercent <= 0.5) {
+      const smoke = this.scene.add.circle(barrel.x, barrel.y - 10, 3, 0x666666, 0.6);
+      smoke.setDepth(49);
+
+      this.scene.tweens.add({
+        targets: smoke,
+        y: smoke.y - 20,
+        scaleX: 2,
+        scaleY: 2,
+        alpha: 0,
+        duration: 1000,
+        ease: 'Power1',
+        onComplete: () => {
+          if (smoke && smoke.scene) {
+            smoke.destroy();
+          }
+        }
+      });
+    }
+
+    // Parpadeo de advertencia si está crítico
+    if (healthPercent <= 0.33 && barrel.active) {
+      this.scene.tweens.add({
+        targets: barrel,
+        alpha: 0.5,
+        duration: 100,
+        yoyo: true,
+        repeat: 3,
+        ease: 'Power2',
+        onComplete: () => {
+          if (barrel && barrel.active) {
+            barrel.setAlpha(1); // Restaurar alpha
+          }
+        }
+      });
+    }
+
+    console.log(`🔥 Barril dañado: ${barrel.health}/${barrel.maxHealth} HP restante`);
+  }
+
+  /**
+   * Hace explotar un barril específico (ahora usa Structure) - COMPLETAMENTE ARREGLADO
+   */
+  private explodeBarrel(barrel: Structure): void {
+    // Verificar que el barril aún existe
+    if (!barrel || !barrel.scene || !barrel.active) {
+      console.log(`⚠️ Intento de explotar barril inválido`);
+      return;
+    }
+
+    console.log(`💥 Barril explotando en (${Math.round(barrel.x)}, ${Math.round(barrel.y)})`);
+
+    // Guardar posición antes de que el barril sea destruido
+    const explosionX = barrel.x;
+    const explosionY = barrel.y;
+
+    // Remover barril inmediatamente del StructureManager
+    const structureManager = this.worldManager.getStructureManager();
+    structureManager.removeStructure(barrel);
+
+    // Crear explosión inmediatamente
     this.createExplosion({
-      x: barrel.x,
-      y: barrel.y,
+      x: explosionX,
+      y: explosionY,
       radius: this.BARREL_EXPLOSION_RADIUS,
       damage: this.BARREL_EXPLOSION_DAMAGE,
       damagePlayer: true,
@@ -209,25 +239,6 @@ export class ExplosionManager {
       destroyStructures: true,
       source: 'barrel'
     });
-
-    // Remover barril del array
-    const index = this.barrels.indexOf(barrel);
-    if (index > -1) {
-      this.barrels.splice(index, 1);
-    }
-
-    // Limpiar sprites
-    const topRing = barrel.sprite.getData('topRing');
-    const bottomRing = barrel.sprite.getData('bottomRing');
-    const warningSymbol = barrel.sprite.getData('warningSymbol');
-
-    if (topRing) topRing.destroy();
-    if (bottomRing) bottomRing.destroy();
-    if (warningSymbol) warningSymbol.destroy();
-
-    // Remover del grupo de física
-    this.barrelGroup?.remove(barrel.sprite);
-    barrel.sprite.destroy();
   }
 
   /**
@@ -236,7 +247,13 @@ export class ExplosionManager {
   createExplosion(config: ExplosionConfig): void {
     const { x, y, radius, damage, damagePlayer, damageEnemies, destroyStructures, source } = config;
 
-    console.log(`💥 Explosión ${source || 'desconocida'} en (${x}, ${y}) - Radio: ${radius}, Daño: ${damage}`);
+    console.log(`💥 EXPLOSIÓN ${source || 'desconocida'} en (${Math.round(x)}, ${Math.round(y)}) - Radio: ${radius}, Daño: ${damage}`);
+
+    // Verificar coordenadas válidas
+    if (!isFinite(x) || !isFinite(y) || !isFinite(radius) || radius <= 0) {
+      console.error(`❌ Coordenadas de explosión inválidas: (${x}, ${y}) radio: ${radius}`);
+      return;
+    }
 
     // Efecto visual de explosión
     this.createExplosionVisualEffect(x, y, radius);
@@ -313,160 +330,288 @@ export class ExplosionManager {
   }
 
   /**
-   * Crea el efecto visual de la explosión
+   * Crea el efecto visual de la explosión - MEJORADO Y MÁS ROBUSTO
    */
   private createExplosionVisualEffect(x: number, y: number, radius: number): void {
-    // Círculo de explosión principal
-    const explosionCircle = this.scene.add.circle(x, y, radius, 0xff4500, 0.7);
-    explosionCircle.setDepth(100); // Por encima de todo
+    console.log(`🎆 Creando explosión mejorada en (${x}, ${y}) con radio ${radius}`);
 
-    // Círculo interno más brillante
-    const innerCircle = this.scene.add.circle(x, y, radius * 0.6, 0xffd700, 0.9);
-    innerCircle.setDepth(101);
+    // Verificar que las coordenadas son válidas
+    if (!isFinite(x) || !isFinite(y) || !isFinite(radius) || radius <= 0) {
+      console.warn(`⚠️ Coordenadas de explosión inválidas: (${x}, ${y}) radio: ${radius}`);
+      return;
+    }
 
-    // Círculo central
-    const coreCircle = this.scene.add.circle(x, y, radius * 0.3, 0xffffff, 1);
-    coreCircle.setDepth(102);
+    // === ONDAS DE CHOQUE MÚLTIPLES ===
+    for (let wave = 0; wave < 3; wave++) {
+      const waveDelay = wave * 50;
+      const waveRadius = radius * (0.8 + wave * 0.3);
+      
+      this.scene.time.delayedCall(waveDelay, () => {
+        const shockWave = this.scene.add.circle(x, y, 5, 0xffffff, 0.8 - wave * 0.2);
+        shockWave.setDepth(105 + wave);
+        shockWave.setStrokeStyle(3, 0xff4500, 0.9);
 
-    // Animación de expansión y desvanecimiento
-    this.scene.tweens.add({
-      targets: [explosionCircle, innerCircle, coreCircle],
-      scaleX: 1.5,
-      scaleY: 1.5,
-      alpha: 0,
-      duration: 500,
-      ease: 'Power2',
-      onComplete: () => {
-        explosionCircle.destroy();
-        innerCircle.destroy();
-        coreCircle.destroy();
-      }
-    });
-
-    // Partículas de explosión
-    for (let i = 0; i < 12; i++) {
-      const angle = (i / 12) * Math.PI * 2;
-      const particleX = x + Math.cos(angle) * 20;
-      const particleY = y + Math.sin(angle) * 20;
-
-      const particle = this.scene.add.rectangle(particleX, particleY, 8, 8, 0xff6600);
-      particle.setDepth(103);
-
-      this.scene.tweens.add({
-        targets: particle,
-        x: x + Math.cos(angle) * radius * 0.8,
-        y: y + Math.sin(angle) * radius * 0.8,
-        alpha: 0,
-        duration: 400,
-        ease: 'Power2',
-        onComplete: () => particle.destroy()
+        this.scene.tweens.add({
+          targets: shockWave,
+          radius: waveRadius,
+          alpha: 0,
+          duration: 400 + wave * 100,
+          ease: 'Power2',
+          onComplete: () => shockWave.destroy()
+        });
       });
     }
 
-    // Efecto de sacudida de cámara
-    this.scene.cameras.main.shake(300, 0.02);
+    // === EXPLOSIÓN PRINCIPAL MULTICAPA ===
+    // Círculo exterior (humo y fuego)
+    const outerExplosion = this.scene.add.circle(x, y, radius * 0.3, 0x8b0000, 0.6);
+    outerExplosion.setDepth(100);
+
+    // Círculo medio (llamas naranjas)
+    const middleExplosion = this.scene.add.circle(x, y, radius * 0.5, 0xff4500, 0.8);
+    middleExplosion.setDepth(101);
+
+    // Círculo interno (llamas amarillas)
+    const innerExplosion = this.scene.add.circle(x, y, radius * 0.7, 0xffd700, 0.9);
+    innerExplosion.setDepth(102);
+
+    // Núcleo blanco brillante
+    const coreExplosion = this.scene.add.circle(x, y, radius * 0.2, 0xffffff, 1);
+    coreExplosion.setDepth(103);
+
+    // Animación de expansión escalonada
+    this.scene.tweens.add({
+      targets: outerExplosion,
+      scaleX: 2.5,
+      scaleY: 2.5,
+      alpha: 0,
+      duration: 800,
+      ease: 'Power3',
+      onComplete: () => outerExplosion.destroy()
+    });
+
+    this.scene.tweens.add({
+      targets: middleExplosion,
+      scaleX: 2.0,
+      scaleY: 2.0,
+      alpha: 0,
+      duration: 600,
+      ease: 'Power2',
+      onComplete: () => middleExplosion.destroy()
+    });
+
+    this.scene.tweens.add({
+      targets: innerExplosion,
+      scaleX: 1.8,
+      scaleY: 1.8,
+      alpha: 0,
+      duration: 500,
+      ease: 'Power2',
+      onComplete: () => innerExplosion.destroy()
+    });
+
+    this.scene.tweens.add({
+      targets: coreExplosion,
+      scaleX: 3.0,
+      scaleY: 3.0,
+      alpha: 0,
+      duration: 300,
+      ease: 'Power1',
+      onComplete: () => coreExplosion.destroy()
+    });
+
+    // === PARTÍCULAS DE FUEGO MEJORADAS ===
+    for (let i = 0; i < 24; i++) {
+      const angle = (i / 24) * Math.PI * 2;
+      const baseDistance = 15 + Math.random() * 10;
+      const particleX = x + Math.cos(angle) * baseDistance;
+      const particleY = y + Math.sin(angle) * baseDistance;
+
+      // Partículas grandes (fragmentos)
+      const fragment = this.scene.add.rectangle(
+        particleX, particleY, 
+        4 + Math.random() * 6, 
+        4 + Math.random() * 6, 
+        Math.random() > 0.5 ? 0xff6600 : 0xff4500
+      );
+      fragment.setDepth(104);
+      fragment.setRotation(Math.random() * Math.PI * 2);
+
+      const finalDistance = radius * (0.7 + Math.random() * 0.4);
+      const finalX = x + Math.cos(angle) * finalDistance;
+      const finalY = y + Math.sin(angle) * finalDistance;
+
+      this.scene.tweens.add({
+        targets: fragment,
+        x: finalX,
+        y: finalY,
+        rotation: fragment.rotation + (Math.random() - 0.5) * Math.PI * 4,
+        scaleX: 0.1,
+        scaleY: 0.1,
+        alpha: 0,
+        duration: 500 + Math.random() * 300,
+        ease: 'Power2',
+        onComplete: () => fragment.destroy()
+      });
+    }
+
+    // === PARTÍCULAS DE CHISPAS ===
+    for (let i = 0; i < 16; i++) {
+      const sparkAngle = Math.random() * Math.PI * 2;
+      const sparkDistance = 20 + Math.random() * 30;
+      const sparkX = x + Math.cos(sparkAngle) * sparkDistance;
+      const sparkY = y + Math.sin(sparkAngle) * sparkDistance;
+
+      const spark = this.scene.add.rectangle(sparkX, sparkY, 2, 2, 0xffff00);
+      spark.setDepth(106);
+
+      const sparkFinalX = x + Math.cos(sparkAngle) * (radius * 1.2);
+      const sparkFinalY = y + Math.sin(sparkAngle) * (radius * 1.2);
+
+      this.scene.tweens.add({
+        targets: spark,
+        x: sparkFinalX,
+        y: sparkFinalY,
+        alpha: 0,
+        duration: 300 + Math.random() * 200,
+        ease: 'Power1',
+        onComplete: () => spark.destroy()
+      });
+    }
+
+    // === EFECTO DE FLASH INICIAL ===
+    const flash = this.scene.add.circle(x, y, radius * 1.5, 0xffffff, 0.9);
+    flash.setDepth(107);
+    
+    this.scene.tweens.add({
+      targets: flash,
+      alpha: 0,
+      duration: 100,
+      ease: 'Power3',
+      onComplete: () => flash.destroy()
+    });
+
+    // === SACUDIDA DE CÁMARA MEJORADA ===
+    const shakeIntensity = Math.min(0.05, radius / 1000); // Intensidad basada en el radio
+    const shakeDuration = Math.min(600, radius * 3); // Duración basada en el radio
+    
+    this.scene.cameras.main.shake(shakeDuration, shakeIntensity);
+    
+    // Efecto de zoom out/in sutil
+    const originalZoom = this.scene.cameras.main.zoom;
+    this.scene.tweens.add({
+      targets: this.scene.cameras.main,
+      zoom: originalZoom * 0.98,
+      duration: 100,
+      yoyo: true,
+      ease: 'Power2'
+    });
+
+    console.log(`💥 Explosión visual completa con ${24} fragmentos, ${16} chispas y sacudida de ${shakeDuration}ms`);
   }
 
   /**
-   * Destruye estructuras dentro del radio de explosión
+   * Destruye estructuras dentro del radio de explosión usando StructureManager
    */
   private destroyStructuresInRadius(x: number, y: number, radius: number): void {
-    const structures = this.worldManager.getPhysicsStructures();
-    let structuresDestroyed = 0;
+    const structureManager = this.worldManager.getStructureManager();
+    const structuresDestroyed = structureManager.damageStructuresInArea(x, y, radius, 999); // Daño masivo para destruir
 
-    structures.forEach(structure => {
-      const structDistance = Phaser.Math.Distance.Between(x, y, structure.x || 0, structure.y || 0);
-
-      if (structDistance <= radius) {
-        // Efecto visual de destrucción
-        this.visualEffects.createExplosionEffect(structure.x || 0, structure.y || 0);
-
-        // Remover estructura (esto requerirá modificar WorldManager)
-        // Por ahora solo crear efecto visual
-        structuresDestroyed++;
-
-        console.log(`💥 Estructura destruida en (${structure.x}, ${structure.y})`);
-      }
+    structuresDestroyed.forEach(structure => {
+      // Efecto visual de destrucción
+      this.visualEffects.createExplosionEffect(structure.x, structure.y);
+      console.log(`💥 Estructura destruida en (${structure.x}, ${structure.y})`);
     });
 
-    if (structuresDestroyed > 0) {
-      console.log(`💥 Explosión destruyó ${structuresDestroyed} estructuras`);
-      this.visualEffects.showScoreText(x, y, `${structuresDestroyed} estructuras`, '#ff8800');
+    if (structuresDestroyed.length > 0) {
+      console.log(`💥 Explosión destruyó ${structuresDestroyed.length} estructuras`);
+      this.visualEffects.showScoreText(x, y, `${structuresDestroyed.length} estructuras`, '#ff8800');
     }
   }
 
   /**
-   * Activa reacción en cadena con otros barriles
+   * Activa reacción en cadena con otros barriles usando StructureManager
    */
   private triggerChainReaction(x: number, y: number, radius: number): void {
-    const barrelsToExplode: ExplosiveBarrel[] = [];
-
-    this.barrels.forEach(barrel => {
-      if (!barrel.exploded) {
-        const distance = Phaser.Math.Distance.Between(x, y, barrel.x, barrel.y);
-
-        if (distance <= radius) {
-          barrelsToExplode.push(barrel);
-        }
-      }
-    });
+    const structureManager = this.worldManager.getStructureManager();
+    const barrelsInArea = structureManager.getStructuresInArea(x, y, radius)
+      .filter(structure => structure.getType() === StructureType.EXPLOSIVE_BARREL && structure.health > 0);
 
     // Explotar barriles con un pequeño delay para efecto visual
-    barrelsToExplode.forEach((barrel, index) => {
+    barrelsInArea.forEach((barrel, index) => {
       this.scene.time.delayedCall(index * 100, () => {
         this.explodeBarrel(barrel);
       });
     });
 
-    if (barrelsToExplode.length > 0) {
-      console.log(`🔥 Reacción en cadena: ${barrelsToExplode.length} barriles adicionales`);
+    if (barrelsInArea.length > 0) {
+      console.log(`🔥 Reacción en cadena: ${barrelsInArea.length} barriles adicionales`);
     }
   }
 
   /**
-   * Verifica colisiones de balas con barriles
+   * Verifica colisiones de balas con barriles usando StructureManager - ARREGLADO
    */
   checkBulletBarrelCollisions(bullets: Phaser.GameObjects.Rectangle[]): void {
+    const structureManager = this.worldManager.getStructureManager();
+    const barrels = structureManager.getStructuresByType(StructureType.EXPLOSIVE_BARREL)
+      .filter(barrel => barrel.active && barrel.health > 0); // Verificar que esté activo
+
     bullets.forEach(bullet => {
-      this.barrels.forEach(barrel => {
-        if (!barrel.exploded) {
-          const distance = Phaser.Math.Distance.Between(bullet.x, bullet.y, barrel.x, barrel.y);
-          const bulletRadius = bullet.width / 2 || 4;
-          const barrelRadius = 20; // Radio aproximado del barril
+      // Verificar que la bala aún existe y está activa
+      if (!bullet.active || !bullet.scene) return;
 
-          if (distance < (bulletRadius + barrelRadius)) {
-            // Remover bala
-            this.scene.events.emit('bulletHitBarrel', bullet);
+      barrels.forEach(barrel => {
+        // Verificar que el barril aún existe y está activo
+        if (!barrel.active || !barrel.scene) return;
 
-            // Dañar barril
+        const distance = Phaser.Math.Distance.Between(bullet.x, bullet.y, barrel.x, barrel.y);
+        const bulletRadius = (bullet.width / 2) || 4;
+        const barrelRadius = (barrel.width / 2) || 12; // Usar el ancho real del barril
+
+        if (distance < (bulletRadius + barrelRadius)) {
+          console.log(`💥 Colisión detectada: bala en (${Math.round(bullet.x)}, ${Math.round(bullet.y)}) vs barril en (${Math.round(barrel.x)}, ${Math.round(barrel.y)}) - distancia: ${Math.round(distance)}`);
+          
+          // Remover bala inmediatamente
+          this.scene.events.emit('bulletHitBarrel', bullet);
+
+          // Dañar barril con verificación adicional
+          if (barrel.active && barrel.health > 0) {
             this.damageBarrel(barrel, 1);
           }
+          
+          return; // Salir del loop de barriles para esta bala
         }
       });
     });
   }
 
   /**
-   * Obtiene todos los barriles activos
+   * Obtiene todos los barriles activos usando StructureManager
    */
-  getBarrels(): ExplosiveBarrel[] {
-    return this.barrels.filter(barrel => !barrel.exploded);
+  getBarrels(): Structure[] {
+    const structureManager = this.worldManager.getStructureManager();
+    return structureManager.getStructuresByType(StructureType.EXPLOSIVE_BARREL)
+      .filter(barrel => barrel.health > 0);
   }
 
   /**
-   * Obtiene el grupo de física de barriles
+   * Obtiene el grupo de física de barriles desde StructureManager
    */
-  getBarrelGroup(): Phaser.Physics.Arcade.StaticGroup | undefined {
-    return this.barrelGroup;
+  getBarrelGroup(): Phaser.Physics.Arcade.StaticGroup {
+    const structureManager = this.worldManager.getStructureManager();
+    return structureManager.getPhysicsGroup();
   }
 
   /**
-   * Limpia barriles fuera de pantalla
+   * Limpia barriles fuera de pantalla usando StructureManager
    */
   cleanupOffscreenBarrels(playerX: number, playerY: number, maxDistance: number = 1200): void {
-    const barrelsToRemove: ExplosiveBarrel[] = [];
+    const structureManager = this.worldManager.getStructureManager();
+    const barrels = structureManager.getStructuresByType(StructureType.EXPLOSIVE_BARREL);
+    const barrelsToRemove: Structure[] = [];
 
-    this.barrels.forEach(barrel => {
+    barrels.forEach(barrel => {
       const distance = Phaser.Math.Distance.Between(playerX, playerY, barrel.x, barrel.y);
 
       if (distance > maxDistance) {
@@ -475,22 +620,7 @@ export class ExplosionManager {
     });
 
     barrelsToRemove.forEach(barrel => {
-      const index = this.barrels.indexOf(barrel);
-      if (index > -1) {
-        this.barrels.splice(index, 1);
-      }
-
-      // Limpiar sprites
-      const topRing = barrel.sprite.getData('topRing');
-      const bottomRing = barrel.sprite.getData('bottomRing');
-      const warningSymbol = barrel.sprite.getData('warningSymbol');
-
-      if (topRing) topRing.destroy();
-      if (bottomRing) bottomRing.destroy();
-      if (warningSymbol) warningSymbol.destroy();
-
-      this.barrelGroup?.remove(barrel.sprite);
-      barrel.sprite.destroy();
+      structureManager.removeStructure(barrel);
     });
 
     if (barrelsToRemove.length > 0) {
@@ -547,30 +677,32 @@ export class ExplosionManager {
   }
 
   /**
+   * Obtiene estadísticas de barriles para debugging
+   */
+  public getBarrelStats(): { total: number; active: number; healthy: number; positions: Array<{x: number, y: number, health: number}> } {
+    const structureManager = this.worldManager.getStructureManager();
+    const allBarrels = structureManager.getStructuresByType(StructureType.EXPLOSIVE_BARREL);
+    const activeBarrels = allBarrels.filter(barrel => barrel.active && barrel.scene);
+    const healthyBarrels = activeBarrels.filter(barrel => barrel.health > 0);
+
+    return {
+      total: allBarrels.length,
+      active: activeBarrels.length,
+      healthy: healthyBarrels.length,
+      positions: healthyBarrels.map(barrel => ({
+        x: Math.round(barrel.x),
+        y: Math.round(barrel.y),
+        health: barrel.health
+      }))
+    };
+  }
+
+  /**
    * Destruye el manager y limpia recursos
    */
   destroy(): void {
-    // Limpiar todos los barriles
-    this.barrels.forEach(barrel => {
-      const topRing = barrel.sprite.getData('topRing');
-      const bottomRing = barrel.sprite.getData('bottomRing');
-      const warningSymbol = barrel.sprite.getData('warningSymbol');
-
-      if (topRing) topRing.destroy();
-      if (bottomRing) bottomRing.destroy();
-      if (warningSymbol) warningSymbol.destroy();
-
-      barrel.sprite.destroy();
-    });
-
-    this.barrels.clear();
-
-    // Limpiar grupo de física
-    if (this.barrelGroup) {
-      this.barrelGroup.clear(false, false);
-      this.barrelGroup.destroy(false);
-    }
-
-    console.log('💥 ExplosionManager destruido');
+    // Los barriles ahora se limpian automáticamente via StructureManager
+    // No necesitamos limpiar manualmente
+    console.log('💥 ExplosionManager destruido (barriles manejados por StructureManager)');
   }
 }
