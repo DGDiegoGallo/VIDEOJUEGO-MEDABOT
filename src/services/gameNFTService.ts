@@ -83,7 +83,9 @@ export class GameNFTService {
           description: equippedNFT.description || 'NFT equipado en sesión',
           image: equippedNFT.image || '',
           rarity: equippedNFT.rarity || 'common',
-          game_effect: this.getGameEffectFromNFT(equippedNFT)
+          achievement_type: equippedNFT.achievement_type || 'power_enhancement',
+          game_effect: equippedNFT.game_effect || this.getGameEffectFromNFT(equippedNFT),
+          attributes: equippedNFT.attributes || []
         },
         is_listed_for_sale: 'False',
         listing_price_eth: 0
@@ -100,6 +102,12 @@ export class GameNFTService {
    * @returns Objeto game_effect
    */
   private getGameEffectFromNFT(nft: any): any {
+    // Si ya tiene game_effect, usarlo directamente
+    if (nft.game_effect && nft.game_effect.type) {
+      return nft.game_effect;
+    }
+    
+    // Si no, intentar generarlo desde los atributos
     if (nft.achievement_type === 'power_enhancement') {
       const attributes = nft.attributes || [];
       const effectTypeAttr = attributes.find((attr: any) => attr.trait_type === 'Effect Type');
@@ -207,10 +215,31 @@ export class GameNFTService {
    * Verifica si un NFT tiene efectos de juego
    */
   private hasGameEffect(nft: UserNFT): boolean {
-    const hasEffect = !!(nft.metadata as any).game_effect?.type;
+    const metadata = nft.metadata as any;
+    const hasEffect = !!(metadata.game_effect?.type);
+    
     if (!hasEffect) {
-      console.log('🎮 NFT without game effect:', nft.metadata.name, nft.metadata);
+      console.log('🎮 NFT without game_effect:', nft.metadata.name);
+      console.log('🔍 NFT metadata structure:', {
+        name: metadata.name,
+        rarity: metadata.rarity,
+        achievement_type: metadata.achievement_type,
+        hasGameEffect: !!metadata.game_effect,
+        gameEffectType: metadata.game_effect?.type,
+        gameEffectValue: metadata.game_effect?.value,
+        attributes: metadata.attributes?.map((attr: any) => ({
+          trait_type: attr.trait_type,
+          value: attr.value
+        }))
+      });
+    } else {
+      console.log('✅ NFT with game_effect:', metadata.name, {
+        type: metadata.game_effect.type,
+        value: metadata.game_effect.value,
+        unit: metadata.game_effect.unit
+      });
     }
+    
     return hasEffect;
   }
 

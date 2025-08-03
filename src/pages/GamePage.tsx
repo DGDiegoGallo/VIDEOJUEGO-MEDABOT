@@ -5,7 +5,8 @@ import { GameUI } from '@/components/GameUI';
 import { GameMenu } from '@/components/GameMenu';
 import { GameInstructions } from '@/components/GameInstructions';
 import { GameOverStats } from '@/components/GameOverStats';
-import { SkillSelectionModal, Skill } from '@/components/SkillSelectionModal';
+import { SkillSelectionModal } from '@/components/SkillSelectionModal';
+import { SkillOption } from '@/types/game';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { MainScene } from '@/scenes/MainScene';
 import { VIEWPORT_CONFIG } from '@/config/gameConfig';
@@ -83,7 +84,7 @@ export const GamePage: React.FC = () => {
   const [showSkillModal, setShowSkillModal] = useState(false);
   const [showGameMenu, setShowGameMenu] = useState(false);
   const [currentLevel, setCurrentLevel] = useState(1);
-  const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
+  const [availableSkills, setAvailableSkills] = useState<SkillOption[]>([]);
   const [enemiesKilled, setEnemiesKilled] = useState(0);
   const [isWorldLoading, setIsWorldLoading] = useState(false);
   const [gameStats, setGameStats] = useState<GameStats>({
@@ -211,7 +212,7 @@ export const GamePage: React.FC = () => {
           console.log('🎮 GamePage: Registrando eventos de MainScene');
           mainScene.events.on('updateUI', handleUIUpdate);
           mainScene.events.on('gameOver', handleGameOver);
-          mainScene.events.on('levelUp', handleLevelUp);
+          mainScene.events.on('levelUpModal', handleLevelUp);
           mainScene.events.on('enemyKilled', handleEnemyKilled);
           mainScene.events.on('worldLoading', handleWorldLoading);
         } else {
@@ -322,7 +323,7 @@ export const GamePage: React.FC = () => {
           if (restartedScene) {
             restartedScene.events.on('updateUI', handleUIUpdate);
             restartedScene.events.on('gameOver', handleGameOver);
-            restartedScene.events.on('levelUp', handleLevelUp);
+            restartedScene.events.on('levelUpModal', handleLevelUp);
             restartedScene.events.on('enemyKilled', handleEnemyKilled);
             restartedScene.events.on('worldLoading', handleWorldLoading);
           }

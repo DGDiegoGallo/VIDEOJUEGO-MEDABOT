@@ -31,7 +31,7 @@ export class BulletManager {
    */
   constructor(scene: Scene, config?: Partial<BulletConfig>) {
     this.scene = scene;
-    
+
     // Configuración por defecto
     this.config = {
       size: 8,
@@ -52,6 +52,8 @@ export class BulletManager {
    */
   shootAtEnemy(playerX: number, playerY: number, enemyX: number, enemyY: number): void {
     const baseAngle = Phaser.Math.Angle.Between(playerX, playerY, enemyX, enemyY);
+
+    console.log(`🔫 Shooting ${this.bulletsPerShot} bullets at enemy`);
 
     // Disparar múltiples balas según el nivel de multiShot
     for (let i = 0; i < this.bulletsPerShot; i++) {
@@ -193,7 +195,9 @@ export class BulletManager {
    * @param count - Número de balas por disparo
    */
   setBulletsPerShot(count: number): void {
+    const previousCount = this.bulletsPerShot;
     this.bulletsPerShot = Math.max(1, count);
+    console.log(`🔫 BulletManager setBulletsPerShot: ${previousCount} → ${this.bulletsPerShot} (requested: ${count})`);
   }
 
   /**
@@ -210,12 +214,12 @@ export class BulletManager {
    */
   updateConfig(newConfig: Partial<BulletConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    
+
     // Actualizar número de balas por disparo
     if (newConfig.bulletsPerShot !== undefined) {
       this.setBulletsPerShot(newConfig.bulletsPerShot);
     }
-    
+
     // Si cambió la velocidad, actualizar balas existentes
     if (newConfig.speed && this.bullets.length > 0) {
       this.bullets.forEach(bullet => {
@@ -223,7 +227,7 @@ export class BulletManager {
           const body = bullet.body as Phaser.Physics.Arcade.Body;
           const currentVelocity = body.velocity;
           const currentSpeed = Math.sqrt(currentVelocity.x * currentVelocity.x + currentVelocity.y * currentVelocity.y);
-          
+
           if (currentSpeed > 0) {
             const newSpeed = newConfig.speed!;
             const velocityX = (currentVelocity.x / currentSpeed) * newSpeed;
@@ -233,7 +237,7 @@ export class BulletManager {
         }
       });
     }
-    
+
     // Si cambió el tiempo de vida, actualizar balas existentes
     if (newConfig.lifetime && this.bullets.length > 0) {
       // Las balas existentes mantienen su tiempo de vida original

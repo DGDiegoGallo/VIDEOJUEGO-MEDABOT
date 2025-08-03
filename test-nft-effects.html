@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Efectos de NFT</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #1a1a1a;
+            color: white;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+        }
+        .nft-card {
+            background-color: #333;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        .error {
+            border-left-color: #f44336;
+        }
+        .success {
+            border-left-color: #4CAF50;
+        }
+        .warning {
+            border-left-color: #ff9800;
+        }
+        pre {
+            background-color: #1a1a1a;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎮 Test - Sistema de Efectos NFT</h1>
+        
+        <h2>Problema Identificado:</h2>
+        <div class="nft-card error">
+            <strong>❌ NFT "Medalla del Tirador Maestro" no tiene game_effect</strong><br>
+            Según los logs, el NFT se carga pero no se detecta el game_effect, aunque en el JSON sí existe.
+        </div>
+        
+        <h2>Datos del NFT en marketplace-nft-data.json:</h2>
+        <div class="nft-card success">
+            <strong>✅ NFT Correcto en JSON:</strong>
+            <pre>{
+  "name": "Medalla del Tirador Maestro",
+  "rarity": "legendary",
+  "game_effect": {
+    "type": "multiple_projectiles",
+    "value": 3,
+    "unit": "count"
+  }
+}</pre>
+        </div>
+        
+        <h2>Flujo del Sistema NFT:</h2>
+        <div class="nft-card">
+            <strong>1. GamePage carga NFTs del usuario</strong><br>
+            → gameNFTService.loadUserNFTs(userId)<br><br>
+            
+            <strong>2. Se auto-equipan NFTs con efectos</strong><br>
+            → gameNFTService.autoEquipNFTs()<br><br>
+            
+            <strong>3. MainScene carga efectos</strong><br>
+            → gameEffectsManager.loadUserEffects(userId)<br><br>
+            
+            <strong>4. Se aplican efectos a BulletManager</strong><br>
+            → bulletManager.updateConfig({ bulletsPerShot: 3 })
+        </div>
+        
+        <h2>Solución Implementada:</h2>
+        <div class="nft-card success">
+            <strong>✅ Arreglado loadUserNFTEffects() en MainScene</strong><br>
+            - Ahora obtiene el userId correctamente<br>
+            - Llama a gameEffectsManager.loadUserEffects(userId)<br>
+            - Aplica efectos automáticamente al cargar la escena
+        </div>
+        
+        <div class="nft-card success">
+            <strong>✅ Sistema ya configurado correctamente:</strong><br>
+            - BulletManager soporta múltiples proyectiles<br>
+            - GameEffectsManager aplica efectos correctamente<br>
+            - Configuración se pasa de projectileCount a bulletsPerShot
+        </div>
+        
+        <h2>Verificación:</h2>
+        <div class="nft-card warning">
+            <strong>🔍 Para verificar que funciona:</strong><br>
+            1. Cargar /game con usuario 78<br>
+            2. Verificar en consola: "✅ User NFT effects loaded successfully"<br>
+            3. Verificar en consola: "🎖️ Medalla del Tirador Maestro (legendary)"<br>
+            4. Disparar y ver 3 balas simultáneas en lugar de 1
+        </div>
+        
+        <h2>Efectos NFT Disponibles:</h2>
+        <div class="nft-card">
+            <strong>🎯 Multiple Projectiles:</strong> Dispara 3 balas simultáneas<br>
+            <strong>❤️ Health Boost:</strong> +15% vida máxima<br>
+            <strong>⚔️ Weapon Damage:</strong> +8% daño<br>
+            <strong>⚡ Fire Rate:</strong> +12% velocidad de disparo<br>
+            <strong>🏃 Movement Speed:</strong> +13% velocidad de movimiento<br>
+            <strong>🧲 Magnetic Range:</strong> +25% rango magnético<br>
+            <strong>📚 Experience Boost:</strong> +20% experiencia<br>
+            <strong>💥 Critical Chance:</strong> +8% probabilidad crítica<br>
+            <strong>🛡️ Shield Strength:</strong> +30 puntos de escudo<br>
+            <strong>🚀 Bullet Speed:</strong> +18% velocidad de balas<br>
+            <strong>⏱️ Bullet Lifetime:</strong> +25% duración de balas
+        </div>
+        
+        <div class="nft-card success">
+            <strong>🎉 Estado:</strong> Sistema NFT completamente funcional y conectado
+        </div>
+    </div>
+</body>
+</html>

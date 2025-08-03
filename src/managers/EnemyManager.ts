@@ -23,17 +23,17 @@ export class EnemyManager {
   private scene: Scene;
   private config: EnemyConfig;
   private spawnTimer: Phaser.Time.TimerEvent | null = null;
-  
+
   // Sistema de escalado de dificultad
   private gameTimeSeconds: number = 0;
   private currentSpawnInterval: number = 2000;
   private dasherUnlocked: boolean = false;
   private spawnCallback: (() => void) | null = null; // Guardar el callback
-  
+
   // Control de logs del radar
   private lastRadarLogTime: number = 0;
   private lastEnemyCount: number = 0; // Agregar esta línea
-  
+
   // Configuración específica del Dasher
   private dasherConfig = {
     color: 0x8a2be2, // Violeta brillante
@@ -67,7 +67,7 @@ export class EnemyManager {
    */
   constructor(scene: Scene, config?: Partial<EnemyConfig>) {
     this.scene = scene;
-    
+
     // Configuración por defecto
     this.config = {
       size: 24,
@@ -87,7 +87,7 @@ export class EnemyManager {
       },
       ...config
     };
-    
+
     this.currentSpawnInterval = this.config.spawnInterval;
   }
 
@@ -107,23 +107,23 @@ export class EnemyManager {
     if (!this.config.difficultyScaling?.enabled) return;
 
     const { baseSpawnInterval, minSpawnInterval, spawnIntervalReduction, dasherUnlockTime } = this.config.difficultyScaling;
-    
+
     // Calcular nuevo intervalo de spawn
     const minutesPassed = Math.floor(this.gameTimeSeconds / 60);
     const newSpawnInterval = Math.max(
       minSpawnInterval,
       baseSpawnInterval - (minutesPassed * spawnIntervalReduction)
     );
-    
+
     if (newSpawnInterval !== this.currentSpawnInterval) {
       this.currentSpawnInterval = newSpawnInterval;
-      
+
       // Reiniciar el timer con el nuevo intervalo
       if (this.spawnTimer) {
         this.restartSpawnTimer();
       }
     }
-    
+
     // Desbloquear Dasher después del tiempo especificado
     if (!this.dasherUnlocked && this.gameTimeSeconds >= dasherUnlockTime) {
       this.dasherUnlocked = true;
@@ -137,7 +137,7 @@ export class EnemyManager {
     if (this.spawnTimer) {
       this.spawnTimer.destroy();
     }
-    
+
     // Solo crear el timer si hay un callback guardado
     if (this.spawnCallback) {
       this.spawnTimer = this.scene.time.addEvent({
@@ -159,10 +159,10 @@ export class EnemyManager {
     const enemy = this.scene.add.rectangle(x, y, this.config.size, this.config.size, this.config.color);
     enemy.setStrokeStyle(2, this.config.strokeColor);
     enemy.setDepth(5); // Enemigos por encima del terreno pero debajo de balas
-    
+
     // Configurar física
     this.scene.physics.add.existing(enemy);
-    
+
     // Configurar propiedades específicas del tipo
     if (type === EnemyType.DASHER) {
       this.configureDasher(enemy);
@@ -171,13 +171,13 @@ export class EnemyManager {
     } else {
       this.configureZombie(enemy);
     }
-    
+
     // Agregar a la lista de enemigos
     this.enemies.push(enemy);
-    
+
     // Crear efecto de spawn
     this.createSpawnEffect(enemy);
-    
+
     return enemy;
   }
 
@@ -194,7 +194,7 @@ export class EnemyManager {
     if (!enemyType) {
       enemyType = this.selectRandomEnemyType();
     }
-    
+
     const spawnPosition = this.getRandomSpawnPosition(playerX, playerY);
     const enemy = this.createEnemy(spawnPosition.x, spawnPosition.y, enemyType);
 
@@ -212,19 +212,19 @@ export class EnemyManager {
     if (!this.dasherUnlocked || !this.config.difficultyScaling) {
       return EnemyType.ZOMBIE;
     }
-    
+
     const random = Math.random();
-    
+
     // 15% probabilidad de Tank (aparece desde el inicio)
     if (random < 0.15) {
       return EnemyType.TANK;
     }
-    
+
     // 25% probabilidad de Dasher (solo después de desbloquearse)
     if (random < 0.40) {
       return EnemyType.DASHER;
     }
-    
+
     // 60% probabilidad de Zombie normal
     return EnemyType.ZOMBIE;
   }
@@ -276,7 +276,7 @@ export class EnemyManager {
   private moveEnemyTowardsPlayer(enemy: Phaser.GameObjects.Rectangle, playerX: number, playerY: number): void {
     const body = enemy.body as Phaser.Physics.Arcade.Body;
     const enemyType = enemy.getData('type');
-    
+
     if (enemyType === 'dasher') {
       this.moveDasherTowardsPlayer(enemy, playerX, playerY);
     } else if (enemyType === 'tank') {
@@ -296,10 +296,10 @@ export class EnemyManager {
   private applySmoothMovement(enemy: Phaser.GameObjects.Rectangle, targetX: number, targetY: number): void {
     const body = enemy.body as Phaser.Physics.Arcade.Body;
     if (!body) return;
-    
+
     const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, targetX, targetY);
     const speed = this.config.speed + Math.random() * this.config.speedVariation;
-    
+
     // Movimiento directo sin aceleración compleja
     body.setVelocity(
       Math.cos(angle) * speed,
@@ -318,11 +318,11 @@ export class EnemyManager {
     const currentTime = this.scene.time.now;
     const lastDashTime = (enemy as any).lastDashTime || 0;
     const isDashing = (enemy as any).isDashing || false;
-    
+
     // Verificar si puede hacer dash
     if (!isDashing && currentTime - lastDashTime > this.dasherConfig.dashCooldown) {
       const distanceToPlayer = Phaser.Math.Distance.Between(enemy.x, enemy.y, playerX, playerY);
-      
+
       // Dash si está a cierta distancia del jugador (rango más amplio)
       if (distanceToPlayer > 100 && distanceToPlayer < 400) {
         // Probabilidad de dash basada en la distancia (más cerca = más probable)
@@ -333,11 +333,11 @@ export class EnemyManager {
         }
       }
     }
-    
+
     // Movimiento normal del Dasher - DIRECTO
     const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, playerX, playerY);
     const speed = this.dasherConfig.speed + Math.random() * (this.config.speedVariation * 0.5);
-    
+
     // Movimiento directo sin aceleración compleja
     body.setVelocity(
       Math.cos(angle) * speed,
@@ -354,20 +354,20 @@ export class EnemyManager {
   private performDash(enemy: Phaser.GameObjects.Rectangle, playerX: number, playerY: number): void {
     const body = enemy.body as Phaser.Physics.Arcade.Body;
     const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, playerX, playerY);
-    
+
     // Configurar dash
     (enemy as any).isDashing = true;
     (enemy as any).lastDashTime = this.scene.time.now;
-    
+
     // Aplicar velocidad de dash
     body.setVelocity(
       Math.cos(angle) * this.dasherConfig.dashSpeed,
       Math.sin(angle) * this.dasherConfig.dashSpeed
     );
-    
+
     // Efecto visual de dash
     this.createDashEffect(enemy);
-    
+
     // Terminar dash después de la duración
     this.scene.time.delayedCall(this.dasherConfig.dashDuration, () => {
       (enemy as any).isDashing = false;
@@ -382,15 +382,15 @@ export class EnemyManager {
     // Efecto de estela violeta múltiple
     for (let i = 0; i < 3; i++) {
       const trail = this.scene.add.rectangle(
-        enemy.x + (Math.random() - 0.5) * 10, 
-        enemy.y + (Math.random() - 0.5) * 10, 
-        this.dasherConfig.size + i * 5, 
-        this.dasherConfig.size + i * 5, 
+        enemy.x + (Math.random() - 0.5) * 10,
+        enemy.y + (Math.random() - 0.5) * 10,
+        this.dasherConfig.size + i * 5,
+        this.dasherConfig.size + i * 5,
         0x8a2be2
       );
       trail.setAlpha(0.8 - i * 0.2);
       trail.setDepth(4 - i);
-      
+
       // Animación de desvanecimiento escalonada
       this.scene.tweens.add({
         targets: trail,
@@ -404,7 +404,7 @@ export class EnemyManager {
         }
       });
     }
-    
+
     // Efecto de brillo en el enemigo durante el dash
     this.scene.tweens.add({
       targets: enemy,
@@ -414,7 +414,7 @@ export class EnemyManager {
       repeat: Math.floor(this.dasherConfig.dashDuration / 200),
       ease: 'Power2'
     });
-    
+
     console.log(`💨 Dasher realizando dash a velocidad ${this.dasherConfig.dashSpeed}`);
   }
 
@@ -424,7 +424,7 @@ export class EnemyManager {
    */
   private createSpawnEffect(enemy: Phaser.GameObjects.Rectangle): void {
     const enemyType = (enemy as any).enemyType;
-    
+
     enemy.setScale(0);
     this.scene.tweens.add({
       targets: enemy,
@@ -433,7 +433,7 @@ export class EnemyManager {
       duration: 300,
       ease: 'Back.easeOut'
     });
-    
+
     // Efecto adicional para Dasher
     if (enemyType === EnemyType.DASHER) {
       // Efecto de parpadeo violeta
@@ -445,13 +445,13 @@ export class EnemyManager {
         repeat: 3,
         ease: 'Power2'
       });
-      
+
       // Efecto de anillo violeta expandiéndose
       const ring = this.scene.add.circle(enemy.x, enemy.y, 5, 0x8a2be2);
       ring.setStrokeStyle(3, 0x4b0082);
       ring.setAlpha(0.8);
       ring.setDepth(4);
-      
+
       this.scene.tweens.add({
         targets: ring,
         radius: 40,
@@ -462,10 +462,10 @@ export class EnemyManager {
           ring.destroy();
         }
       });
-      
+
       console.log(`💜 Dasher spawneado con efectos especiales`);
     }
-    
+
     // Efecto adicional para Tank
     if (enemyType === EnemyType.TANK) {
       // Efecto de parpadeo gris
@@ -477,13 +477,13 @@ export class EnemyManager {
         repeat: 2,
         ease: 'Power2'
       });
-      
+
       // Efecto de anillo cyan para el escudo
       const shieldRing = this.scene.add.circle(enemy.x, enemy.y, 8, 0x00ffff);
       shieldRing.setStrokeStyle(4, 0x00cccc);
       shieldRing.setAlpha(0.9);
       shieldRing.setDepth(4);
-      
+
       this.scene.tweens.add({
         targets: shieldRing,
         radius: 50,
@@ -494,7 +494,7 @@ export class EnemyManager {
           shieldRing.destroy();
         }
       });
-      
+
       console.log(`🛡️ Tank spawneado con escudo activado`);
     }
   }
@@ -524,24 +524,24 @@ export class EnemyManager {
    */
   damageEnemy(enemy: Phaser.GameObjects.Rectangle, damage: number = 1, isExplosion: boolean = false): boolean {
     const enemyType = enemy.getData('type');
-    
+
     // Manejar daño al tanque con escudo
     if (enemyType === 'tank') {
       return this.damageTank(enemy, damage, isExplosion);
     }
-    
+
     // Daño normal para otros enemigos
     const currentHealth = enemy.getData('health') || 1;
     enemy.setData('health', Math.max(0, currentHealth - damage));
-    
+
     // Efecto visual de daño
     this.createDamageEffect(enemy);
-    
+
     if (enemy.getData('health') <= 0) {
       this.removeEnemy(enemy);
       return true;
     }
-    
+
     return false;
   }
 
@@ -554,7 +554,7 @@ export class EnemyManager {
    */
   private damageTank(enemy: Phaser.GameObjects.Rectangle, damage: number, isExplosion: boolean): boolean {
     const hasShield = enemy.getData('hasShield') || false;
-    
+
     if (hasShield) {
       // Si tiene escudo, solo las explosiones pueden romperlo
       if (isExplosion) {
@@ -573,14 +573,14 @@ export class EnemyManager {
       // Sin escudo, recibe daño normal
       const currentHealth = enemy.getData('health') || 1;
       enemy.setData('health', Math.max(0, currentHealth - damage));
-      
+
       this.createDamageEffect(enemy);
-      
+
       if (enemy.getData('health') <= 0) {
         this.removeEnemy(enemy);
         return true;
       }
-      
+
       return false;
     }
   }
@@ -591,7 +591,7 @@ export class EnemyManager {
    */
   private createDamageEffect(enemy: Phaser.GameObjects.Rectangle): void {
     const enemyType = enemy.getData('type');
-    
+
     // Efecto de parpadeo
     this.scene.tweens.add({
       targets: enemy,
@@ -600,7 +600,7 @@ export class EnemyManager {
       yoyo: true,
       repeat: 1
     });
-    
+
     // Efecto de escala para Dasher
     if (enemyType === 'dasher') {
       this.scene.tweens.add({
@@ -612,7 +612,7 @@ export class EnemyManager {
         ease: 'Power2'
       });
     }
-    
+
     // Efecto de sacudida para Tank
     if (enemyType === 'tank') {
       this.scene.tweens.add({
@@ -671,7 +671,7 @@ export class EnemyManager {
     if (enemyType === 'tank') {
       this.removeShieldEffect(enemy);
     }
-    
+
     const index = this.enemies.indexOf(enemy);
     if (index > -1) {
       this.enemies.splice(index, 1);
@@ -715,7 +715,7 @@ export class EnemyManager {
    */
   updateConfig(newConfig: Partial<EnemyConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    
+
     // Actualizar intervalo de spawn si cambió
     if (newConfig.spawnInterval) {
       this.currentSpawnInterval = newConfig.spawnInterval;
@@ -739,10 +739,10 @@ export class EnemyManager {
    */
   startAutoSpawn(callback: () => void): void {
     this.stopAutoSpawn();
-    
+
     // Guardar el callback para usarlo en restartSpawnTimer
     this.spawnCallback = callback;
-    
+
     this.spawnTimer = this.scene.time.addEvent({
       delay: this.currentSpawnInterval,
       callback: callback,
@@ -759,18 +759,18 @@ export class EnemyManager {
     // Calcular cuántos enemigos spawnear basado en el tiempo
     const minutesPassed = Math.floor(this.gameTimeSeconds / 60);
     let enemiesToSpawn = 1; // Mínimo 1 enemigo
-    
+
     // Aumentar gradualmente la cantidad de enemigos
     if (minutesPassed >= 1) enemiesToSpawn = 2;
     if (minutesPassed >= 2) enemiesToSpawn = 3;
     if (minutesPassed >= 4) enemiesToSpawn = 4;
     if (minutesPassed >= 6) enemiesToSpawn = 5;
-    
+
     // Máximo 5 enemigos por spawn para evitar lag
     enemiesToSpawn = Math.min(enemiesToSpawn, 5);
-    
+
     console.log(`👹 Spawneando ${enemiesToSpawn} enemigos (minuto ${minutesPassed})`);
-    
+
     for (let i = 0; i < enemiesToSpawn; i++) {
       // Pequeño delay entre spawns para evitar que aparezcan todos en el mismo lugar
       this.scene.time.delayedCall(i * 100, () => {
@@ -801,13 +801,13 @@ export class EnemyManager {
     const cameraY = camera.scrollY;
     const gameWidth = this.scene.scale.width || 800;
     const gameHeight = this.scene.scale.height || 600;
-    
+
     // Límites basados en la posición de la cámara
     const leftBound = cameraX - margin;
     const rightBound = cameraX + gameWidth + margin;
     const topBound = cameraY - margin;
     const bottomBound = cameraY + gameHeight + margin;
-    
+
     let removedCount = 0;
 
     this.enemies.forEach((enemy, index) => {
@@ -819,7 +819,7 @@ export class EnemyManager {
 
       // Verificar si está fuera de los límites de la cámara (no de la pantalla absoluta)
       if (enemy.x < leftBound || enemy.x > rightBound ||
-          enemy.y < topBound || enemy.y > bottomBound) {
+        enemy.y < topBound || enemy.y > bottomBound) {
         console.log(`🗑️ Enemigo eliminado por estar fuera de cámara: (${Math.round(enemy.x)}, ${Math.round(enemy.y)}) vs cámara (${Math.round(cameraX)}, ${Math.round(cameraY)})`);
         this.removeEnemy(enemy);
         removedCount++;
@@ -848,7 +848,7 @@ export class EnemyManager {
     const dasherCount = enemies.filter(e => (e as any).enemyType === EnemyType.DASHER).length;
     const zombieCount = enemies.filter(e => (e as any).enemyType === EnemyType.ZOMBIE).length;
     const tankCount = enemies.filter(e => (e as any).enemyType === EnemyType.TANK).length;
-    
+
     return {
       totalEnemies: enemies.length,
       dasherCount,
@@ -878,7 +878,7 @@ export class EnemyManager {
         enemy.x, enemy.y,
         playerX, playerY
       );
-      
+
       // Determinar el tipo de enemigo basado en sus propiedades
       let type = 'zombie';
       if (enemy.getData('type') === 'dasher') {
@@ -886,7 +886,7 @@ export class EnemyManager {
       } else if (enemy.getData('type') === 'tank') {
         type = 'tank';
       }
-      
+
       return {
         id: enemy.name || `enemy_${enemy.x}_${enemy.y}`,
         x: enemy.x,
@@ -933,12 +933,12 @@ export class EnemyManager {
     enemy.setData('dashCooldown', this.dasherConfig.dashCooldown);
     enemy.setData('lastDashTime', 0);
     enemy.setData('isDashing', false);
-    
+
     // Configurar color y tamaño
     enemy.setFillStyle(this.dasherConfig.color);
     enemy.setStrokeStyle(3, this.dasherConfig.strokeColor); // Borde más grueso
     enemy.setSize(this.dasherConfig.size, this.dasherConfig.size);
-    
+
     // Configurar física básica
     const body = enemy.body as Phaser.Physics.Arcade.Body;
     body.setCollideWorldBounds(false);
@@ -946,10 +946,10 @@ export class EnemyManager {
     body.setSize(this.dasherConfig.size, this.dasherConfig.size);
     body.setDrag(0); // Sin resistencia para detención limpia
     body.setMaxVelocity(this.dasherConfig.dashSpeed * 1.2); // Límite de velocidad
-    
+
     // Marcar el tipo de enemigo para identificación
     (enemy as any).enemyType = EnemyType.DASHER;
-    
+
     console.log(`💜 Dasher creado con ${this.dasherConfig.health} de vida`);
   }
 
@@ -962,12 +962,12 @@ export class EnemyManager {
     enemy.setData('type', 'zombie');
     enemy.setData('health', 1); // Los zombies tienen 1 de vida por defecto
     enemy.setData('speed', this.config.speed);
-    
+
     // Configurar color y tamaño
     enemy.setFillStyle(this.config.color);
     enemy.setStrokeStyle(2, this.config.strokeColor);
     enemy.setSize(this.config.size, this.config.size);
-    
+
     // Configurar física básica
     const body = enemy.body as Phaser.Physics.Arcade.Body;
     body.setCollideWorldBounds(false);
@@ -975,7 +975,7 @@ export class EnemyManager {
     body.setSize(this.config.size, this.config.size);
     body.setDrag(0); // Sin resistencia para detención limpia
     body.setMaxVelocity(this.config.speed * 2); // Límite de velocidad
-    
+
     // Marcar el tipo de enemigo para identificación
     (enemy as any).enemyType = EnemyType.ZOMBIE;
   }
@@ -991,12 +991,12 @@ export class EnemyManager {
     enemy.setData('speed', this.tankConfig.speed);
     enemy.setData('hasShield', this.tankConfig.hasShield);
     enemy.setData('shieldHealth', this.tankConfig.shieldHealth);
-    
+
     // Configurar color y tamaño
     enemy.setFillStyle(this.tankConfig.color);
     enemy.setStrokeStyle(3, this.tankConfig.strokeColor); // Borde más grueso
     enemy.setSize(this.tankConfig.size, this.tankConfig.size);
-    
+
     // Configurar física básica
     const body = enemy.body as Phaser.Physics.Arcade.Body;
     body.setCollideWorldBounds(false);
@@ -1004,13 +1004,13 @@ export class EnemyManager {
     body.setSize(this.tankConfig.size, this.tankConfig.size);
     body.setDrag(0); // Sin resistencia para detención limpia
     body.setMaxVelocity(this.tankConfig.speed * 1.5); // Límite de velocidad
-    
+
     // Marcar el tipo de enemigo para identificación
     (enemy as any).enemyType = EnemyType.TANK;
-    
+
     // Crear efecto visual del escudo
     this.createShieldEffect(enemy);
-    
+
     console.log(`🛡️ Tank creado con ${this.tankConfig.health} de vida y escudo`);
   }
 
@@ -1024,7 +1024,7 @@ export class EnemyManager {
     const body = enemy.body as Phaser.Physics.Arcade.Body;
     const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, playerX, playerY);
     const speed = this.tankConfig.speed;
-    
+
     // Movimiento directo pero pesado
     body.setVelocity(
       Math.cos(angle) * speed,
@@ -1043,10 +1043,10 @@ export class EnemyManager {
     shieldRing.setFillStyle(0x00ffff, 0.1); // Transparente
     shieldRing.setDepth(6); // Por encima del enemigo
     shieldRing.setAlpha(0.8);
-    
+
     // Guardar referencia del escudo en el enemigo
     (enemy as any).shieldEffect = shieldRing;
-    
+
     // Animación de pulsación del escudo
     this.scene.tweens.add({
       targets: shieldRing,
@@ -1056,7 +1056,7 @@ export class EnemyManager {
       repeat: -1,
       ease: 'Sine.easeInOut'
     });
-    
+
     // Actualizar posición del escudo en cada frame
     const updateShield = () => {
       if (enemy.active && shieldRing.active) {
@@ -1094,7 +1094,7 @@ export class EnemyManager {
         this.tankConfig.shieldColor
       );
       fragment.setDepth(7);
-      
+
       // Animación de dispersión
       this.scene.tweens.add({
         targets: fragment,
@@ -1109,7 +1109,7 @@ export class EnemyManager {
         }
       });
     }
-    
+
     // Efecto de flash en el tanque
     this.scene.tweens.add({
       targets: enemy,
@@ -1134,7 +1134,7 @@ export class EnemyManager {
       0xffff00
     );
     spark.setDepth(7);
-    
+
     // Animación de chispa
     this.scene.tweens.add({
       targets: spark,
@@ -1147,7 +1147,7 @@ export class EnemyManager {
         spark.destroy();
       }
     });
-    
+
     // Efecto de brillo en el escudo
     const shieldEffect = (enemy as any).shieldEffect;
     if (shieldEffect && shieldEffect.active) {

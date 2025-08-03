@@ -132,16 +132,28 @@ export class GameEffectsManager {
    * @returns Valor combinado
    */
   private combineEffectValues(effectType: GameEffectType, nftValue: number, skillValue: number): number {
+    let combinedValue: number;
+    
     // Para la mayoría de efectos, sumar valores
     // Para algunos efectos específicos, usar multiplicadores
     switch (effectType) {
       case 'experience_boost':
-        return nftValue * (1 + skillValue * 0.1); // Multiplicador de experiencia
+        combinedValue = nftValue * (1 + skillValue * 0.1); // Multiplicador de experiencia
+        break;
       case 'critical_chance':
-        return Math.min(100, nftValue + skillValue); // Probabilidad crítica (máx 100%)
+        combinedValue = Math.min(100, nftValue + skillValue); // Probabilidad crítica (máx 100%)
+        break;
       default:
-        return nftValue + skillValue; // Suma simple para otros efectos
+        combinedValue = nftValue + skillValue; // Suma simple para otros efectos
+        break;
     }
+    
+    // Log para debugging
+    if (nftValue > 0 || skillValue > 0) {
+      console.log(`🔄 Combining ${effectType}: NFT(${nftValue}) + Skill(${skillValue}) = ${combinedValue}`);
+    }
+    
+    return combinedValue;
   }
 
   /**
@@ -213,22 +225,25 @@ export class GameEffectsManager {
 
   /**
    * Aplica efectos que solo vienen de habilidades (sin NFT)
+   * Solo aplica habilidades que NO tienen efectos NFT correspondientes
    */
   private applySkillOnlyEffects(): void {
-    // Fire rate (rapidFire)
-    if (this.gameSkills.rapidFire > 0) {
+    const effectsByType = this.nftService.getEffectsByType();
+    
+    // Fire rate (rapidFire) - Solo aplicar si no hay NFT con fire_rate
+    if (this.gameSkills.rapidFire > 0 && !effectsByType.has('fire_rate')) {
       const fireRateReduction = this.gameSkills.rapidFire * 50;
       this.currentStats.fireRate = Math.max(100, this.baseStats.baseFireRate - fireRateReduction);
     }
     
-    // Magnetic range (magneticField)
-    if (this.gameSkills.magneticField > 0) {
+    // Magnetic range (magneticField) - Solo aplicar si no hay NFT con magnetic_range
+    if (this.gameSkills.magneticField > 0 && !effectsByType.has('magnetic_range')) {
       const magneticBoost = this.gameSkills.magneticField * 20;
       this.currentStats.magneticRange = this.baseStats.baseMagneticRange + magneticBoost;
     }
     
-    // Multiple projectiles (multiShot)
-    if (this.gameSkills.multiShot > 0) {
+    // Multiple projectiles (multiShot) - Solo aplicar si no hay NFT con multiple_projectiles
+    if (this.gameSkills.multiShot > 0 && !effectsByType.has('multiple_projectiles')) {
       const projectileBonus = this.gameSkills.multiShot;
       this.currentStats.projectileCount = Math.max(1, this.currentStats.projectileCount + projectileBonus);
     }
@@ -309,7 +324,9 @@ export class GameEffectsManager {
    * Aplica múltiples proyectiles (NFT + habilidades)
    */
   private applyMultipleProjectiles(count: number): void {
+    const previousCount = this.currentStats.projectileCount;
     this.currentStats.projectileCount = Math.max(1, Math.floor(count));
+    console.log(`🎯 Multiple projectiles: ${previousCount} → ${this.currentStats.projectileCount} (from combined value: ${count})`);
   }
 
   /**
@@ -399,6 +416,7 @@ export class GameEffectsManager {
 
     // Actualizar configuración de balas
     if (this.bulletManager) {
+      console.log(`🔫 Updating BulletManager with bulletsPerShot: ${this.currentStats.projectileCount}`);
       this.bulletManager.updateConfig({
         damage: this.currentStats.damage,
         bulletsPerShot: this.currentStats.projectileCount,
@@ -406,6 +424,10 @@ export class GameEffectsManager {
         speed: this.currentStats.bulletSpeed,
         lifetime: this.currentStats.bulletLifetime
       } as any);
+      
+      // Verificar que se aplicó correctamente
+      const currentBulletsPerShot = this.bulletManager.getBulletsPerShot();
+      console.log(`🔫 BulletManager bulletsPerShot after update: ${currentBulletsPerShot}`);
     }
 
     // Actualizar configuración de experiencia

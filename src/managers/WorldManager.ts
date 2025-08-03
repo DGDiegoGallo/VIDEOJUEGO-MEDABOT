@@ -776,10 +776,7 @@ export class WorldManager {
     // DESACTIVADO: Permitir mundo infinito dinámico
     // El wraparound estaba limitando el mundo y causando teletransporte
     
-    // Log solo ocasionalmente para evitar spam
-    if (Math.random() < 0.001) { // ~0.1% de probabilidad
-      console.log(`🌍 Jugador en posición libre: (${Math.round(x)}, ${Math.round(y)}) - Sin límites`);
-    }
+    // Mundo infinito sin límites - log desactivado para mejor rendimiento
     
     // Devolver la posición original sin modificar
     return { x, y };

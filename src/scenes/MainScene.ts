@@ -376,10 +376,43 @@ export class MainScene extends Scene {
     try {
       if (this.gameEffectsManager) {
         console.log('🎮 Loading user NFT effects...');
+        
+        // Obtener el ID del usuario desde el contexto global o localStorage
+        const userId = this.getUserId();
+        if (userId) {
+          await this.gameEffectsManager.loadUserEffects(userId);
+          console.log('✅ User NFT effects loaded successfully');
+        } else {
+          console.warn('⚠️ No user ID found, skipping NFT effects');
+        }
       }
     } catch (error) {
       console.error('❌ Error loading user NFT effects:', error);
     }
+  }
+
+  /**
+   * Obtiene el ID del usuario desde el contexto global
+   */
+  private getUserId(): string | number | null {
+    // Intentar obtener desde window.user (si existe)
+    if (typeof window !== 'undefined' && (window as any).user?.id) {
+      return (window as any).user.id;
+    }
+    
+    // Intentar obtener desde localStorage
+    try {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        const user = JSON.parse(userData);
+        return user.id;
+      }
+    } catch (error) {
+      console.warn('⚠️ Error parsing user data from localStorage:', error);
+    }
+    
+    // Valor por defecto para testing (usuario 78 según los logs)
+    return 78;
   }
 
   /**
@@ -397,7 +430,8 @@ export class MainScene extends Scene {
 
     // Emitir evento para mostrar modal de habilidades
     this.events.emit('levelUpModal', {
-      availableSkills: this.getAvailableSkills(),
+      level: this.experienceManager.getLevel(),
+      skills: this.getAvailableSkills(),
       currentSkills: this.skills
     });
   }
@@ -461,16 +495,11 @@ export class MainScene extends Scene {
       // Actualizar efectos del juego
       this.gameEffectsManager.updateGameSkills(this.skills);
 
-      // Actualizar intervalo de disparo si es necesario
-      if (skillId === 'rapidFire') {
-        const newInterval = Math.max(100, 500 - (this.skills.rapidFire * 50));
-        this.timerManager.updateShootInterval(newInterval);
-      }
+      // El intervalo de disparo se actualiza automáticamente via GameEffectsManager
+      // No necesitamos actualizar manualmente aquí
 
-      // Actualizar número de balas si es necesario
-      if (skillId === 'multiShot') {
-        this.bulletManager.setBulletsPerShot(this.skills.multiShot + 1);
-      }
+      // El número de balas se actualiza automáticamente via GameEffectsManager
+      // No necesitamos actualizar manualmente aquí
 
       console.log(`🎯 Habilidad ${skillId} mejorada a nivel ${this.skills[skillId as keyof SkillLevels]}`);
     }

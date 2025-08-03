@@ -1,21 +1,12 @@
 import React from 'react';
 import { FaBolt, FaMagnet, FaCrosshairs, FaTimes } from 'react-icons/fa';
 import { GiUpgrade } from 'react-icons/gi';
-
-export interface Skill {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  currentLevel: number;
-  maxLevel: number;
-  effect: string;
-}
+import { SkillOption } from '@/types/game';
 
 interface SkillSelectionModalProps {
   isOpen: boolean;
   level: number;
-  skills: Skill[];
+  skills: SkillOption[];
   onSkillSelect: (skillId: string) => void;
   onClose: () => void;
 }
