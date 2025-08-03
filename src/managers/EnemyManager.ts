@@ -423,7 +423,7 @@ export class EnemyManager {
    * @param enemy - Sprite del enemigo
    */
   private createSpawnEffect(enemy: Phaser.GameObjects.Rectangle): void {
-    const enemyType = (enemy as any).enemyType;
+    const enemyType = enemy.getData('type');
 
     enemy.setScale(0);
     this.scene.tweens.add({
@@ -435,7 +435,7 @@ export class EnemyManager {
     });
 
     // Efecto adicional para Dasher
-    if (enemyType === EnemyType.DASHER) {
+    if (enemyType === 'dasher') {
       // Efecto de parpadeo violeta
       this.scene.tweens.add({
         targets: enemy,
@@ -467,7 +467,7 @@ export class EnemyManager {
     }
 
     // Efecto adicional para Tank
-    if (enemyType === EnemyType.TANK) {
+    if (enemyType === 'tank') {
       // Efecto de parpadeo gris
       this.scene.tweens.add({
         targets: enemy,
@@ -845,9 +845,9 @@ export class EnemyManager {
     gameTime: number;
   } {
     const enemies = this.getEnemies();
-    const dasherCount = enemies.filter(e => (e as any).enemyType === EnemyType.DASHER).length;
-    const zombieCount = enemies.filter(e => (e as any).enemyType === EnemyType.ZOMBIE).length;
-    const tankCount = enemies.filter(e => (e as any).enemyType === EnemyType.TANK).length;
+    const dasherCount = enemies.filter(e => e.getData('type') === 'dasher').length;
+    const zombieCount = enemies.filter(e => e.getData('type') === 'zombie').length;
+    const tankCount = enemies.filter(e => e.getData('type') === 'tank').length;
 
     return {
       totalEnemies: enemies.length,
@@ -947,9 +947,6 @@ export class EnemyManager {
     body.setDrag(0); // Sin resistencia para detención limpia
     body.setMaxVelocity(this.dasherConfig.dashSpeed * 1.2); // Límite de velocidad
 
-    // Marcar el tipo de enemigo para identificación
-    (enemy as any).enemyType = EnemyType.DASHER;
-
     console.log(`💜 Dasher creado con ${this.dasherConfig.health} de vida`);
   }
 
@@ -976,8 +973,7 @@ export class EnemyManager {
     body.setDrag(0); // Sin resistencia para detención limpia
     body.setMaxVelocity(this.config.speed * 2); // Límite de velocidad
 
-    // Marcar el tipo de enemigo para identificación
-    (enemy as any).enemyType = EnemyType.ZOMBIE;
+
   }
 
   /**
@@ -1004,9 +1000,6 @@ export class EnemyManager {
     body.setSize(this.tankConfig.size, this.tankConfig.size);
     body.setDrag(0); // Sin resistencia para detención limpia
     body.setMaxVelocity(this.tankConfig.speed * 1.5); // Límite de velocidad
-
-    // Marcar el tipo de enemigo para identificación
-    (enemy as any).enemyType = EnemyType.TANK;
 
     // Crear efecto visual del escudo
     this.createShieldEffect(enemy);

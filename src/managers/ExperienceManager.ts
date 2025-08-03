@@ -50,6 +50,109 @@ export class ExperienceManager {
   }
 
   /**
+   * Maneja cuando un enemigo es eliminado - crea diamante y efectos
+   * @param x - Posición X donde murió el enemigo
+   * @param y - Posición Y donde murió el enemigo
+   * @param enemyType - Tipo de enemigo que murió
+   */
+  onEnemyKilled(x: number, y: number, enemyType: string): void {
+    // Crear diamante de experiencia
+    this.createDiamond(x, y, enemyType);
+    
+    // Crear efectos visuales de muerte del enemigo
+    this.createEnemyDeathEffects(x, y, enemyType);
+  }
+
+  /**
+   * Crea efectos visuales cuando un enemigo muere
+   * @param x - Posición X del enemigo
+   * @param y - Posición Y del enemigo
+   * @param enemyType - Tipo de enemigo que murió
+   */
+  private createEnemyDeathEffects(x: number, y: number, enemyType: string): void {
+    // Efecto de explosión
+    const explosionColor = this.getExplosionColorByEnemyType(enemyType);
+    
+    // Crear partículas de explosión
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const particle = this.scene.add.circle(
+        x + Math.cos(angle) * 5,
+        y + Math.sin(angle) * 5,
+        3,
+        explosionColor
+      );
+      particle.setDepth(8);
+
+      this.scene.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * 30,
+        y: y + Math.sin(angle) * 30,
+        alpha: 0,
+        duration: 400,
+        ease: 'Power2',
+        onComplete: () => {
+          particle.destroy();
+        }
+      });
+    }
+
+    // Texto de score
+    const scoreValue = this.getScoreByEnemyType(enemyType);
+    const scoreText = this.scene.add.text(x, y - 10, `+${scoreValue}`, {
+      fontSize: '16px',
+      color: `#${explosionColor.toString(16).padStart(6, '0')}`,
+      stroke: '#000000',
+      strokeThickness: 2
+    });
+    scoreText.setOrigin(0.5);
+    scoreText.setDepth(10);
+
+    this.scene.tweens.add({
+      targets: scoreText,
+      y: y - 40,
+      alpha: 0,
+      duration: 1000,
+      ease: 'Power2',
+      onComplete: () => {
+        scoreText.destroy();
+      }
+    });
+  }
+
+  /**
+   * Obtiene el color de explosión basado en el tipo de enemigo
+   * @param enemyType - Tipo de enemigo
+   * @returns Color de la explosión
+   */
+  private getExplosionColorByEnemyType(enemyType: string): number {
+    switch (enemyType) {
+      case 'dasher':
+        return 0x8a2be2; // Violeta
+      case 'tank':
+        return 0xffd700; // Dorado
+      default:
+        return 0xff4444; // Rojo
+    }
+  }
+
+  /**
+   * Obtiene el valor de score basado en el tipo de enemigo
+   * @param enemyType - Tipo de enemigo
+   * @returns Valor de score
+   */
+  private getScoreByEnemyType(enemyType: string): number {
+    switch (enemyType) {
+      case 'dasher':
+        return 50;
+      case 'tank':
+        return 350;
+      default:
+        return 10;
+    }
+  }
+
+  /**
    * Crea un diamante de experiencia en una posición específica
    * @param x - Posición X del diamante
    * @param y - Posición Y del diamante
@@ -135,6 +238,63 @@ export class ExperienceManager {
           experienceValue: 10
         };
     }
+  }
+
+  /**
+   * Crea efectos visuales de recolección de diamante
+   * @param x - Posición X del diamante
+   * @param y - Posición Y del diamante
+   * @param experienceValue - Valor de experiencia del diamante
+   * @param diamondColor - Color del diamante
+   */
+  private createCollectionEffects(x: number, y: number, experienceValue: number, diamondColor: number): void {
+    // Efecto de brillo al recolectar
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      const sparkle = this.scene.add.circle(
+        x + Math.cos(angle) * 8,
+        y + Math.sin(angle) * 8,
+        2,
+        diamondColor
+      );
+      sparkle.setDepth(9);
+
+      this.scene.tweens.add({
+        targets: sparkle,
+        x: x + Math.cos(angle) * 20,
+        y: y + Math.sin(angle) * 20,
+        alpha: 0,
+        scaleX: 2,
+        scaleY: 2,
+        duration: 300,
+        ease: 'Power2',
+        onComplete: () => {
+          sparkle.destroy();
+        }
+      });
+    }
+
+    // Texto de experiencia ganada
+    const expText = this.scene.add.text(x, y, `+${experienceValue} EXP`, {
+      fontSize: '14px',
+      color: `#${diamondColor.toString(16).padStart(6, '0')}`,
+      stroke: '#000000',
+      strokeThickness: 2
+    });
+    expText.setOrigin(0.5);
+    expText.setDepth(10);
+
+    // Animación del texto
+    this.scene.tweens.add({
+      targets: expText,
+      y: y - 30,
+      alpha: 0,
+      duration: 800,
+      ease: 'Power2',
+      onComplete: () => {
+        expText.destroy();
+      }
+    });
   }
 
   /**
@@ -224,9 +384,15 @@ export class ExperienceManager {
    * @returns true si el jugador subió de nivel
    */
   collectDiamond(diamond: Phaser.GameObjects.Polygon): boolean {
-    // Obtener el valor de experiencia del diamante
+    // Obtener información del diamante
     const experienceValue = diamond.getData('experienceValue') || 1;
     const enemyType = diamond.getData('enemyType') || 'zombie';
+    const diamondX = diamond.x;
+    const diamondY = diamond.y;
+    const diamondColor = diamond.fillColor;
+    
+    // Crear efectos visuales de recolección
+    this.createCollectionEffects(diamondX, diamondY, experienceValue, diamondColor);
     
     // Eliminar el diamante
     this.removeDiamond(diamond);

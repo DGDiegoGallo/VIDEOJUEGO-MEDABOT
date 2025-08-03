@@ -289,17 +289,19 @@ export class CollisionManager {
   private handleBulletEnemyCollision(bullet: Phaser.GameObjects.Rectangle, enemy: Phaser.GameObjects.Rectangle): void {
     this.bulletManager.removeBullet(bullet);
 
+    // Obtener información del enemigo ANTES de dañarlo
+    const enemyType = enemy.getData('type') || 'zombie';
+    const enemyX = enemy.x;
+    const enemyY = enemy.y;
+
     // Usar el nuevo sistema de daño (false = no es explosión)
     const enemyDied = this.enemyManager.damageEnemy(enemy, 1, false);
 
     if (enemyDied) {
-      // Obtener el tipo de enemigo para crear el diamante apropiado
-      const enemyType = enemy.getData('type') || 'zombie';
+      // Solo notificar al ExperienceManager - él se encarga de todo
+      this.experienceManager.onEnemyKilled(enemyX, enemyY, enemyType);
       
-      // Enemigo eliminado - crear diamante con valor apropiado
-      this.experienceManager.createDiamond(enemy.x, enemy.y, enemyType);
-      
-      // Calcular score basado en el tipo de enemigo
+      // Calcular score basado en el tipo de enemigo para el sistema de puntuación
       let scoreValue = 10; // Default
       switch (enemyType) {
         case 'zombie':
@@ -315,12 +317,8 @@ export class CollisionManager {
       }
       
       this.scene.events.emit('enemyKilled', { score: scoreValue });
-
-      this.visualEffects.createExplosionEffect(enemy.x, enemy.y);
-      this.visualEffects.showScoreText(enemy.x, enemy.y, `+${scoreValue}`);
     } else {
-      // Enemigo dañado pero no eliminado
-      const enemyType = enemy.getData('type');
+      // Enemigo dañado pero no eliminado - solo efectos visuales
       const remainingHealth = enemy.getData('health');
 
       if (enemyType === 'dasher') {
@@ -350,13 +348,6 @@ export class CollisionManager {
    * Maneja la colisión entre jugador y diamante
    */
   private handlePlayerDiamondCollision(diamond: Phaser.GameObjects.Polygon): void {
-    const playerPos = this.player.getPosition();
-    const experienceValue = diamond.getData('experienceValue') || 10;
-    const diamondColor = diamond.fillColor;
-    
-    this.visualEffects.createCollectionEffect(diamond.x, diamond.y, playerPos.x, playerPos.y);
-    this.visualEffects.showScoreText(diamond.x, diamond.y, `+${experienceValue} EXP`, `#${diamondColor.toString(16).padStart(6, '0')}`);
-
     const leveledUp = this.experienceManager.collectDiamond(diamond);
 
     if (leveledUp) {
