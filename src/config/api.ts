@@ -17,6 +17,7 @@ export const API_CONFIG = {
     },
     BLOCKCHAIN: {
       NFTS: '/nfts',
+      NFT_MARKETPLACE: '/nft-marketplaces',
       TRANSACTIONS: '/blockchain-transactions'
     },
     WALLET: {

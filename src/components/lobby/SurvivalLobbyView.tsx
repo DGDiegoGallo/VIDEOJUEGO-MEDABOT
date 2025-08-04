@@ -15,7 +15,8 @@ import {
   FaExclamationTriangle,
   FaCheckCircle,
   FaClock,
-  FaHammer
+  FaHammer,
+  FaTasks
 } from 'react-icons/fa';
 import { useAuthStore } from '@/stores/authStore';
 import { useGameSessionData } from '@/hooks/useGameSessionData';
@@ -23,6 +24,7 @@ import { InitialSessionCard } from '@/components/game-session/InitialSessionCard
 import { MaterialsDisplay } from '@/components/lobby/MaterialsDisplay';
 import { EquipmentDisplay } from '@/components/lobby/EquipmentDisplay';
 import { CraftingTable } from '@/components/lobby/CraftingTable';
+import { DailyQuestsView } from './DailyQuestsView';
 import type { GameSession } from '@/types/gameSession';
 
 export const SurvivalLobbyView: React.FC = () => {
@@ -32,6 +34,7 @@ export const SurvivalLobbyView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showSessionDetails, setShowSessionDetails] = useState(false);
   const [showCraftingModal, setShowCraftingModal] = useState(false);
+  const [showDailyQuests, setShowDailyQuests] = useState(false);
 
   // Obtener sesiones del usuario
   const { sessions, loading: sessionsLoading, refreshData } = useGameSessionData(user ? parseInt(user.id) : 0);
@@ -311,11 +314,11 @@ export const SurvivalLobbyView: React.FC = () => {
               </button>
               
               <button
-                onClick={handleCreateNewSession}
+                onClick={() => setShowDailyQuests(true)}
                 className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3 shadow-lg"
               >
-                <FaAward className="text-xl" />
-                <span className="text-xl">Nueva Misión</span>
+                <FaTasks className="text-xl" />
+                <span className="text-xl">Misiones Diarias</span>
               </button>
               
               <button
@@ -389,6 +392,14 @@ export const SurvivalLobbyView: React.FC = () => {
           La horda de zombies se acerca. Prepárate para el combate final.
         </p>
       </div>
+
+      {/* Modal de Misiones Diarias */}
+      {showDailyQuests && user && (
+        <DailyQuestsView 
+          userId={parseInt(user.id)} 
+          onClose={() => setShowDailyQuests(false)} 
+        />
+      )}
 
       {/* Modal de Mesa de Creación */}
       {showCraftingModal && initialSession?.materials && (

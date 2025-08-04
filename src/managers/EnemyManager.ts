@@ -718,6 +718,12 @@ export class EnemyManager {
       this.removeShieldEffect(enemy);
     }
 
+    // Emitir evento de enemigo eliminado para misiones diarias
+    this.scene.events.emit('enemyKilled', { 
+      enemyType: enemyType,
+      score: this.getScoreByEnemyType(enemyType)
+    });
+
     const index = this.enemies.indexOf(enemy);
     if (index > -1) {
       this.enemies.splice(index, 1);
@@ -777,6 +783,24 @@ export class EnemyManager {
    */
   getConfig(): EnemyConfig {
     return { ...this.config };
+  }
+
+  /**
+   * Obtiene el puntaje por tipo de enemigo
+   * @param enemyType - Tipo de enemigo
+   * @returns Puntaje del enemigo
+   */
+  private getScoreByEnemyType(enemyType: string): number {
+    switch (enemyType) {
+      case 'zombie':
+        return 10;
+      case 'dasher':
+        return 25;
+      case 'tank':
+        return 50;
+      default:
+        return 10;
+    }
   }
 
   /**

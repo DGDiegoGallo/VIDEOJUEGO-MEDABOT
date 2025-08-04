@@ -394,6 +394,13 @@ export class ExperienceManager {
     // Crear efectos visuales de recolección
     this.createCollectionEffects(diamondX, diamondY, experienceValue, diamondColor);
     
+    // Emitir evento para misiones diarias
+    this.scene.events.emit('diamondCollected', {
+      experienceValue,
+      enemyType,
+      position: { x: diamondX, y: diamondY }
+    });
+    
     // Eliminar el diamante
     this.removeDiamond(diamond);
     

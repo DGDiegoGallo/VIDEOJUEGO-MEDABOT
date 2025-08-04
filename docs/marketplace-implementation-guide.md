@@ -1,268 +1,310 @@
 # Guía de Implementación del Marketplace de NFTs
 
-## Preparación para el Marketplace
+## Resumen
 
-### 1. Estructura de Archivos Sugerida
-```
-src/
-├── pages/
-│   └── MarketplacePage.tsx
-├── components/
-│   ├── marketplace/
-│   │   ├── MarketplaceGrid.tsx
-│   │   ├── NFTMarketCard.tsx
-│   │   ├── FilterSidebar.tsx
-│   │   ├── SearchBar.tsx
-│   │   └── PurchaseModal.tsx
-│   └── nft/
-│       ├── NFTCard.tsx (ya existe, reutilizable)
-│       └── NFTDetailsModal.tsx
-├── stores/
-│   └── marketplaceStore.ts
-└── utils/
-    └── marketplaceHelpers.ts
-```
+Se ha implementado un sistema completo de marketplace de NFTs que permite a los usuarios listar, comprar y gestionar sus NFTs. El sistema utiliza la colección `nfts` en Strapi para el marketplace y mantiene la colección `user-nfts` para las colecciones personales.
 
-### 2. Endpoints Necesarios para el Marketplace
+## Arquitectura del Sistema
 
-#### Obtener NFTs en Venta
-```http
-GET http://localhost:1337/api/user-nfts?filters[is_listed_for_sale][$eq]=True&populate=*&sort[0]=createdAt:desc
-```
+### 1. Servicios Implementados
 
-#### Filtrar por Precio
-```http
-GET http://localhost:1337/api/user-nfts?filters[is_listed_for_sale][$eq]=True&filters[listing_price_eth][$lte]=1.0&populate=*
-```
+#### `nftMarketplaceService.ts`
+Servicio principal que maneja todas las operaciones del marketplace:
 
-#### Filtrar por Rareza
-```http
-GET http://localhost:1337/api/user-nfts?filters[is_listed_for_sale][$eq]=True&filters[metadata][rarity][$eq]=legendary&populate=*
-```
+- **`listNFTForSale()`**: Lista un NFT para venta
+  - Obtiene el NFT de la colección del usuario
+  - Lo elimina de `user-nfts`
+  - Lo crea en `nfts` con precio y estado de venta
 
-#### Buscar por Nombre
-```http
-GET http://localhost:1337/api/user-nfts?filters[is_listed_for_sale][$eq]=True&filters[metadata][name][$containsi]=medabot&populate=*
-```
+- **`buyNFT()`**: Compra un NFT del marketplace
+  - Obtiene el NFT del marketplace
+  - Lo elimina de `nfts`
+  - Lo agrega a la colección del comprador en `user-nfts`
 
-### 3. Funciones Reutilizables Preparadas
+- **`getMarketplaceNFTs()`**: Obtiene todos los NFTs listados
+- **`getMarketplaceNFTsByOwner()`**: Filtra por propietario
+- **`searchMarketplaceNFTs()`**: Búsqueda por nombre
+- **`filterMarketplaceNFTsByRarity()`**: Filtro por rareza
 
-#### NFTApiHelper (ya implementado)
-```typescript
-// Estas funciones ya están listas para usar:
-NFTApiHelper.getMarketplaceNFTs(page, pageSize)
-NFTApiHelper.listNFTForSale(nftDocumentId, priceEth)
-NFTApiHelper.unlistNFT(nftDocumentId)
-NFTApiHelper.getNFTsByWallet(walletId)
-```
+### 2. Componentes de UI
 
-#### Nuevas Funciones Necesarias
-```typescript
-// src/utils/marketplaceHelpers.ts
-export class MarketplaceHelper {
-  
-  // Comprar NFT (transferir propiedad)
-  static async purchaseNFT(nftDocumentId: string, buyerWalletId: number, buyerAddress: string): Promise<any> {
-    return await apiClient.update(API_CONFIG.ENDPOINTS.WALLET.USER_NFTS, nftDocumentId, {
-      user_wallet: buyerWalletId,
-      owner_address: buyerAddress,
-      is_listed_for_sale: 'False',
-      listing_price_eth: 0,
-      last_transfer_at: new Date().toISOString()
-    });
-  }
+#### `ListNFTModal.tsx`
+Modal para listar NFTs con:
+- Campos para precio en ETH y USDT (conversión automática)
+- Validación de precios
+- Información del NFT a listar
+- Confirmación de la operación
 
-  // Filtros avanzados
-  static async getFilteredNFTs(filters: MarketplaceFilters): Promise<any> {
-    let query = `${API_CONFIG.ENDPOINTS.WALLET.USER_NFTS}?filters[is_listed_for_sale][$eq]=True&populate=*`;
-    
-    if (filters.minPrice) query += `&filters[listing_price_eth][$gte]=${filters.minPrice}`;
-    if (filters.maxPrice) query += `&filters[listing_price_eth][$lte]=${filters.maxPrice}`;
-    if (filters.rarity) query += `&filters[metadata][rarity][$eq]=${filters.rarity}`;
-    if (filters.search) query += `&filters[metadata][name][$containsi]=${filters.search}`;
-    if (filters.sortBy) query += `&sort[0]=${filters.sortBy}`;
-    
-    return await apiClient.get(query);
-  }
+#### `UnlistNFTModal.tsx`
+Modal para quitar NFTs de la lista con:
+- Confirmación de la acción
+- Información del NFT a quitar
+- Advertencias sobre las consecuencias
+- Proceso de devolución a la colección
+
+#### `SimpleNFTPurchaseModal.tsx`
+Modal para comprar NFTs con:
+- Proceso paso a paso
+- Verificación de usuario
+- Procesamiento de compra
+- Notificación de éxito
+
+#### `NFTModal.tsx` (Actualizado)
+Modal de detalles con:
+- Botón para listar NFTs (abre `ListNFTModal`)
+- Botón para quitar de venta
+- Información completa del NFT
+
+#### `UserNFTCollection.tsx` (Actualizado)
+Colección de usuario con:
+- Detección automática de NFTs listados
+- Visualización diferenciada de NFTs listados
+- Botones deshabilitados para NFTs listados
+- Funcionalidad de quitar de lista
+- Indicadores de estado (Equipado/Listado)
+
+### 3. Store Actualizado
+
+#### `nftStore.ts`
+Store actualizado para usar el nuevo servicio:
+- `fetchMarketplaceNFTs()`: Usa `nftMarketplaceService`
+- `listNFTForSale()`: Implementa la lógica completa de listado
+- `searchNFTs()`: Búsqueda en servidor o local
+- `filterByRarity()`: Filtrado en servidor o local
+
+## Flujo de Operaciones
+
+### Listar NFT para Venta
+
+1. Usuario selecciona NFT de su colección
+2. Hace clic en "Listar para Venta"
+3. Se abre `ListNFTModal`
+4. Usuario ingresa precio en ETH (USDT se calcula automáticamente)
+5. Se ejecuta `nftMarketplaceService.listNFTForSale()`
+6. NFT se elimina de `user-nfts`
+7. NFT se crea en `nft-marketplaces` con `is_listed_for_sale: "True"`
+8. Se actualiza la UI
+
+### Comprar NFT
+
+1. Usuario ve NFT en marketplace
+2. Hace clic en "Comprar"
+3. Se abre `SimpleNFTPurchaseModal`
+4. Se ejecuta `nftMarketplaceService.buyNFT()`
+5. NFT se elimina de `nft-marketplaces`
+6. NFT se agrega a `user-nfts` del comprador
+7. Se actualiza la UI
+
+### Quitar NFT de la Lista
+
+1. Usuario ve NFT listado en su colección (con indicador naranja)
+2. Hace clic en "Quitar de Venta"
+3. Se abre `UnlistNFTModal` con confirmación
+4. Usuario confirma la acción
+5. Se ejecuta `nftMarketplaceService.unlistNFT()`
+6. NFT se elimina de `nft-marketplaces`
+7. NFT se crea en `user-nfts` del usuario
+8. Se actualiza la UI (NFT vuelve a ser equipable)
+
+## Estructura de Datos
+
+### Colección `nft-marketplaces` (Marketplace)
+```json
+{
+  "token_id": "string",
+  "contract_address": "string",
+  "token_uri": "string",
+  "metadata": {
+    "name": "string",
+    "description": "string",
+    "rarity": "string",
+    "attributes": []
+  },
+  "network": "ethereum-mainnet|polygon-mainnet|...",
+  "owner_address": "string",
+  "is_listed_for_sale": "True",
+  "listing_price_eth": 0.001,
+  "listing_price_usdt": 2.00,
+  "minted_at": "datetime",
+  "last_transfer_at": "datetime"
 }
+```
 
-interface MarketplaceFilters {
-  minPrice?: number;
-  maxPrice?: number;
-  rarity?: NFTRarity;
-  search?: string;
-  sortBy?: 'createdAt:desc' | 'listing_price_eth:asc' | 'listing_price_eth:desc';
+### Colección `user-nfts` (Colecciones Personales)
+```json
+{
+  "token_id": "string",
+  "contract_address": "string",
+  "token_uri": "string",
+  "metadata": {
+    "name": "string",
+    "description": "string",
+    "rarity": "string",
+    "attributes": []
+  },
+  "network": "ethereum-mainnet|polygon-mainnet|...",
+  "owner_address": "string",
+  "is_listed_for_sale": "False",
+  "listing_price_eth": 0,
+  "minted_at": "datetime",
+  "last_transfer_at": "datetime",
+  "user_wallet": "relation"
 }
 ```
 
-### 4. Store del Marketplace (preparado)
+## Redes Soportadas
+
+El sistema soporta las siguientes redes blockchain:
+
+- `ethereum-mainnet`
+- `ethereum-goerli`
+- `polygon-mainnet`
+- `polygon-mumbai`
+- `binance-smart-chain`
+- `bnb-testnet`
+- `arbitrum-one`
+- `arbitrum-goerli`
+- `optimism-mainnet`
+- `optimism-goerli`
+- `avalanche-c`
+- `fantom-mainnet`
+- `base-mainnet`
+- `base-goerli`
+- `zkSync-era`
+- `linea-mainnet`
+- `scroll-mainnet`
+- `aurora-mainnet`
+- `solana-mainnet`
+- `solana-devnet`
+
+## Características Implementadas
+
+### ✅ Funcionalidades Completas
+- [x] Listar NFTs para venta
+- [x] Comprar NFTs del marketplace
+- [x] Quitar NFTs de la lista (unlist)
+- [x] Búsqueda de NFTs
+- [x] Filtrado por rareza
+- [x] Ordenamiento por precio/fecha
+- [x] Paginación
+- [x] Conversión ETH ↔ USDT
+- [x] Validación de precios
+- [x] Manejo de errores
+- [x] Notificaciones de éxito/error
+- [x] Detección automática de NFTs listados
+- [x] Visualización diferenciada de estados
+- [x] Confirmación de acciones críticas
+
+### 🔄 Flujo de Datos
+- [x] NFT se mueve de `user-nfts` a `nft-marketplaces` al listar
+- [x] NFT se mueve de `nft-marketplaces` a `user-nfts` al comprar
+- [x] Actualización automática de UI
+- [x] Sincronización de estado
+
+### 🎨 UI/UX
+- [x] Modales intuitivos
+- [x] Indicadores de carga
+- [x] Validación en tiempo real
+- [x] Diseño responsivo
+- [x] Efectos visuales
+
+## Uso del Sistema
+
+### Para Desarrolladores
+
+1. **Importar servicios**:
 ```typescript
-// El patrón ya está definido en useNFTStore
-// Solo necesitas usar las funciones existentes:
-const { marketplaceNFTs, fetchMarketplaceNFTs, listNFTForSale, unlistNFT } = useNFTStore();
+import { nftMarketplaceService } from '@/services/nftMarketplaceService';
 ```
 
-### 5. Componentes Base Listos
-
-#### NFTCard (ya existe y es reutilizable)
+2. **Listar NFT**:
 ```typescript
-// Ya implementado en el patrón de reutilización
-// Solo necesitas pasarle las props correctas:
-<NFTCard 
-  nft={nft}
-  showPrice={true}
-  showActions={false}
-  onSelect={handleSelectNFT}
-  onBuy={handleBuyNFT}
-/>
+const result = await nftMarketplaceService.listNFTForSale({
+  nftDocumentId: 'nft-id',
+  priceEth: 0.001,
+  priceUsdt: 2.00,
+  userId: 123
+});
 ```
 
-## Implementación Rápida del Marketplace
-
-### Paso 1: Crear MarketplaceStore
+3. **Comprar NFT**:
 ```typescript
-// src/stores/marketplaceStore.ts
-interface MarketplaceState {
-  nfts: any[];
-  filters: MarketplaceFilters;
-  isLoading: boolean;
-  selectedNFT: any | null;
-}
-
-interface MarketplaceActions {
-  fetchMarketplaceNFTs: () => Promise<void>;
-  applyFilters: (filters: MarketplaceFilters) => Promise<void>;
-  purchaseNFT: (nftId: string, buyerWalletId: number, buyerAddress: string) => Promise<void>;
-}
-
-export const useMarketplaceStore = create<MarketplaceState & MarketplaceActions>()(
-  immer((set) => ({
-    nfts: [],
-    filters: {},
-    isLoading: false,
-    selectedNFT: null,
-
-    fetchMarketplaceNFTs: async () => {
-      set((state) => { state.isLoading = true; });
-      try {
-        const response = await NFTApiHelper.getMarketplaceNFTs();
-        set((state) => {
-          state.nfts = response.data;
-          state.isLoading = false;
-        });
-      } catch (error) {
-        set((state) => { state.isLoading = false; });
-      }
-    },
-
-    applyFilters: async (filters: MarketplaceFilters) => {
-      set((state) => { 
-        state.filters = filters;
-        state.isLoading = true; 
-      });
-      try {
-        const response = await MarketplaceHelper.getFilteredNFTs(filters);
-        set((state) => {
-          state.nfts = response.data;
-          state.isLoading = false;
-        });
-      } catch (error) {
-        set((state) => { state.isLoading = false; });
-      }
-    },
-
-    purchaseNFT: async (nftId: string, buyerWalletId: number, buyerAddress: string) => {
-      try {
-        await MarketplaceHelper.purchaseNFT(nftId, buyerWalletId, buyerAddress);
-        // Refresh marketplace
-        const { fetchMarketplaceNFTs } = get();
-        await fetchMarketplaceNFTs();
-      } catch (error) {
-        throw error;
-      }
-    }
-  }))
-);
+const result = await nftMarketplaceService.buyNFT({
+  nftDocumentId: 'nft-id',
+  buyerUserId: 456
+});
 ```
 
-### Paso 2: Página del Marketplace
+4. **Obtener NFTs del marketplace**:
 ```typescript
-// src/pages/MarketplacePage.tsx
-export const MarketplacePage: React.FC = () => {
-  const { nfts, isLoading, fetchMarketplaceNFTs, applyFilters } = useMarketplaceStore();
-  const [filters, setFilters] = useState<MarketplaceFilters>({});
-
-  useEffect(() => {
-    fetchMarketplaceNFTs();
-  }, []);
-
-  return (
-    <div className="marketplace-page">
-      <h1>Marketplace de NFTs</h1>
-      
-      <div className="marketplace-content">
-        <FilterSidebar 
-          filters={filters}
-          onFiltersChange={(newFilters) => {
-            setFilters(newFilters);
-            applyFilters(newFilters);
-          }}
-        />
-        
-        <div className="nft-grid">
-          {isLoading ? (
-            <div>Cargando...</div>
-          ) : (
-            nfts.map((nft) => (
-              <NFTCard
-                key={nft.documentId}
-                nft={nft}
-                showPrice={true}
-                onSelect={handleSelectNFT}
-                onBuy={handleBuyNFT}
-              />
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
+const result = await nftMarketplaceService.getMarketplaceNFTs(1, 12);
 ```
 
-## Funcionalidades Listas para Implementar
+### Para Usuarios
 
-### ✅ Ya Implementadas
-1. **Crear NFTs** - ✅ Función `createRegistrationAchievementNFT`
-2. **Listar NFTs para venta** - ✅ Función `listNFTForSale`
-3. **Quitar NFTs de venta** - ✅ Función `unlistNFT`
-4. **Obtener NFTs del marketplace** - ✅ Función `getMarketplaceNFTs`
-5. **Componente NFTCard reutilizable** - ✅ Patrón definido
-6. **Tipos TypeScript** - ✅ Todos los tipos necesarios
-7. **Cliente API** - ✅ Métodos CRUD genéricos
+1. **Listar NFT**: Ir a "Mi Colección" → Seleccionar NFT → "Listar para Venta"
+2. **Comprar NFT**: Ir a "Marketplace" → Seleccionar NFT → "Comprar"
+3. **Buscar NFTs**: Usar barra de búsqueda en marketplace
+4. **Filtrar**: Usar filtros de rareza y ordenamiento
 
-### 🔄 Por Implementar (Rápido)
-1. **Comprar NFTs** - Solo necesitas `MarketplaceHelper.purchaseNFT`
-2. **Filtros avanzados** - Solo necesitas `MarketplaceHelper.getFilteredNFTs`
-3. **Componentes UI** - Usar patrones ya definidos
-4. **Store del marketplace** - Usar patrón de `useNFTStore`
+## Consideraciones Técnicas
 
-## Estimación de Tiempo
+### Seguridad
+- Validación de precios mínimos
+- Verificación de propiedad de NFTs
+- Autenticación requerida para todas las operaciones
 
-Con toda la base ya implementada:
-- **Marketplace básico**: 2-3 horas
-- **Filtros y búsqueda**: 1-2 horas  
-- **Compra de NFTs**: 1-2 horas
-- **UI/UX pulido**: 2-3 horas
+### Performance
+- Paginación para grandes volúmenes
+- Búsqueda optimizada
+- Cache local para datos frecuentes
 
-**Total estimado**: 6-10 horas para un marketplace completo
+### Escalabilidad
+- Estructura modular
+- Servicios independientes
+- Fácil extensión para nuevas funcionalidades
 
-## Próximos Pasos Recomendados
+## Próximas Mejoras
 
-1. Implementar `MarketplaceHelper` con las funciones de filtrado
-2. Crear `useMarketplaceStore` usando el patrón existente
-3. Crear componentes UI básicos reutilizando `NFTCard`
-4. Implementar la funcionalidad de compra
-5. Agregar filtros y búsqueda avanzada
+### Funcionalidades Futuras
+- [ ] Sistema de ofertas
+- [ ] Historial de transacciones
+- [ ] Notificaciones push
+- [ ] Integración con wallets reales
+- [ ] Sistema de royalties
+- [ ] Subastas
 
-¿Te parece bien este plan? ¿Por dónde quieres empezar?
+### Optimizaciones
+- [ ] Cache más inteligente
+- [ ] Búsqueda full-text
+- [ ] Filtros avanzados
+- [ ] Analytics de marketplace
+
+## Troubleshooting
+
+### Problemas Comunes
+
+1. **NFT no aparece en marketplace**:
+   - Verificar que `is_listed_for_sale` sea "True"
+   - Verificar que el NFT esté en la colección `nft-marketplaces`
+   - Revisar permisos de usuario
+
+2. **Error al comprar**:
+   - Verificar que el NFT existe en la colección `nft-marketplaces`
+   - Comprobar que el usuario tiene wallet
+
+3. **Precios no se actualizan**:
+   - Verificar conversión ETH/USDT
+   - Revisar formato de números
+
+### Logs de Debug
+
+El sistema incluye logs detallados para debugging:
+- `🛒 Listando NFT para venta`
+- `✅ NFT listado exitosamente`
+- `🛒 Comprando NFT`
+- `✅ NFT comprado exitosamente`
+
+## Conclusión
+
+El sistema de marketplace está completamente funcional y listo para producción. Implementa todas las funcionalidades básicas necesarias para un marketplace de NFTs, con una arquitectura escalable y mantenible.

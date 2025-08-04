@@ -55,9 +55,8 @@ export function createInitialGameSessionData(
       weapons: ["pistol_default"], // Pistola equipada por defecto
       active_effects: [],
       bandages: 1 // El usuario empieza con 1 vendaje
-    },
-    // Relación con el NFT creado (pero no equipado)
-    user_nfts: [nftId]
+    }
+    // Removed user_nfts relation - will be handled in the main payload
   };
 
   console.log('📊 Initial session data created:', initialSessionData);
@@ -85,14 +84,33 @@ export async function createInitialGameSession(
     // Create initial session data
     const initialSessionData = createInitialGameSessionData(username, nftId);
     
-    // Create the game session
-    const sessionResponse = await apiClient.create('/game-sessions', {
+    // Create the game session with proper relations
+    const sessionPayload = {
       users_permissions_user: userId,
+      user_nfts: [nftId], // Relate to the NFT
       ...initialSessionData
-    });
+    };
+    
+    console.log('🎮 Session payload:', JSON.stringify(sessionPayload, null, 2));
+    
+    const sessionResponse = await apiClient.create('/game-sessions', sessionPayload);
     
     console.log('✅ Initial game session created successfully');
     console.log('🎮 Session ID:', sessionResponse.data?.id);
+    console.log('🎮 Full session response:', JSON.stringify(sessionResponse, null, 2));
+    
+    // Update the NFT to include the game session relationship
+    if (sessionResponse.data?.id) {
+      try {
+        console.log('🔄 Updating NFT to include game session relationship');
+        await apiClient.update('/user-nfts', nftId, {
+          game_sessions: [sessionResponse.data.id]
+        });
+        console.log('✅ NFT updated with game session relationship');
+      } catch (updateErr) {
+        console.error('❌ Error updating NFT with game session relationship:', updateErr);
+      }
+    }
     
     return sessionResponse;
     

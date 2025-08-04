@@ -150,11 +150,14 @@ class ApiClient {
     } as const;
 
     console.log('🎖️ Registration achievement NFT payload:', JSON.stringify(payload, null, 2));
+    console.log('🎖️ API endpoint:', API_CONFIG.ENDPOINTS.WALLET.USER_NFTS);
     
     try {
       const response = await this.client.post(API_CONFIG.ENDPOINTS.WALLET.USER_NFTS, payload);
       console.log('✅ Registration achievement NFT created successfully:', response.data);
       console.log('✅ NFT relation established with wallet ID:', walletIdNumber);
+      console.log('✅ Created NFT ID:', response.data?.data?.id);
+      console.log('✅ Full response structure:', JSON.stringify(response.data, null, 2));
       return response.data;
     } catch (error) {
       console.error('❌ Failed to create registration achievement NFT:', error);
@@ -163,6 +166,9 @@ class ApiClient {
         const axiosError = error as any;
         if (axiosError.response?.data) {
           console.error('❌ Strapi error details:', JSON.stringify(axiosError.response.data, null, 2));
+        }
+        if (axiosError.response?.status) {
+          console.error('❌ HTTP status:', axiosError.response.status);
         }
       }
       throw error;

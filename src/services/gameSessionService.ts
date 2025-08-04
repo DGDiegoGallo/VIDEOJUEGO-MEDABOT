@@ -1,4 +1,5 @@
 import { API_CONFIG } from '@/config/api';
+import { GameMaterials } from '@/managers/SupplyBoxManager';
 
 interface EquipNFTData {
   nftId: string;
@@ -9,6 +10,25 @@ interface EquipNFTData {
 interface UnequipNFTData {
   nftId: string;
   sessionId: string;
+}
+
+interface UpdateMaterialsData {
+  sessionId: string;
+  materials: GameMaterials;
+  isVictory?: boolean;
+  victoryBonusPercentage?: number;
+}
+
+interface UpdateDailyQuestsData {
+  sessionId: string;
+  completedQuests: Array<{
+    id: string;
+    title: string;
+    description: string;
+    type: string;
+    reward: number;
+    completedAt: string;
+  }>;
 }
 
 class GameSessionService {
@@ -41,6 +61,188 @@ class GameSessionService {
     } catch (error) {
       console.error('Error getting user game session:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Actualiza los materiales en la sesión de juego
+   */
+  async updateSessionMaterials({ sessionId, materials, isVictory = false, victoryBonusPercentage = 0.25 }: UpdateMaterialsData): Promise<any> {
+    try {
+      console.log('🎮 Actualizando materiales en sesión:', sessionId);
+      console.log('📦 Materiales a actualizar:', materials);
+      console.log('🏆 Es victoria:', isVictory, 'Bonus:', victoryBonusPercentage);
+
+      // Primero obtener la sesión actual
+      const currentSession = await this.getSessionById(sessionId);
+      if (!currentSession) {
+        throw new Error('Sesión de juego no encontrada');
+      }
+
+      // Obtener materiales actuales de la sesión
+      const currentMaterials = currentSession.materials || {
+        steel: 0,
+        energy_cells: 0,
+        medicine: 0,
+        food: 0
+      };
+
+      // Calcular nuevos materiales
+      let updatedMaterials: GameMaterials = {
+        steel: currentMaterials.steel + materials.steel,
+        energy_cells: currentMaterials.energy_cells + materials.energy_cells,
+        medicine: currentMaterials.medicine + materials.medicine,
+        food: currentMaterials.food + materials.food
+      };
+
+      // Aplicar bonus de victoria si corresponde
+      let bonusApplied = null;
+      if (isVictory && victoryBonusPercentage > 0) {
+        const bonusMaterials = {
+          steel: Math.floor(materials.steel * victoryBonusPercentage),
+          energy_cells: Math.floor(materials.energy_cells * victoryBonusPercentage),
+          medicine: Math.floor(materials.medicine * victoryBonusPercentage),
+          food: Math.floor(materials.food * victoryBonusPercentage)
+        };
+
+        updatedMaterials = {
+          steel: updatedMaterials.steel + bonusMaterials.steel,
+          energy_cells: updatedMaterials.energy_cells + bonusMaterials.energy_cells,
+          medicine: updatedMaterials.medicine + bonusMaterials.medicine,
+          food: updatedMaterials.food + bonusMaterials.food
+        };
+
+        bonusApplied = bonusMaterials;
+        console.log('🏆 Bonus de victoria aplicado:', bonusMaterials);
+      }
+
+      // Preparar datos de actualización
+      const updateData = {
+        data: {
+          materials: updatedMaterials
+        }
+      };
+
+      console.log('📤 Enviando actualización de materiales:', updateData);
+
+      const response = await fetch(
+        `${this.baseURL}/game-sessions/${sessionId}`,
+        {
+          method: 'PUT',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(updateData)
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Error response:', errorData);
+        throw new Error(`Error actualizando materiales: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Materiales actualizados exitosamente:', result);
+      
+      // No actualizar localStorage aquí - ya se maneja en SupplyBoxManager
+      // this.updateLocalStorageMaterials(updatedMaterials);
+      
+      return { 
+        success: true, 
+        data: result,
+        materialsUpdated: updatedMaterials,
+        bonusApplied
+      };
+    } catch (error) {
+      console.error('❌ Error actualizando materiales:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Actualiza las misiones diarias completadas en la sesión
+   */
+  async updateDailyQuestsCompleted({ sessionId, completedQuests }: UpdateDailyQuestsData): Promise<any> {
+    try {
+      console.log('🎯 Actualizando misiones diarias completadas en sesión:', sessionId);
+      console.log('📋 Misiones completadas:', completedQuests);
+
+      // Obtener la sesión actual
+      const currentSession = await this.getSessionById(sessionId);
+      if (!currentSession) {
+        throw new Error('Sesión de juego no encontrada');
+      }
+
+      // Obtener misiones ya completadas
+      const currentCompletedQuests = currentSession.daily_quests_completed?.quests || [];
+      
+      // Combinar misiones existentes con las nuevas (evitar duplicados)
+      const allCompletedQuests = [...currentCompletedQuests];
+      
+      completedQuests.forEach(newQuest => {
+        const exists = allCompletedQuests.find(existing => existing.id === newQuest.id);
+        if (!exists) {
+          allCompletedQuests.push(newQuest);
+        }
+      });
+
+      // Preparar datos de actualización
+      const updateData = {
+        data: {
+          daily_quests_completed: {
+            date: new Date().toISOString().split('T')[0], // Formato YYYY-MM-DD
+            quests: allCompletedQuests
+          }
+        }
+      };
+
+      console.log('📤 Enviando actualización de misiones diarias:', updateData);
+
+      const response = await fetch(
+        `${this.baseURL}/game-sessions/${sessionId}`,
+        {
+          method: 'PUT',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(updateData)
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Error response:', errorData);
+        throw new Error(`Error actualizando misiones diarias: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Misiones diarias actualizadas exitosamente:', result);
+      
+      return { 
+        success: true, 
+        data: result,
+        questsUpdated: allCompletedQuests
+      };
+    } catch (error) {
+      console.error('❌ Error actualizando misiones diarias:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Actualiza los materiales en localStorage
+   */
+  private updateLocalStorageMaterials(materials: GameMaterials): void {
+    try {
+      // Obtener el userId del token o de localStorage
+      const userData = localStorage.getItem('user-data');
+      if (userData) {
+        const user = JSON.parse(userData);
+        const storageKey = `game-materials-${user.id}`;
+        
+        // Guardar los materiales totales actualizados
+        localStorage.setItem(storageKey, JSON.stringify(materials));
+        console.log('💾 Materiales actualizados en localStorage:', materials);
+      }
+    } catch (error) {
+      console.error('❌ Error actualizando localStorage:', error);
     }
   }
 

@@ -106,6 +106,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             };
 
             let createdWalletId: string | null = null;
+            let createdWalletResponse: any = null;
             
             try {
               const walletResponse = await apiClient.createWallet(walletData, response.user.id.toString());
@@ -116,6 +117,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
                                walletResponse?.id?.toString() || 
                                null;
               
+              createdWalletResponse = walletResponse;
               console.log('✅ Wallet created successfully with ID:', createdWalletId);
               console.log('🔍 Wallet response data structure:', walletResponse?.data);
             } catch (walletErr) {
@@ -124,6 +126,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             }
 
             // Create registration achievement NFT if wallet was created successfully
+            let createdNFTId: string | null = null;
             if (createdWalletId) {
               try {
                 const { createRegistrationAchievementNFTData } = await import('@/utils/registrationAchievementNFT');
@@ -139,13 +142,29 @@ export const useAuthStore = create<AuthState & AuthActions>()(
                 const nftResponse = await apiClient.createRegistrationAchievementNFT(registrationNFTData, createdWalletId);
                 console.log('✅ Registration achievement NFT created and linked to wallet successfully');
                 
+                createdNFTId = nftResponse?.data?.id?.toString() || null;
+                console.log('🎨 Created NFT ID:', createdNFTId);
+                
+                // Update wallet to include the NFT relationship
+                if (createdNFTId && createdWalletResponse?.data?.id) {
+                  try {
+                    console.log('🔄 Updating wallet to include NFT relationship');
+                    await apiClient.update('/user-wallets', createdWalletResponse.data.id, {
+                      user_nfts: [parseInt(createdNFTId, 10)]
+                    });
+                    console.log('✅ Wallet updated with NFT relationship');
+                  } catch (updateErr) {
+                    console.error('❌ Error updating wallet with NFT relationship:', updateErr);
+                  }
+                }
+                
                 // Create initial game session after NFT creation
-                if (nftResponse?.data?.id) {
+                if (createdNFTId) {
                   try {
                     const { createInitialGameSession } = await import('@/utils/initialGameSession');
                     
                     // Get the created NFT ID
-                    const nftId = nftResponse.data.id;
+                    const nftId = parseInt(createdNFTId, 10);
                     
                     // Create initial game session
                     await createInitialGameSession(
@@ -157,7 +176,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
                   } catch (sessionErr) {
                     console.error('❌ Error creating initial game session:', sessionErr);
                     console.error('❌ Failed for user ID:', response.user.id);
-                    console.error('❌ Failed for NFT ID:', nftResponse.data.id);
+                    console.error('❌ Failed for NFT ID:', createdNFTId);
                     // Continue without blocking registration - session creation is optional
                   }
                 } else {

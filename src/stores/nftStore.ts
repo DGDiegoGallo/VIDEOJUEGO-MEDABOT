@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { NFTApiHelper } from '@/utils/nftHelpers';
+import { nftMarketplaceService } from '@/services/nftMarketplaceService';
 import { getMockMarketplaceData, simulateApiDelay } from '@/utils/mockNFTData';
 import { normalizeRarity } from '@/utils/translations';
 import type { UserNFT } from '@/types/nft';
@@ -38,6 +39,7 @@ interface NFTActions {
   loadMoreMarketplace: () => Promise<void>;
   toggleMockData: () => void;
   loadMockMarketplace: () => Promise<void>;
+  applyFilters: () => void;
 }
 
 export const useNFTStore = create<NFTState & NFTActions>()(
@@ -98,20 +100,25 @@ export const useNFTStore = create<NFTState & NFTActions>()(
           await simulateApiDelay(800);
           response = getMockMarketplaceData();
         } else {
-          response = await NFTApiHelper.getMarketplaceNFTs(page, 12);
+          // Usar el nuevo servicio del marketplace
+          const result = await nftMarketplaceService.getMarketplaceNFTs(page, 12);
+          if (!result.success) {
+            throw new Error(result.error || 'Error obteniendo NFTs del marketplace');
+          }
+          response = result.data;
         }
         
         set((state) => {
           if (page === 1) {
-            state.marketplaceNFTs = response.data || [];
-            state.filteredNFTs = response.data || [];
+            state.marketplaceNFTs = response.nfts || [];
+            state.filteredNFTs = response.nfts || [];
           } else {
-            state.marketplaceNFTs.push(...(response.data || []));
+            state.marketplaceNFTs.push(...(response.nfts || []));
             // Re-aplicar filtros a los nuevos datos
             get().applyFilters();
           }
           state.marketplacePage = page;
-          state.marketplaceTotalPages = response.meta?.pagination?.pageCount || 1;
+          state.marketplaceTotalPages = response.pagination?.pageCount || 1;
           state.isMarketplaceLoading = false;
         });
       } catch (error) {
@@ -134,20 +141,43 @@ export const useNFTStore = create<NFTState & NFTActions>()(
 
     listNFTForSale: async (nftDocumentId: string, price: number) => {
       try {
-        await NFTApiHelper.listNFTForSale(nftDocumentId, price);
-        
-        // Update local state
-        set((state) => {
-          const nftIndex = state.userNFTs.findIndex(nft => nft.documentId === nftDocumentId);
-          if (nftIndex !== -1) {
-            state.userNFTs[nftIndex].is_listed_for_sale = 'True';
-            state.userNFTs[nftIndex].listing_price_eth = price;
-          }
+        // Obtener el ID del usuario del token de autenticación
+        const token = localStorage.getItem('auth-token');
+        if (!token) {
+          throw new Error('Usuario no autenticado');
+        }
+
+        // Decodificar el token para obtener el userId
+        const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+        const userId = tokenPayload.id;
+
+        console.log('🔄 Iniciando proceso de list para NFT:', nftDocumentId, 'Usuario:', userId);
+
+        const result = await nftMarketplaceService.listNFTForSale({
+          nftDocumentId,
+          priceEth: price,
+          priceUsdt: price * 2000, // Conversión aproximada ETH a USDT
+          userId
         });
 
-        // Refresh marketplace
+        if (!result.success) {
+          throw new Error(result.error || 'Error al listar NFT');
+        }
+
+        console.log('✅ List exitoso, actualizando estado local');
+
+        // Update local state - remover el NFT de la colección del usuario
+        set((state) => {
+          state.userNFTs = state.userNFTs.filter(nft => nft.documentId !== nftDocumentId);
+          console.log('🗑️ NFT removido de userNFTs');
+        });
+
+        // Refresh marketplace y recargar NFTs listados
+        console.log('🔄 Recargando datos...');
         const { fetchMarketplaceNFTs } = get();
         await fetchMarketplaceNFTs(1);
+        
+        console.log('✅ Datos recargados exitosamente');
       } catch (error) {
         console.error('Error listing NFT:', error);
         set((state) => {
@@ -158,20 +188,52 @@ export const useNFTStore = create<NFTState & NFTActions>()(
 
     unlistNFT: async (nftDocumentId: string) => {
       try {
-        await NFTApiHelper.unlistNFT(nftDocumentId);
-        
-        // Update local state
+        // Obtener el ID del usuario del token de autenticación
+        const token = localStorage.getItem('auth-token');
+        if (!token) {
+          throw new Error('Usuario no autenticado');
+        }
+
+        // Decodificar el token para obtener el userId
+        const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+        const userId = tokenPayload.id;
+
+        console.log('🔄 Iniciando proceso de unlist para NFT:', nftDocumentId, 'Usuario:', userId);
+
+        const result = await nftMarketplaceService.unlistNFT({
+          nftDocumentId,
+          userId
+        });
+
+        if (!result.success) {
+          throw new Error(result.error || 'Error al quitar NFT de la lista');
+        }
+
+        console.log('✅ Unlist exitoso, actualizando estado local');
+
+        // Update local state - agregar el NFT de vuelta a la colección del usuario
         set((state) => {
-          const nftIndex = state.userNFTs.findIndex(nft => nft.documentId === nftDocumentId);
-          if (nftIndex !== -1) {
-            state.userNFTs[nftIndex].is_listed_for_sale = 'False';
-            state.userNFTs[nftIndex].listing_price_eth = 0;
+          // Agregar el NFT de vuelta a la colección del usuario
+          if (result.data) {
+            state.userNFTs.push(result.data);
+            console.log('📝 NFT agregado a userNFTs:', result.data.metadata?.name);
           }
           
           // Remove from marketplace
           state.marketplaceNFTs = state.marketplaceNFTs.filter(nft => nft.documentId !== nftDocumentId);
           state.filteredNFTs = state.filteredNFTs.filter(nft => nft.documentId !== nftDocumentId);
+          console.log('🗑️ NFT removido de marketplaceNFTs y filteredNFTs');
         });
+
+        // Refresh marketplace y user NFTs
+        console.log('🔄 Recargando datos...');
+        const { fetchMarketplaceNFTs, fetchUserNFTs } = get();
+        await Promise.all([
+          fetchMarketplaceNFTs(1),
+          fetchUserNFTs(userId)
+        ]);
+        
+        console.log('✅ Datos recargados exitosamente');
       } catch (error) {
         console.error('Error unlisting NFT:', error);
         set((state) => {
@@ -207,18 +269,35 @@ export const useNFTStore = create<NFTState & NFTActions>()(
       
       try {
         if (searchTerm.trim()) {
-          // Búsqueda local en los datos existentes
-          const { marketplaceNFTs } = get();
-          const filtered = marketplaceNFTs.filter(nft => 
-            nft.metadata.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            nft.metadata.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            nft.metadata.achievement_type?.toLowerCase().includes(searchTerm.toLowerCase())
-          );
+          // Usar el servicio del marketplace para búsqueda
+          const { useMockData } = get();
           
-          set((state) => {
-            state.filteredNFTs = filtered;
-            state.isMarketplaceLoading = false;
-          });
+          if (useMockData) {
+            // Búsqueda local en los datos existentes
+            const { marketplaceNFTs } = get();
+            const filtered = marketplaceNFTs.filter(nft => 
+              nft.metadata.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              nft.metadata.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              nft.metadata.achievement_type?.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            
+            set((state) => {
+              state.filteredNFTs = filtered;
+              state.isMarketplaceLoading = false;
+            });
+          } else {
+            // Búsqueda en el servidor
+            const result = await nftMarketplaceService.searchMarketplaceNFTs(searchTerm, 1, 12);
+            if (result.success) {
+              set((state) => {
+                state.marketplaceNFTs = result.data.nfts || [];
+                state.filteredNFTs = result.data.nfts || [];
+                state.isMarketplaceLoading = false;
+              });
+            } else {
+              throw new Error(result.error || 'Error en la búsqueda');
+            }
+          }
         } else {
           // Si no hay término de búsqueda, mostrar todos
           get().applyFilters();
@@ -244,17 +323,34 @@ export const useNFTStore = create<NFTState & NFTActions>()(
           // Mostrar todos los NFTs
           get().applyFilters();
         } else {
-          // Filtrar por rareza
-          const { marketplaceNFTs } = get();
-          const normalizedRarity = normalizeRarity(rarity);
-          const filtered = marketplaceNFTs.filter(nft => 
-            normalizeRarity(nft.metadata.rarity) === normalizedRarity
-          );
+          // Usar el servicio del marketplace para filtrado
+          const { useMockData } = get();
           
-          set((state) => {
-            state.filteredNFTs = filtered;
-            state.isMarketplaceLoading = false;
-          });
+          if (useMockData) {
+            // Filtrar por rareza localmente
+            const { marketplaceNFTs } = get();
+            const normalizedRarity = normalizeRarity(rarity);
+            const filtered = marketplaceNFTs.filter(nft => 
+              normalizeRarity(nft.metadata.rarity) === normalizedRarity
+            );
+            
+            set((state) => {
+              state.filteredNFTs = filtered;
+              state.isMarketplaceLoading = false;
+            });
+          } else {
+            // Filtrar en el servidor
+            const result = await nftMarketplaceService.filterMarketplaceNFTsByRarity(rarity, 1, 12);
+            if (result.success) {
+              set((state) => {
+                state.marketplaceNFTs = result.data.nfts || [];
+                state.filteredNFTs = result.data.nfts || [];
+                state.isMarketplaceLoading = false;
+              });
+            } else {
+              throw new Error(result.error || 'Error en el filtrado');
+            }
+          }
         }
       } catch (error) {
         console.error('Error filtering NFTs by rarity:', error);

@@ -6,7 +6,7 @@ export interface SupplyBoxConfig {
   materials: {
     steel: { min: number; max: number; chance: number };
     energy_cells: { min: number; max: number; chance: number };
-    medicine: { min: number; max: number; chance: number };
+    // medicine: { min: number; max: number; chance: number }; // Deshabilitado - se obtiene del lobby
     // food: { min: number; max: number; chance: number }; // No incluido por ahora
   };
   visualEffects: {
@@ -23,19 +23,29 @@ export interface SupplyBoxData {
   materials: {
     steel?: number;
     energy_cells?: number;
-    medicine?: number;
+    // medicine?: number; // Deshabilitado - se obtiene del lobby
   };
   isCollected: boolean;
+}
+
+// Interfaz para los materiales en el formato de Strapi
+export interface GameMaterials {
+  steel: number;
+  energy_cells: number;
+  medicine: number;
+  food: number;
 }
 
 export class SupplyBoxManager {
   private scene: Scene;
   private supplyBoxes: Phaser.GameObjects.Rectangle[] = [];
   private config: SupplyBoxConfig;
-  private collectedMaterials: Map<string, number> = new Map();
+  private sessionMaterials: Map<string, number> = new Map(); // Solo materiales de esta sesión
+  private userId: string | number;
 
-  constructor(scene: Scene, config?: Partial<SupplyBoxConfig>) {
+  constructor(scene: Scene, userId: string | number, config?: Partial<SupplyBoxConfig>) {
     this.scene = scene;
+    this.userId = userId;
 
     // Configuración por defecto
     this.config = {
@@ -43,7 +53,7 @@ export class SupplyBoxManager {
       materials: {
         steel: { min: 1, max: 3, chance: 0.4 },
         energy_cells: { min: 1, max: 2, chance: 0.3 },
-        medicine: { min: 1, max: 1, chance: 0.2 },
+        // medicine: { min: 1, max: 1, chance: 0.2 }, // Deshabilitado - se obtiene del lobby
       },
       visualEffects: {
         glowColor: 0x00ff00,
@@ -52,9 +62,6 @@ export class SupplyBoxManager {
       },
       ...config
     };
-
-    // Cargar materiales guardados en localStorage
-    this.loadCollectedMaterials();
   }
 
   /**
@@ -255,11 +262,17 @@ export class SupplyBoxManager {
     // Marcar como recolectada
     boxData.isCollected = true;
 
-    // Agregar materiales al inventario local
-    this.addMaterialsToInventory(boxData.materials);
+    // Agregar materiales al inventario de la sesión
+    this.addMaterialsToSession(boxData.materials);
 
     // Efecto de recolección
     this.createCollectionEffect(supplyBox.x, supplyBox.y);
+
+    // Emitir evento para misiones diarias
+    this.scene.events.emit('supplyBoxCollected', {
+      materials: boxData.materials,
+      position: { x: supplyBox.x, y: supplyBox.y }
+    });
 
     // Remover de la lista y destruir
     const index = this.supplyBoxes.indexOf(supplyBox);
@@ -321,48 +334,104 @@ export class SupplyBoxManager {
   }
 
   /**
-   * Agrega materiales al inventario local
+   * Agrega materiales al inventario de la sesión actual
    * @param materials - Materiales a agregar
    */
-  private addMaterialsToInventory(materials: { [key: string]: number }): void {
+  private addMaterialsToSession(materials: { [key: string]: number }): void {
     Object.entries(materials).forEach(([materialType, amount]) => {
-      const currentAmount = this.collectedMaterials.get(materialType) || 0;
-      this.collectedMaterials.set(materialType, currentAmount + amount);
+      const currentAmount = this.sessionMaterials.get(materialType) || 0;
+      this.sessionMaterials.set(materialType, currentAmount + amount);
     });
 
-    // Guardar en localStorage
-    this.saveCollectedMaterials();
+    // Actualizar localStorage con el acumulado total
+    this.updateLocalStorageMaterials();
+
+    console.log('📦 Materiales agregados a la sesión:', materials);
+    console.log('📦 Total de materiales en sesión:', Object.fromEntries(this.sessionMaterials));
   }
 
   /**
-   * Guarda los materiales recolectados en localStorage
+   * Actualiza localStorage con los materiales acumulados de la sesión
    */
-  private saveCollectedMaterials(): void {
+  private updateLocalStorageMaterials(): void {
     try {
-      const materialsData = Object.fromEntries(this.collectedMaterials);
-      localStorage.setItem('collectedMaterials', JSON.stringify(materialsData));
-      console.log('💾 Materiales guardados en localStorage:', materialsData);
-    } catch (error) {
-      console.error('❌ Error guardando materiales en localStorage:', error);
-    }
-  }
+      const storageKey = `game-materials-${this.userId}`;
+      
+      // Obtener materiales actuales de localStorage
+      const currentMaterialsData = localStorage.getItem(storageKey);
+      let currentMaterials: GameMaterials = {
+        steel: 0,
+        energy_cells: 0,
+        medicine: 0,
+        food: 0
+      };
 
-  /**
-   * Carga los materiales recolectados desde localStorage
-   */
-  private loadCollectedMaterials(): void {
-    try {
-      const materialsData = localStorage.getItem('collectedMaterials');
-      if (materialsData) {
-        const materials = JSON.parse(materialsData);
-        Object.entries(materials).forEach(([materialType, amount]) => {
-          this.collectedMaterials.set(materialType, amount as number);
-        });
-        console.log('📦 Materiales cargados desde localStorage:', materials);
+      if (currentMaterialsData) {
+        currentMaterials = JSON.parse(currentMaterialsData);
       }
+
+      // Agregar los materiales de la sesión actual
+      this.sessionMaterials.forEach((amount, materialType) => {
+        if (materialType in currentMaterials) {
+          currentMaterials[materialType as keyof GameMaterials] += amount;
+        }
+      });
+
+      // Guardar el total actualizado
+      localStorage.setItem(storageKey, JSON.stringify(currentMaterials));
+      
+      console.log('💾 Materiales actualizados en localStorage (acumulado):', currentMaterials);
     } catch (error) {
-      console.error('❌ Error cargando materiales desde localStorage:', error);
+      console.error('❌ Error actualizando localStorage:', error);
     }
+  }
+
+  /**
+   * Obtiene los materiales recolectados en esta sesión
+   * @returns Materiales recolectados en formato Strapi
+   */
+  public getSessionMaterials(): GameMaterials {
+    const sessionMaterials: GameMaterials = {
+      steel: this.sessionMaterials.get('steel') || 0,
+      energy_cells: this.sessionMaterials.get('energy_cells') || 0,
+      medicine: 0, // No se recolecta en cajas
+      food: 0 // No implementado
+    };
+
+    return sessionMaterials;
+  }
+
+  /**
+   * Aplica bonus de victoria a los materiales recolectados
+   * @param bonusPercentage - Porcentaje de bonus (ej: 0.25 = 25%)
+   */
+  public applyVictoryBonus(bonusPercentage: number): GameMaterials {
+    const sessionMaterials = this.getSessionMaterials();
+    const bonusMaterials: GameMaterials = {
+      steel: Math.floor(sessionMaterials.steel * bonusPercentage),
+      energy_cells: Math.floor(sessionMaterials.energy_cells * bonusPercentage),
+      medicine: Math.floor(sessionMaterials.medicine * bonusPercentage),
+      food: Math.floor(sessionMaterials.food * bonusPercentage)
+    };
+
+    // Agregar bonus a los materiales de la sesión
+    Object.entries(bonusMaterials).forEach(([materialType, bonusAmount]) => {
+      if (bonusAmount > 0) {
+        const currentAmount = this.sessionMaterials.get(materialType) || 0;
+        this.sessionMaterials.set(materialType, currentAmount + bonusAmount);
+      }
+    });
+
+    console.log('🏆 Bonus de victoria aplicado:', bonusMaterials);
+    return bonusMaterials;
+  }
+
+  /**
+   * Limpia los materiales recolectados en esta sesión (para nueva partida)
+   */
+  public clearSessionMaterials(): void {
+    this.sessionMaterials.clear();
+    console.log('🔄 Materiales de sesión limpiados');
   }
 
   /**
@@ -382,11 +451,11 @@ export class SupplyBoxManager {
   }
 
   /**
-   * Obtiene los materiales recolectados
+   * Obtiene los materiales recolectados en esta sesión
    * @returns Mapa de materiales recolectados
    */
   getCollectedMaterials(): Map<string, number> {
-    return new Map(this.collectedMaterials);
+    return new Map(this.sessionMaterials);
   }
 
   /**
@@ -400,12 +469,12 @@ export class SupplyBoxManager {
     spawnChance: number;
   } {
     const totalMaterials: { [key: string]: number } = {};
-    this.collectedMaterials.forEach((amount, materialType) => {
+    this.sessionMaterials.forEach((amount, materialType) => {
       totalMaterials[materialType] = amount;
     });
 
     return {
-      totalBoxesCreated: this.collectedMaterials.size > 0 ? 
+      totalBoxesCreated: this.sessionMaterials.size > 0 ? 
         Object.values(totalMaterials).reduce((sum, amount) => sum + amount, 0) : 0,
       activeBoxes: this.getSupplyBoxCount(),
       totalMaterialsCollected: totalMaterials,

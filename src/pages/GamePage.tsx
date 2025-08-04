@@ -7,12 +7,16 @@ import { GameInstructions } from '@/components/GameInstructions';
 import { GameOverStats } from '@/components/GameOverStats';
 import { SkillSelectionModal } from '@/components/SkillSelectionModal';
 import { SupplyBoxModal } from '@/components/SupplyBoxModal';
+import { BandageButton } from '@/components/BandageButton';
+import { HealingIndicator } from '@/components/HealingIndicator';
 import { SkillOption } from '@/types/game';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { MainScene } from '@/scenes/MainScene';
 import { VIEWPORT_CONFIG } from '@/config/gameConfig';
 import { useEquipment, type EquipmentStats } from '@/hooks/useEquipment';
 import { useAuthStore } from '@/stores/authStore';
+import { useGameSessionData } from '@/hooks/useGameSessionData';
+import { toast } from 'react-toastify';
 
 interface GameStats {
   health: number;
@@ -78,6 +82,12 @@ export const GamePage: React.FC = () => {
     hasLoaded: hasEquipmentLoaded,
     reloadEquipment 
   } = useEquipment(user?.id);
+
+  // Obtener datos de la sesión de juego
+  const { sessions } = useGameSessionData(user ? parseInt(user.id) : 0);
+  
+  // Obtener la sesión activa (la primera sesión del usuario)
+  const activeSession = sessions.length > 0 ? sessions[0] : null;
   
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
@@ -90,6 +100,14 @@ export const GamePage: React.FC = () => {
   const [availableSkills, setAvailableSkills] = useState<SkillOption[]>([]);
   const [enemiesKilled, setEnemiesKilled] = useState(0);
   const [isWorldLoading, setIsWorldLoading] = useState(false);
+  const [bandageStats, setBandageStats] = useState({
+    medicineInventory: 0,
+    canUse: false,
+    cooldownRemaining: 0,
+    healProgress: 0,
+    isHealing: false,
+    totalHealAmount: 0
+  });
   const [gameStats, setGameStats] = useState<GameStats>({
     health: 100,
     maxHealth: 100,
@@ -99,6 +117,11 @@ export const GamePage: React.FC = () => {
     maxExperience: 100,
     level: 1
   });
+
+  // Daily Quests state
+  const [dailyQuests, setDailyQuests] = useState<any[]>([]);
+  const [questProgress, setQuestProgress] = useState<any>(null);
+  const [completedQuests, setCompletedQuests] = useState<any[]>([]);
 
   // Optimización: usar useCallback para evitar re-renders innecesarios
   const handleUIUpdate = useCallback((gameStats: GameStats) => {
@@ -146,6 +169,103 @@ export const GamePage: React.FC = () => {
     setShowSupplyBoxModal(true);
   }, []);
 
+  const handleBandageStarted = useCallback((bandageData: any) => {
+    console.log('🩹 GamePage: Curación iniciada:', bandageData);
+    // Actualizar estadísticas del vendaje
+    if (gameRef.current) {
+      const mainScene = gameRef.current.scene.getScene('MainScene') as MainScene;
+      if (mainScene) {
+        setBandageStats(mainScene.getBandageStats());
+      }
+    }
+  }, []);
+
+  const handleBandageProgress = useCallback((bandageData: any) => {
+    console.log('🩹 GamePage: Progreso de curación:', bandageData);
+    // Actualizar estadísticas del vendaje
+    if (gameRef.current) {
+      const mainScene = gameRef.current.scene.getScene('MainScene') as MainScene;
+      if (mainScene) {
+        setBandageStats(mainScene.getBandageStats());
+      }
+    }
+  }, []);
+
+  const handleBandageCompleted = useCallback((bandageData: any) => {
+    console.log('🩹 GamePage: Curación completada:', bandageData);
+    // Actualizar estadísticas del vendaje
+    if (gameRef.current) {
+      const mainScene = gameRef.current.scene.getScene('MainScene') as MainScene;
+      if (mainScene) {
+        setBandageStats(mainScene.getBandageStats());
+      }
+    }
+  }, []);
+
+  // Daily Quests handlers
+  const handleQuestCompleted = useCallback((data: { quest: any; reward: number }) => {
+    console.log('🎯 GamePage: Misión completada:', data.quest.title);
+    
+    // Mostrar notificación con toastify
+    toast.success(`🎯 ¡Misión completada! ${data.quest.title} - Recompensa: ${data.reward} alimentos`, {
+      position: "top-right",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+    });
+
+    // Actualizar estado de misiones
+    updateDailyQuestsState();
+  }, []);
+
+  const handleAllQuestsCompleted = useCallback((data: { totalReward: number; quests: any[] }) => {
+    console.log('🏆 GamePage: Todas las misiones completadas!');
+    
+    // Mostrar notificación especial
+    toast.success(`🏆 ¡Todas las misiones diarias completadas! Recompensa total: ${data.totalReward} alimentos`, {
+      position: "top-right",
+      autoClose: 7000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+    });
+
+    // Actualizar estado de misiones
+    updateDailyQuestsState();
+  }, []);
+
+  const updateDailyQuestsState = useCallback(() => {
+    if (gameRef.current) {
+      const mainScene = gameRef.current.scene.getScene('MainScene') as MainScene;
+      if (mainScene) {
+        setDailyQuests(mainScene.getDailyQuests());
+        setQuestProgress(mainScene.getQuestProgress());
+        setCompletedQuests(mainScene.getCompletedQuests());
+      }
+    }
+  }, []);
+
+  // Actualizar estado de misiones diarias en tiempo real
+  useEffect(() => {
+    if (!gameStarted || gameOver) return; // Detener cuando el juego termine
+
+    const interval = setInterval(() => {
+      if (gameRef.current) {
+        const mainScene = gameRef.current.scene.getScene('MainScene') as MainScene;
+        if (mainScene) {
+          setDailyQuests(mainScene.getDailyQuests());
+          setQuestProgress(mainScene.getQuestProgress());
+          setCompletedQuests(mainScene.getCompletedQuests());
+        }
+      }
+    }, 1000); // Actualizar cada segundo
+
+    return () => clearInterval(interval);
+  }, [gameStarted, gameOver]); // Agregar gameOver como dependencia
+
   // Cargar equipamiento solo una vez cuando el usuario esté disponible
   useEffect(() => {
     if (user?.id && !hasEquipmentLoaded && !isEquipmentLoading) {
@@ -153,6 +273,22 @@ export const GamePage: React.FC = () => {
       reloadEquipment();
     }
   }, [user?.id, hasEquipmentLoaded, isEquipmentLoading, reloadEquipment]);
+
+  // Timer para actualizar estadísticas del vendaje
+  useEffect(() => {
+    if (!gameStarted || gameOver) return; // Detener cuando el juego termine
+
+    const interval = setInterval(() => {
+      if (gameRef.current) {
+        const mainScene = gameRef.current.scene.getScene('MainScene') as MainScene;
+        if (mainScene) {
+          setBandageStats(mainScene.getBandageStats());
+        }
+      }
+    }, 100); // Actualizar cada 100ms para animaciones suaves
+
+    return () => clearInterval(interval);
+  }, [gameStarted, gameOver]); // Agregar gameOver como dependencia
 
   // Mostrar información del equipamiento cargado (solo una vez)
   useEffect(() => {
@@ -221,12 +357,24 @@ export const GamePage: React.FC = () => {
         const mainScene = gameRef.current?.scene.getScene('MainScene') as MainScene;
         if (mainScene) {
           console.log('🎮 GamePage: Registrando eventos de MainScene');
+          
+          // Establecer el sessionId en el GameStateManager si existe una sesión activa
+          if (activeSession?.documentId) {
+            mainScene.gameStateManager?.setSessionId(activeSession.documentId);
+            console.log('🎮 GamePage: SessionId establecido:', activeSession.documentId);
+          }
+          
           mainScene.events.on('updateUI', handleUIUpdate);
           mainScene.events.on('gameOver', handleGameOver);
           mainScene.events.on('levelUpModal', handleLevelUp);
           mainScene.events.on('enemyKilled', handleEnemyKilled);
           mainScene.events.on('worldLoading', handleWorldLoading);
           mainScene.events.on('supplyBoxCollected', handleSupplyBoxCollected);
+          mainScene.events.on('bandageStarted', handleBandageStarted);
+          mainScene.events.on('bandageProgress', handleBandageProgress);
+          mainScene.events.on('bandageCompleted', handleBandageCompleted);
+          mainScene.events.on('questCompleted', handleQuestCompleted);
+          mainScene.events.on('allQuestsCompleted', handleAllQuestsCompleted);
         } else {
           console.error('❌ GamePage: No se pudo obtener MainScene');
         }
@@ -272,9 +420,14 @@ export const GamePage: React.FC = () => {
             mainScene.events.off('updateUI', handleUIUpdate);
             mainScene.events.off('gameOver', handleGameOver);
             mainScene.events.off('levelUp', handleLevelUp);
-            mainScene.events.off('enemyKilled', handleEnemyKilled);
-            mainScene.events.off('worldLoading', handleWorldLoading);
-            mainScene.events.off('supplyBoxCollected', handleSupplyBoxCollected);
+                      mainScene.events.off('enemyKilled', handleEnemyKilled);
+          mainScene.events.off('worldLoading', handleWorldLoading);
+          mainScene.events.off('supplyBoxCollected', handleSupplyBoxCollected);
+          mainScene.events.off('bandageStarted', handleBandageStarted);
+          mainScene.events.off('bandageProgress', handleBandageProgress);
+          mainScene.events.off('bandageCompleted', handleBandageCompleted);
+          mainScene.events.off('questCompleted', handleQuestCompleted);
+          mainScene.events.off('allQuestsCompleted', handleAllQuestsCompleted);
           }
         } catch (error) {
           console.warn('Error cleaning up events:', error);
@@ -284,7 +437,7 @@ export const GamePage: React.FC = () => {
         gameRef.current = null;
       }
     };
-  }, [gameStarted, handleUIUpdate, handleLevelUp, handleGameOver]);
+  }, [gameStarted, handleUIUpdate, handleLevelUp, handleGameOver, handleQuestCompleted, handleAllQuestsCompleted]);
 
   const handleGameStart = () => {
     setGameStarted(true);
@@ -314,6 +467,40 @@ export const GamePage: React.FC = () => {
         }
       }));
     }
+
+    // Inicializar inventario de vendajes desde los datos de la sesión
+    let medicineAmount = 0; // Valor por defecto
+    
+    if (sessions.length > 0) {
+      const currentSession = sessions.find(s => s.session_name?.includes('Sesión Inicial')) || sessions[0];
+      if (currentSession?.materials?.medicine !== undefined) {
+        medicineAmount = currentSession.materials.medicine;
+        console.log('🩹 Inicializando inventario de vendajes con medicina de la sesión:', medicineAmount);
+      } else {
+        console.log('🩹 No se encontró medicina en la sesión, usando valor por defecto: 0');
+      }
+    } else {
+      console.log('🩹 No hay sesiones disponibles, usando valor por defecto: 0');
+    }
+    
+    // Inicializar el BandageManager con la medicina disponible
+    if (gameRef.current) {
+      const mainScene = gameRef.current.scene.getScene('MainScene') as MainScene;
+      if (mainScene) {
+        mainScene.initializeBandageInventory(medicineAmount);
+        // Actualizar las estadísticas del vendaje
+        setBandageStats(mainScene.getBandageStats());
+        
+        // Inicializar estado de misiones diarias
+        setDailyQuests(mainScene.getDailyQuests());
+        setQuestProgress(mainScene.getQuestProgress());
+        setCompletedQuests(mainScene.getCompletedQuests());
+        
+        console.log('🎯 GamePage: Estado de misiones diarias inicializado');
+        console.log('🎯 Misiones diarias:', mainScene.getDailyQuests());
+        console.log('🎯 Progreso de misiones:', mainScene.getQuestProgress());
+      }
+    }
   };
 
   const handleRestart = () => {
@@ -340,6 +527,11 @@ export const GamePage: React.FC = () => {
                       restartedScene.events.on('enemyKilled', handleEnemyKilled);
           restartedScene.events.on('worldLoading', handleWorldLoading);
           restartedScene.events.on('supplyBoxCollected', handleSupplyBoxCollected);
+          restartedScene.events.on('bandageStarted', handleBandageStarted);
+          restartedScene.events.on('bandageProgress', handleBandageProgress);
+          restartedScene.events.on('bandageCompleted', handleBandageCompleted);
+          restartedScene.events.on('questCompleted', handleQuestCompleted);
+          restartedScene.events.on('allQuestsCompleted', handleAllQuestsCompleted);
           }
         }, 100);
       }
@@ -356,6 +548,14 @@ export const GamePage: React.FC = () => {
     setAvailableSkills([]);
     setEnemiesKilled(0);
     setIsWorldLoading(false);
+    setBandageStats({
+      medicineInventory: 0,
+      canUse: false,
+      cooldownRemaining: 0,
+      healProgress: 0,
+      isHealing: false,
+      totalHealAmount: 0
+    });
     setGameStats({
       health: 100,
       maxHealth: 100,
@@ -403,6 +603,19 @@ export const GamePage: React.FC = () => {
       }
     }
     setShowGameMenu(false);
+  }, []);
+
+  const handleUseBandage = useCallback(() => {
+    if (gameRef.current) {
+      const mainScene = gameRef.current.scene.getScene('MainScene') as MainScene;
+      if (mainScene) {
+        const success = mainScene.useBandage();
+        if (success) {
+          // Actualizar estadísticas del vendaje
+          setBandageStats(mainScene.getBandageStats());
+        }
+      }
+    }
   }, []);
 
   return (
@@ -469,12 +682,16 @@ export const GamePage: React.FC = () => {
         isOpen={showGameMenu}
         onClose={handleMenuClose}
         onLogout={handleMainMenu}
+        userId={user?.id || '0'}
         playerStats={{
           level: gameStats.level,
           enemiesKilled: enemiesKilled,
           skills: gameStats.skills || { rapidFire: 0, magneticField: 0, multiShot: 0 }
         }}
         equipment={gameStats.equipment}
+        dailyQuests={dailyQuests}
+        questProgress={questProgress}
+        completedQuests={completedQuests}
       />
       
       {/* Game Instructions */}
@@ -517,6 +734,85 @@ export const GamePage: React.FC = () => {
         materials={supplyBoxMaterials}
         onClose={() => setShowSupplyBoxModal(false)}
       />
+
+      {/* Bandage Button */}
+      {gameStarted && (
+        <BandageButton
+          medicineInventory={bandageStats.medicineInventory}
+          canUse={bandageStats.canUse}
+          cooldownRemaining={bandageStats.cooldownRemaining}
+          useProgress={bandageStats.healProgress}
+          isUsing={bandageStats.isHealing}
+          onUseBandage={handleUseBandage}
+        />
+      )}
+
+      {/* Healing Indicator */}
+      {gameStarted && (
+        <HealingIndicator
+          isHealing={bandageStats.isHealing}
+          healProgress={bandageStats.healProgress}
+          totalHealAmount={bandageStats.totalHealAmount}
+        />
+      )}
+
+      {/* Daily Quests Progress Indicator - OCULTO */}
+      {/* {gameStarted && dailyQuests.length > 0 && (
+        <div className="fixed top-4 right-4 z-50 bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-gray-600 max-w-xs">
+          <div className="flex items-center space-x-2 mb-2">
+            <span className="text-yellow-400 text-lg">🎯</span>
+            <h3 className="text-white font-semibold text-sm">Misiones Diarias</h3>
+            <button
+              onClick={() => {
+                if (gameRef.current) {
+                  const mainScene = gameRef.current.scene.getScene('MainScene') as MainScene;
+                  if (mainScene && mainScene.dailyQuestManager) {
+                    console.log('🔍 Iniciando debug de misiones...');
+                    mainScene.dailyQuestManager.reloadQuestsFromStorage();
+                    mainScene.dailyQuestManager.forceUpdateProgress();
+                    mainScene.dailyQuestManager.verifyAndFixQuests();
+                    mainScene.dailyQuestManager.forceCompleteQuests();
+                    mainScene.dailyQuestManager.debugQuests();
+                    mainScene.dailyQuestManager.forceCheckProgress();
+                    
+                    setTimeout(() => {
+                      setDailyQuests(mainScene.getDailyQuests());
+                      setQuestProgress(mainScene.getQuestProgress());
+                      setCompletedQuests(mainScene.getCompletedQuests());
+                    }, 100);
+                  }
+                }
+              }}
+              className="ml-auto text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded"
+              title="Debug misiones"
+            >
+              🔍
+            </button>
+          </div>
+          <div className="space-y-2">
+            {dailyQuests.slice(0, 3).map((quest) => (
+              <div key={quest.id} className="text-xs">
+                <div className="flex justify-between text-white mb-1">
+                  <span className="truncate">{quest.title}</span>
+                  <span className={`font-semibold ${quest.completed ? 'text-green-400' : 'text-gray-300'}`}>
+                    {quest.progress}/{quest.target}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-1">
+                  <div
+                    className={`h-1 rounded-full transition-all duration-300 ${
+                      quest.completed
+                        ? 'bg-gradient-to-r from-green-500 to-green-400'
+                        : 'bg-gradient-to-r from-blue-500 to-purple-500'
+                    }`}
+                    style={{ width: `${(quest.progress / quest.target) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )} */}
     </div>
   );
 };

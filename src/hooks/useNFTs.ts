@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useNFTStore } from '@/stores/nftStore';
+import { useGameSessionData } from './useGameSessionData';
 
 export const useNFTs = (userId?: string | number) => {
   const { userNFTs, isLoading, error, fetchUserNFTs } = useNFTStore();
@@ -59,14 +60,54 @@ export const useMarketplace = () => {
   };
 };
 
-export const useNFTActions = () => {
-  const { listNFTForSale, unlistNFT, selectNFT, clearSelectedNFT, clearError } = useNFTStore();
+export const useNFTActions = (userId?: number) => {
+  const { 
+    listNFTForSale, 
+    unlistNFT, 
+    selectNFT, 
+    clearSelectedNFT, 
+    clearError,
+    fetchUserNFTs,
+    fetchMarketplaceNFTs
+  } = useNFTStore();
+
+  const { refreshData } = useGameSessionData(userId || 0);
+
+  const listNFTWithRefresh = useCallback(async (nftDocumentId: string, price: number) => {
+    try {
+      console.log('🔄 Hook: Listando NFT con refresh:', nftDocumentId, price);
+      await listNFTForSale(nftDocumentId, price);
+      // Recargar datos del juego para actualizar materiales, etc.
+      if (userId) {
+        refreshData();
+      }
+    } catch (error) {
+      console.error('Error listing NFT with refresh:', error);
+      throw error;
+    }
+  }, [listNFTForSale, refreshData, userId]);
+
+  const unlistNFTWithRefresh = useCallback(async (nftDocumentId: string) => {
+    try {
+      console.log('🔄 Hook: Quitando NFT con refresh:', nftDocumentId);
+      await unlistNFT(nftDocumentId);
+      // Recargar datos del juego para actualizar materiales, etc.
+      if (userId) {
+        refreshData();
+      }
+    } catch (error) {
+      console.error('Error unlisting NFT with refresh:', error);
+      throw error;
+    }
+  }, [unlistNFT, refreshData, userId]);
 
   return {
-    listForSale: listNFTForSale,
-    unlist: unlistNFT,
+    listForSale: listNFTWithRefresh,
+    unlist: unlistNFTWithRefresh,
     select: selectNFT,
     clearSelected: clearSelectedNFT,
-    clearError
+    clearError,
+    fetchUserNFTs,
+    fetchMarketplaceNFTs
   };
 };

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FaTimes, FaEthereum, FaCalendar, FaTag, FaStar, FaShieldAlt, FaInfoCircle } from 'react-icons/fa';
 import * as Icons from 'react-icons/fa';
+import { ListNFTModal } from './ListNFTModal';
 import type { UserNFT } from '@/types/nft';
 
 interface NFTModalProps {
@@ -14,6 +15,7 @@ interface NFTModalProps {
   onUnequip?: (nft: UserNFT) => void;
   isEquipped?: boolean;
   isEquipping?: boolean;
+  isListed?: boolean;
   showActions?: boolean;
 }
 
@@ -53,11 +55,13 @@ export const NFTModal: React.FC<NFTModalProps> = ({
   onUnequip,
   isEquipped = false,
   isEquipping = false,
+  isListed = false,
   showActions = false
 }) => {
   const [listingPrice, setListingPrice] = useState('');
   const [isListing, setIsListing] = useState(false);
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
+  const [showListModal, setShowListModal] = useState(false);
 
   if (!isOpen || !nft) return null;
 
@@ -66,18 +70,17 @@ export const NFTModal: React.FC<NFTModalProps> = ({
   const rarityBgColor = getRarityBgColor(nft.metadata.rarity);
 
   const handleList = async () => {
-    if (!listingPrice || parseFloat(listingPrice) <= 0) return;
-    
-    setIsListing(true);
-    try {
-      await onList?.(nft, parseFloat(listingPrice));
-      setListingPrice('');
-      onClose();
-    } catch (error) {
-      console.error('Error listing NFT:', error);
-    } finally {
-      setIsListing(false);
+    setShowListModal(true);
+  };
+
+  const handleListSuccess = async () => {
+    setShowListModal(false);
+    // Recargar los datos después de listar exitosamente
+    if (onList) {
+      // Simular un listado exitoso para que se actualice la vista
+      await onList(nft, 0); // El precio real ya se manejó en ListNFTModal
     }
+    onClose();
   };
 
   const handleUnlist = async () => {
@@ -283,15 +286,15 @@ export const NFTModal: React.FC<NFTModalProps> = ({
             {/* List/Unlist Button */}
             {onList && onUnlist && (
               <button
-                onClick={nft.is_listed_for_sale === 'True' ? handleUnlist : () => setListingPrice('0.01')}
+                onClick={isListed ? handleUnlist : handleList}
                 className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 px-4 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
-                {nft.is_listed_for_sale === 'True' ? 'Quitar de Venta' : 'Listar para Venta'}
+                {isListed ? 'Quitar de Venta' : 'Listar para Venta'}
               </button>
             )}
 
             {/* Buy Button */}
-            {onBuy && nft.is_listed_for_sale === 'True' && (
+            {onBuy && isListed && (
               <button
                 onClick={handleBuy}
                 className="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white py-3 px-4 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2 shadow-lg"
@@ -302,31 +305,16 @@ export const NFTModal: React.FC<NFTModalProps> = ({
             )}
           </div>
 
-          {/* Listing Price Input */}
-          {onList && nft.is_listed_for_sale !== 'True' && (
-            <div className="mt-4">
-              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                <input
-                  type="number"
-                  step="0.001"
-                  min="0"
-                  placeholder="Precio en ETH"
-                  value={listingPrice}
-                  onChange={(e) => setListingPrice(e.target.value)}
-                  className="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                />
-                <button
-                  onClick={handleList}
-                  disabled={!listingPrice || parseFloat(listingPrice) <= 0 || isListing}
-                  className="px-8 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-300 transform hover:scale-105 font-medium shadow-lg"
-                >
-                  {isListing ? 'Listando...' : 'Confirmar'}
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* List NFT Modal */}
+      <ListNFTModal
+        nft={showListModal ? nft : null}
+        isOpen={showListModal}
+        onClose={() => setShowListModal(false)}
+        onSuccess={handleListSuccess}
+      />
     </div>
   );
 };

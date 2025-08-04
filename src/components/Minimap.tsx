@@ -132,7 +132,7 @@ export const Minimap: React.FC<MinimapProps> = ({
       
       lastLogTime.current = currentTime;
     }
-  }, [detectedEnemies.length, nearbyEnemies.length, farEnemies.length, radarRange]);
+  }, [detectedEnemies.length, radarRange]); // Remover dependencias que cambian constantemente
 
   return (
     <div className="absolute top-4 right-20 z-40">

@@ -15,6 +15,8 @@ import { ExplosionManager } from '../managers/ExplosionManager';
 import { GameStateManager } from '../managers/GameStateManager';
 import { StructureType } from '../managers/StructureManager';
 import { SupplyBoxManager } from '../managers/SupplyBoxManager';
+import { BandageManager } from '../managers/BandageManager';
+import { DailyQuestManager } from '../managers/DailyQuestManager';
 import { SkillLevels, SkillOption, EnemyType } from '../types/game';
 
 export class MainScene extends Scene {
@@ -32,8 +34,10 @@ export class MainScene extends Scene {
   private minimapManager!: MinimapManager;
   private uiManager!: UIManager;
   private explosionManager!: ExplosionManager;
-  private gameStateManager!: GameStateManager;
+  public gameStateManager!: GameStateManager;
   private supplyBoxManager!: SupplyBoxManager;
+  private bandageManager!: BandageManager;
+  public dailyQuestManager!: DailyQuestManager;
 
   // Input
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -99,6 +103,23 @@ export class MainScene extends Scene {
       }
     });
 
+    // Tecla B para usar vendaje rápidamente
+    this.input.keyboard!.on('keydown-B', () => {
+      if (!this.isGameOver && !this.isLevelingUp && !this.isPausedByMenu) {
+        console.log('🩹 Usando vendaje con tecla B');
+        this.useBandage();
+      }
+    });
+
+    // Tecla V para debug - agregar 99 vendajes
+    this.input.keyboard!.on('keydown-V', () => {
+      if (!this.isGameOver && !this.isLevelingUp && !this.isPausedByMenu) {
+        console.log('🩹 DEBUG: Agregando 99 vendajes');
+        this.bandageManager.addMedicine(99);
+        console.log(`🩹 Vendajes disponibles: ${this.bandageManager.getMedicineInventory()}`);
+      }
+    });
+
     // Configurar eventos
     this.setupEvents();
 
@@ -109,6 +130,15 @@ export class MainScene extends Scene {
     this.loadUserNFTEffects();
 
     console.log('🎮 MainScene inicializada con todos los managers');
+    
+    // Mostrar controles de debug disponibles
+    console.log('🎮 === CONTROLES DE DEBUG DISPONIBLES ===');
+    console.log('🎮 ESPACIO: Crear explosión de prueba');
+    console.log('🎮 B: Usar vendaje rápidamente');
+    console.log('🎮 V: Agregar 99 vendajes (debug)');
+    console.log('🎮 Z: Ganar partida (debug)');
+    console.log('🎮 X: Perder partida (debug)');
+    console.log('🎮 ======================================');
   }
 
   /**
@@ -152,8 +182,25 @@ export class MainScene extends Scene {
       this.visualEffects
     );
 
-    // Inicializar SupplyBoxManager
-    this.supplyBoxManager = new SupplyBoxManager(this);
+    // Obtener userId para los managers
+    const userId = this.getUserId() || 'default';
+
+    // Inicializar SupplyBoxManager con userId
+    this.supplyBoxManager = new SupplyBoxManager(this, userId);
+
+    // Inicializar BandageManager
+    this.bandageManager = new BandageManager(this, this.player);
+
+    // Inicializar DailyQuestManager
+    this.dailyQuestManager = new DailyQuestManager(
+      this,
+      this.player,
+      this.enemyManager,
+      this.experienceManager,
+      this.supplyBoxManager,
+      this.explosionManager,
+      userId
+    );
 
     // Inicializar CollisionManager - CRÍTICO: debe ir después de todos los managers
     this.collisionManager = new CollisionManager(
@@ -174,7 +221,10 @@ export class MainScene extends Scene {
       this.player,
       this.timerManager,
       this.experienceManager,
-      this.uiManager
+      this.uiManager,
+      this.supplyBoxManager,
+      this.dailyQuestManager,
+      userId
     );
 
     // Conectar EnemyManager con SupplyBoxManager
@@ -301,6 +351,9 @@ export class MainScene extends Scene {
     this.enemyManager.updateEnemies(playerPos.x, playerPos.y);
     this.experienceManager.updateDiamonds(playerPos.x, playerPos.y);
     this.supplyBoxManager.cleanupOffscreenBoxes(playerPos.x, playerPos.y);
+    this.dailyQuestManager.update().catch(error => {
+      console.error('❌ Error actualizando misiones diarias:', error);
+    });
 
     // Incrementar contador
     this.updateCounter++;
@@ -400,6 +453,23 @@ export class MainScene extends Scene {
     this.events.on('bulletHitBarrel', (bullet: Phaser.GameObjects.Rectangle) => {
       this.bulletManager.removeBullet(bullet);
     });
+
+    // Eventos para misiones diarias
+    this.events.on('questCompleted', (data: { quest: any; reward: number }) => {
+      console.log(`🎯 Misión completada: ${data.quest.title} - Recompensa: ${data.reward} food`);
+      // Aquí se puede agregar lógica adicional como efectos visuales, sonidos, etc.
+    });
+
+    this.events.on('allQuestsCompleted', (data: { totalReward: number; quests: any[] }) => {
+              console.log(`🏆 ¡Todas las misiones diarias completadas! Recompensa total: ${data.totalReward} alimentos`);
+      // Aquí se puede agregar lógica adicional para el bonus
+    });
+
+    // Evento para manejar medicina recolectada (deshabilitado - se obtiene del lobby)
+    // this.events.on('medicineCollected', (data: { amount: number; total: number }) => {
+    //   console.log(`🩹 Medicina recolectada: +${data.amount} (Total: ${data.total})`);
+    //   this.bandageManager.addMedicine(data.amount);
+    // });
   }
 
   /**
@@ -582,6 +652,88 @@ export class MainScene extends Scene {
   }
 
   /**
+   * Usa un vendaje para curar al jugador
+   */
+  public useBandage(): boolean {
+    return this.bandageManager.useBandage();
+  }
+
+  /**
+   * Obtiene las estadísticas del sistema de vendajes
+   */
+  public getBandageStats() {
+    return this.bandageManager.getStats();
+  }
+
+  /**
+   * Inicializa el inventario de medicina desde los datos de la sesión
+   */
+  public initializeBandageInventory(medicineAmount: number): void {
+    this.bandageManager.initializeMedicineInventory(medicineAmount);
+  }
+
+  /**
+   * Obtiene el inventario de medicina actual
+   */
+  public getMedicineInventory(): number {
+    return this.bandageManager.getMedicineInventory();
+  }
+
+  /**
+   * Obtiene las misiones diarias actuales
+   */
+  public getDailyQuests(): any[] {
+    return this.dailyQuestManager.getDailyQuests();
+  }
+
+  /**
+   * Obtiene el progreso de las misiones diarias
+   */
+  public getQuestProgress(): any {
+    return this.dailyQuestManager.getQuestProgress();
+  }
+
+  /**
+   * Obtiene las misiones completadas
+   */
+  public getCompletedQuests(): any[] {
+    return this.dailyQuestManager.getCompletedQuests();
+  }
+
+  /**
+   * Verifica si todas las misiones están completadas
+   */
+  public areAllQuestsCompleted(): boolean {
+    return this.dailyQuestManager.areAllQuestsCompleted();
+  }
+
+  /**
+   * Obtiene la recompensa total de las misiones
+   */
+  public getTotalQuestReward(): number {
+    return this.dailyQuestManager.getTotalReward();
+  }
+
+  public getPermanentQuests(): any[] {
+    return this.dailyQuestManager.getPermanentQuests();
+  }
+
+  public getAllQuests(): any[] {
+    return this.dailyQuestManager.getAllQuests();
+  }
+
+  public rerollDailyQuests(): void {
+    this.dailyQuestManager.rerollDailyQuests();
+  }
+
+  /**
+   * Establece el ID de la sesión para las misiones diarias
+   */
+  public setQuestSessionId(sessionId: string): void {
+    this.dailyQuestManager.setSessionId(sessionId);
+  }
+
+  /**
    * Destruye la escena y limpia recursos
    */
   destroy() {
@@ -601,6 +753,8 @@ export class MainScene extends Scene {
     this.explosionManager.destroy();
     this.gameStateManager.destroy();
     this.supplyBoxManager.destroy();
+    this.bandageManager.destroy();
+    this.dailyQuestManager.destroy();
 
     console.log('🗑️ MainScene destruida');
   }

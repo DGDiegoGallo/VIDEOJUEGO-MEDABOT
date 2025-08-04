@@ -227,6 +227,12 @@ export class ExplosionManager {
     const explosionX = barrel.x;
     const explosionY = barrel.y;
 
+    // Emitir evento para misiones diarias
+    this.scene.events.emit('barrelDestroyed', {
+      position: { x: barrel.x, y: barrel.y },
+      source: 'explosion'
+    });
+
     // Remover barril inmediatamente del StructureManager
     const structureManager = this.worldManager.getStructureManager();
     structureManager.removeStructure(barrel);

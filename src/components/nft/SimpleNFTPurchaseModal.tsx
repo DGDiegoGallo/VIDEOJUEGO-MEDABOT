@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaTimes, FaEthereum, FaShieldAlt, FaCheckCircle, FaExclamationTriangle, FaSpinner, FaInfoCircle, FaStar, FaGift } from 'react-icons/fa';
-import { simpleNFTService } from '@/services/simpleNFTService';
+import { nftMarketplaceService } from '@/services/nftMarketplaceService';
 import { useAuthStore } from '@/stores/authStore';
 import type { UserNFT } from '@/types/nft';
 
@@ -78,10 +78,10 @@ export const SimpleNFTPurchaseModal: React.FC<SimpleNFTPurchaseModalProps> = ({
     if (!nft || !user) return;
 
     try {
-      const purchaseResult = await simpleNFTService.addNFTToUserCollection(
-        nft.documentId,
-        parseInt(user.id)
-      );
+      const purchaseResult = await nftMarketplaceService.buyNFT({
+        nftDocumentId: nft.documentId,
+        buyerUserId: parseInt(user.id)
+      });
 
       if (!purchaseResult.success) {
         setError(purchaseResult.error || 'Error en la compra');
@@ -92,7 +92,7 @@ export const SimpleNFTPurchaseModal: React.FC<SimpleNFTPurchaseModalProps> = ({
       updateStepStatus('processing', 'completed');
       setCurrentStep('success');
       
-      console.log('✅ Compra exitosa:', purchaseResult.nft);
+      console.log('✅ Compra exitosa:', purchaseResult.data);
       
       // Simular delay para mostrar éxito
       setTimeout(() => {

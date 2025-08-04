@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaCog, FaPlay, FaSignOutAlt, FaTasks, FaTimes, FaBolt, FaMagic, FaCrosshairs } from 'react-icons/fa';
 import { GiDeathSkull } from 'react-icons/gi';
 
@@ -6,6 +6,7 @@ interface GameMenuProps {
   isOpen: boolean;
   onClose: () => void;
   onLogout: () => void;
+  userId: string | number;
   playerStats: {
     level: number;
     enemiesKilled: number;
@@ -40,6 +41,10 @@ interface GameMenuProps {
       experienceMultiplier: number;
     };
   };
+  // Daily Quests props
+  dailyQuests?: any[];
+  questProgress?: any;
+  completedQuests?: any[];
 }
 
 interface DailyMission {
@@ -48,7 +53,7 @@ interface DailyMission {
   description: string;
   progress: number;
   target: number;
-  reward: string;
+  reward: number; // Cambiado a number para alimentos
   completed: boolean;
 }
 
@@ -56,40 +61,138 @@ export const GameMenu: React.FC<GameMenuProps> = ({
   isOpen,
   onClose,
   onLogout,
-  playerStats
+  userId,
+  playerStats,
+  dailyQuests = [],
+  questProgress = null,
+  completedQuests = []
 }) => {
   const [activeTab, setActiveTab] = useState<'main' | 'missions' | 'stats'>('main');
+  const [dailyMissions, setDailyMissions] = useState<DailyMission[]>([]);
 
-  // Mock data para misiones diarias
-  const dailyMissions: DailyMission[] = [
-    {
-      id: '1',
-      title: 'Exterminador',
-      description: 'Elimina 50 enemigos',
-      progress: Math.min(playerStats.enemiesKilled, 50),
-      target: 50,
-      reward: '500 XP',
-      completed: playerStats.enemiesKilled >= 50
-    },
-    {
-      id: '2',
-      title: 'Superviviente',
-      description: 'Sobrevive 3 minutos',
-      progress: 0, // Placeholder
-      target: 180,
-      reward: '300 XP',
-      completed: false
-    },
-    {
-      id: '3',
-      title: 'Maestro de Habilidades',
-      description: 'Alcanza nivel 5',
-      progress: Math.min(playerStats.level, 5),
-      target: 5,
-      reward: '1000 XP',
-      completed: playerStats.level >= 5
+  // Usar las misiones diarias del GamePage si están disponibles
+  useEffect(() => {
+    if (dailyQuests && dailyQuests.length > 0) {
+      // Convertir las misiones del DailyQuestManager al formato del GameMenu
+      const convertedMissions = dailyQuests.map((quest: any) => ({
+        id: quest.id,
+        title: quest.title,
+        description: quest.description,
+        progress: quest.progress || 0,
+        target: quest.target,
+        reward: quest.reward,
+        completed: quest.completed || false
+      }));
+      setDailyMissions(convertedMissions);
+    } else {
+      // Fallback: cargar desde localStorage si no hay misiones del GamePage
+      loadDailyMissions();
     }
-  ];
+  }, [dailyQuests]);
+
+  // Actualizar progreso de misiones cuando cambie questProgress
+  useEffect(() => {
+    if (questProgress && dailyMissions.length > 0) {
+      const updatedMissions = dailyMissions.map(mission => {
+        let progress = 0;
+        
+        // Determinar progreso basado en el tipo de misión
+        if (mission.title.includes('enemigo') || mission.title.includes('Exterminador') || mission.title.includes('Cazador')) {
+          progress = Math.min(questProgress.enemiesKilled || 0, mission.target);
+        } else if (mission.title.includes('zombie') || mission.title.includes('Zombie')) {
+          progress = Math.min(questProgress.zombiesKilled || 0, mission.target);
+        } else if (mission.title.includes('dasher') || mission.title.includes('Dasher') || mission.title.includes('Detector')) {
+          progress = Math.min(questProgress.dashersKilled || 0, mission.target);
+        } else if (mission.title.includes('tank') || mission.title.includes('Tank')) {
+          progress = Math.min(questProgress.tanksKilled || 0, mission.target);
+        } else if (mission.title.includes('nivel') || mission.title.includes('Maestro') || mission.title.includes('Ascenso')) {
+          progress = Math.min(playerStats.level, mission.target);
+        } else if (mission.title.includes('Sobrevive') || mission.title.includes('Superviviente') || mission.title.includes('Resistente')) {
+          progress = Math.min(Math.floor(questProgress.survivalTime || 0), mission.target);
+        } else if (mission.title.includes('vendaje') || mission.title.includes('Sanador') || mission.title.includes('Médico')) {
+          progress = Math.min(questProgress.bandagesUsed || 0, mission.target);
+        } else if (mission.title.includes('barril') || mission.title.includes('Demoledor') || mission.title.includes('Explosivo')) {
+          progress = Math.min(questProgress.barrelsDestroyed || 0, mission.target);
+        } else if (mission.title.includes('suministro') || mission.title.includes('Recolector') || mission.title.includes('Buscador')) {
+          progress = Math.min(questProgress.supplyBoxesCollected || 0, mission.target);
+        }
+        
+        return {
+          ...mission,
+          progress,
+          completed: progress >= mission.target
+        };
+      });
+      
+      setDailyMissions(updatedMissions);
+    }
+  }, [questProgress, playerStats.level]); // Remover dailyMissions de las dependencias
+
+  const loadDailyMissions = () => {
+    try {
+      const storageKey = `dailyQuests_${userId}`;
+      const stored = localStorage.getItem(storageKey);
+      
+      if (stored) {
+        const questData = JSON.parse(stored);
+        setDailyMissions(questData.quests.map((quest: any) => ({
+          id: quest.id,
+          title: quest.title,
+          description: quest.description,
+          progress: quest.progress || 0,
+          target: quest.target,
+          reward: quest.reward,
+          completed: quest.completed || false
+        })));
+      } else {
+        // Si no hay misiones, crear algunas básicas
+        setDailyMissions([
+          {
+            id: '1',
+            title: 'Exterminador',
+            description: 'Elimina 1 enemigo',
+            progress: Math.min(playerStats.enemiesKilled, 1),
+            target: 1,
+            reward: 1,
+            completed: playerStats.enemiesKilled >= 1
+          },
+          {
+            id: '2',
+            title: 'Superviviente',
+            description: 'Sobrevive 5 segundos',
+            progress: 0,
+            target: 5,
+            reward: 1,
+            completed: false
+          },
+          {
+            id: '3',
+            title: 'Maestro de Habilidades',
+            description: 'Alcanza nivel 1',
+            progress: Math.min(playerStats.level, 1),
+            target: 1,
+            reward: 2,
+            completed: playerStats.level >= 1
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error loading daily missions:', error);
+    }
+  };
+
+  const loadQuestProgress = () => {
+    try {
+      const progressKey = `questProgress_${userId}`;
+      const stored = localStorage.getItem(progressKey);
+      
+      if (stored) {
+        setQuestProgress(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Error loading quest progress:', error);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -188,7 +291,7 @@ export const GameMenu: React.FC<GameMenuProps> = ({
               
               <div className="flex justify-between items-center">
                 <span className="text-yellow-400 text-sm font-semibold">
-                  Recompensa: {mission.reward}
+                  Recompensa: 🍎 {mission.reward} alimentos
                 </span>
                 <span className="text-gray-400 text-xs">
                   {Math.round((mission.progress / mission.target) * 100)}%

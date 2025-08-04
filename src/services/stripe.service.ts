@@ -1,7 +1,7 @@
 import axios from 'axios';
-import API_URL from '../config/api';
+import { API_CONFIG } from '../config/api';
 
-const BASE_URL = `${API_URL}/api`;
+const BASE_URL = `${API_CONFIG.STRAPI_URL}/api`;
 
 interface CreatePaymentIntentData {
   amount: number;
@@ -38,10 +38,16 @@ export const stripeService = {
    */
   async createCheckoutSession(data: CreateCheckoutSessionData) {
     try {
+      console.log('Llamando a Stripe API:', `${BASE_URL}/stripe/create-checkout-session`);
+      console.log('Datos enviados:', data);
+      
       const response = await axios.post(`${BASE_URL}/stripe/create-checkout-session`, data);
+      console.log('Respuesta de Stripe API:', response.data);
+      
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating checkout session:', error);
+      console.error('Error details:', error.response?.data);
       throw error;
     }
   },
