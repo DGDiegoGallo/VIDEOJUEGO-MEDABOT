@@ -113,13 +113,20 @@ export class CollisionManager {
     this.structureGroup.clear(false, false);
     this.riverGroup.clear(false, false);
 
-    // Agregar estructuras actuales usando StructureManager - EXCLUYENDO BARRILES EXPLOSIVOS
+    // Agregar estructuras actuales usando StructureManager - USANDO SPRITES DE COLISIÓN CORRECTOS
     const structures = this.worldManager.getPhysicsStructures();
     structures.forEach(structure => {
       // Verificar que la estructura aún existe antes de agregarla
       // Y que NO sea un barril explosivo (los barriles se manejan por separado)
       if (structure && structure.scene && structure.active && structure.getType() !== StructureType.EXPLOSIVE_BARREL) {
-        this.structureGroup!.add(structure);
+        // Usar el sprite de colisión específico si existe, sino usar la estructura completa
+        const collisionSprite = structure.getCollisionSprite();
+        const physicsObject = collisionSprite || structure;
+        
+        // Solo agregar si no está ya en el grupo (evitar duplicados)
+        if (!this.structureGroup!.contains(physicsObject)) {
+          this.structureGroup!.add(physicsObject);
+        }
       }
     });
 
@@ -253,7 +260,10 @@ export class CollisionManager {
         // Verificar colisión con grupo de estructuras
         this.scene.physics.overlap(bullet, this.structureGroup, (_, structureObj) => {
           this.collidingBullets.add(bullet);
-          this.handleBulletStructureCollision(bullet, structureObj as Structure);
+          
+          // Obtener la estructura original (puede ser el objeto directo o a través de parentStructure)
+          const structure = (structureObj as any).parentStructure || structureObj as Structure;
+          this.handleBulletStructureCollision(bullet, structure);
         });
 
         // Verificar colisión con grupo de ríos

@@ -100,7 +100,7 @@ export class BulletManager {
   private createBullet(x: number, y: number, angle: number): Phaser.GameObjects.Rectangle {
     const bullet = this.scene.add.rectangle(x, y, this.config.size, this.config.size, this.config.color);
     bullet.setStrokeStyle(1, this.config.strokeColor);
-    bullet.setDepth(20); // Balas por encima de todo excepto UI y jugador
+    bullet.setDepth(35); // Balas por encima de estructuras
     this.scene.physics.add.existing(bullet);
     this.bullets.push(bullet);
 

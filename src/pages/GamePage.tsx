@@ -344,7 +344,7 @@ export const GamePage: React.FC = () => {
           default: 'arcade',
           arcade: {
             gravity: { x: 0, y: 0 },
-            debug: true // Activar debug temporalmente para ver límites
+            debug: false // Debug desactivado - usar colisiones del JSON
           }
         },
         scene: [MainScene]

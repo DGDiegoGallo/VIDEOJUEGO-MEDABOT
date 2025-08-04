@@ -188,12 +188,59 @@ export class WorldManager {
   }
 
   /**
-   * Genera el terreno base del chunk (optimizado)
+   * Genera el terreno base del chunk usando imágenes PNG
    */
   private generateTerrain(chunk: WorldChunk, worldX: number, worldY: number): void {
     const size = this.config.chunkSize;
 
-    // Reducir tiles de 4x4 a 2x2 para mejor rendimiento
+    // Seleccionar imagen de chunk basada en la posición (determinística)
+    const chunkImageIndex = this.getChunkImageIndex(worldX, worldY);
+    const chunkImageKey = `chunk${chunkImageIndex}`;
+
+    // Verificar que la textura existe antes de usarla
+    if (!this.scene.textures.exists(chunkImageKey)) {
+      console.warn(`⚠️ Textura ${chunkImageKey} no encontrada, usando fallback`);
+      this.generateTerrainFallback(chunk, worldX, worldY);
+      return;
+    }
+
+    // Crear sprite del chunk usando la imagen PNG
+    const chunkSprite = this.scene.add.image(
+      worldX + size / 2, // Centro del chunk
+      worldY + size / 2, // Centro del chunk
+      chunkImageKey
+    );
+
+    // Escalar la imagen para que ocupe todo el chunk (800x800)
+    // Las imágenes son 400x400, así que necesitamos escala 2.0
+    chunkSprite.setScale(2.0);
+
+    // Aplicar transformaciones aleatorias para más variedad
+    const transformations = this.getRandomTransformations(worldX, worldY);
+    
+    // Aplicar rotación aleatoria (0°, 90°, 180°, 270°)
+    chunkSprite.setRotation(transformations.rotation);
+    
+    // Aplicar flip horizontal/vertical aleatorio
+    chunkSprite.setFlipX(transformations.flipX);
+    chunkSprite.setFlipY(transformations.flipY);
+
+    // Establecer profundidad muy baja (fondo del terreno)
+    chunkSprite.setDepth(-90);
+
+    // Agregar al grupo de terreno del chunk
+    chunk.terrain.add(chunkSprite);
+
+    console.log(`🖼️ Chunk ${chunk.id}: Usando imagen ${chunkImageKey} con rotación ${Math.round(transformations.rotation * 180 / Math.PI)}°, flipX: ${transformations.flipX}, flipY: ${transformations.flipY}`);
+  }
+
+  /**
+   * Genera terreno usando el sistema fallback (rectángulos) si las imágenes no están disponibles
+   */
+  private generateTerrainFallback(chunk: WorldChunk, worldX: number, worldY: number): void {
+    const size = this.config.chunkSize;
+
+    // Usar el sistema anterior como fallback
     for (let i = 0; i < 2; i++) {
       for (let j = 0; j < 2; j++) {
         const tileX = worldX + (i * size / 2);
@@ -214,12 +261,58 @@ export class WorldManager {
           terrainColor
         );
 
-        // Reducir grosor del borde para mejor rendimiento
         terrainTile.setStrokeStyle(1, 0x1a3d0a, 0.2);
-        terrainTile.setDepth(-90); // Fondo del terreno
+        terrainTile.setDepth(-90);
         chunk.terrain.add(terrainTile);
       }
     }
+    
+    console.log(`🖼️ Chunk ${chunk.id}: Usando terreno fallback (rectángulos)`);
+  }
+
+  /**
+   * Obtiene el índice de imagen de chunk basado en la posición (determinística)
+   * Usa la posición como seed para que la selección sea consistente
+   */
+  private getChunkImageIndex(worldX: number, worldY: number): number {
+    // Usar posición como seed para consistencia
+    const seed = (worldX * 1337 + worldY * 7919) * 0.001;
+    const imageSeed = Math.sin(seed * 4.7) * 1000;
+    
+    // Seleccionar imagen (1-4) basada en la posición
+    return Math.floor(Math.abs(imageSeed) % 4) + 1;
+  }
+
+  /**
+   * Obtiene transformaciones aleatorias para el chunk basadas en su posición
+   * Usa la posición como seed para que las transformaciones sean consistentes
+   */
+  private getRandomTransformations(worldX: number, worldY: number): {
+    rotation: number;
+    flipX: boolean;
+    flipY: boolean;
+  } {
+    // Usar posición como seed para consistencia
+    const seed = (worldX * 1000 + worldY) * 0.001;
+    
+    // Generar valores pseudo-aleatorios basados en la posición
+    const rotationSeed = Math.sin(seed * 1.1) * 1000;
+    const flipXSeed = Math.sin(seed * 2.3) * 1000;
+    const flipYSeed = Math.sin(seed * 3.7) * 1000;
+
+    // Rotación en incrementos de 90 grados (0°, 90°, 180°, 270°)
+    const rotationIndex = Math.floor(Math.abs(rotationSeed) % 4);
+    const rotation = (rotationIndex * Math.PI) / 2;
+
+    // Flip aleatorio (50% probabilidad cada uno)
+    const flipX = Math.abs(flipXSeed) % 1 > 0.5;
+    const flipY = Math.abs(flipYSeed) % 1 > 0.5;
+
+    return {
+      rotation,
+      flipX,
+      flipY
+    };
   }
 
   /**
@@ -428,11 +521,12 @@ export class WorldManager {
   }
 
   /**
-   * Obtiene un tipo de estructura aleatoria
+   * Obtiene un tipo de estructura aleatoria del tileset (excluyendo barriles explosivos)
    */
   private getRandomStructureType(): StructureType {
-    const types = Object.values(StructureType);
-    return types[Math.floor(Math.random() * types.length)];
+    // Usar el método del StructureManager para obtener tipos del tileset
+    const tilesetTypes = this.structureManager.getTilesetStructureTypes();
+    return tilesetTypes[Math.floor(Math.random() * tilesetTypes.length)];
   }
 
   /**

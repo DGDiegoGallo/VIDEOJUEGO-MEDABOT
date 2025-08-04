@@ -82,16 +82,16 @@ export class Player {
     );
 
     this.sprite.setStrokeStyle(2, this.config.strokeColor);
-    this.sprite.setDepth(25); // Jugador por encima de balas y todo lo demás
+    this.sprite.setDepth(20); // Jugador debajo de estructuras para efecto 2.5D
 
     // Configurar física básica para detención limpia
     this.scene.physics.add.existing(this.sprite);
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
     body.setCollideWorldBounds(false);
-    body.setBounce(0); // Sin rebote para detención limpia
-    body.setDrag(0); // Sin resistencia para detención instantánea
+    body.setBounce(0.1); // Pequeño rebote para evitar quedarse atascado
+    body.setDrag(50); // Pequeña resistencia para movimiento más suave
     body.setMaxVelocity(this.config.speed * 1.5); // Límite de velocidad
-    body.setSize(this.config.size * 0.8, this.config.size * 0.8); // Hitbox ligeramente más pequeña
+    body.setSize(this.config.size * 0.6, this.config.size * 0.6); // Hitbox más pequeña para mejor navegación
   }
 
   /**

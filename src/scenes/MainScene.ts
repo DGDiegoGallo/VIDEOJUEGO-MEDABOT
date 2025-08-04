@@ -59,6 +59,17 @@ export class MainScene extends Scene {
     super({ key: 'MainScene' });
   }
 
+  preload() {
+    // Cargar imágenes de chunks para el WorldManager
+    // En Vite, los assets en public/ se sirven directamente desde la raíz
+    this.load.image('chunk1', 'assets/chunk1.png');
+    this.load.image('chunk2', 'assets/chunk2.png');
+    this.load.image('chunk3', 'assets/chunk3.png');
+    this.load.image('chunk4', 'assets/chunk4.png');
+    
+    console.log('🖼️ Cargando imágenes de chunks...');
+  }
+
   /**
    * Pausa el juego por el menú
    */

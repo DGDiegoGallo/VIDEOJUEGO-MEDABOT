@@ -1,18 +1,37 @@
 import { Scene } from 'phaser';
 
 /**
- * Tipos de estructuras disponibles
+ * Tipos de estructuras disponibles - ACTUALIZADAS CON TILESET
  */
 export enum StructureType {
-    CUBE = 'cube',
-    TOWER = 'tower',
-    WALL = 'wall',
-    PLATFORM = 'platform',
+    // Estructuras del tileset
+    BONES_SMALL = 'bones_small',
+    BONES_LARGE = 'bones_large',
+    BROKEN_TREE_LARGE = 'broken_tree_large',
+    BROKEN_TREE_SMALL = 'broken_tree_small',
+    BROKEN_TREE_MEDIUM = 'broken_tree_medium',
+    BROKEN_TREE_STUMP_1 = 'broken_tree_stump_1',
+    BROKEN_TREE_STUMP_2 = 'broken_tree_stump_2',
+    BROKEN_TREE_STUMP_3 = 'broken_tree_stump_3',
+    DEAD_ARM_1 = 'dead_arm_1',
+    DEAD_ARM_2 = 'dead_arm_2',
+    DEAD_ARM_3 = 'dead_arm_3',
+    DEAD_ARM_4 = 'dead_arm_4',
+    PILE_SKULLS = 'pile_skulls',
+    PLANT_LARGE = 'plant_large',
+    PLANT_SMALL = 'plant_small',
+    ROCK_LARGE = 'rock_large',
+    ROCK_MEDIUM = 'rock_medium',
+    THORN_PLANT_1 = 'thorn_plant_1',
+    THORN_PLANT_2 = 'thorn_plant_2',
+    TREE_SMALL = 'tree_small',
+    TREE_LARGE = 'tree_large',
+    // Mantener el barril explosivo
     EXPLOSIVE_BARREL = 'explosive_barrel'
 }
 
 /**
- * Configuración base para estructuras
+ * Configuración base para estructuras - ACTUALIZADA PARA TILESET
  */
 interface StructureConfig {
     type: StructureType;
@@ -25,30 +44,62 @@ interface StructureConfig {
     hasPhysics?: boolean;
     isDestructible?: boolean;
     health?: number;
+    // Nuevas propiedades para tileset
+    tileId?: number;
+    imagePath?: string;
+    collisionBounds?: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    };
 }
 
 /**
- * Clase base para todas las estructuras - ARREGLADA para alineación correcta
+ * Datos del tileset para mapear estructuras
  */
-export class Structure extends Phaser.GameObjects.Rectangle {
+const TILESET_DATA = {
+    0: { type: StructureType.BONES_SMALL, image: 'Bones_shadow1_3.png', imageSize: { width: 32, height: 32 }, collision: { x: 3, y: 5, width: 25, height: 22 } },
+    1: { type: StructureType.BONES_LARGE, image: 'Bones_shadow2_6.png', imageSize: { width: 64, height: 64 }, collision: { x: 8, y: 8, width: 48, height: 48 } },
+    2: { type: StructureType.BROKEN_TREE_LARGE, image: 'Broken_ tree_shadow3_1.png', imageSize: { width: 128, height: 128 }, collision: { x: 22, y: 52.9, width: 84, height: 30.1 } },
+    3: { type: StructureType.BROKEN_TREE_SMALL, image: 'Broken_tree_shadow1_2.png', imageSize: { width: 32, height: 32 }, collision: { x: 9.2, y: 6.8, width: 18.2, height: 24.4 } },
+    4: { type: StructureType.BROKEN_TREE_MEDIUM, image: 'Broken_tree_shadow1_4.png', imageSize: { width: 64, height: 64 }, collision: { x: 11.9, y: 15.5, width: 39, height: 29.9 } },
+    5: { type: StructureType.BROKEN_TREE_STUMP_1, image: 'Broken_tree_shadow2_1-1.png', imageSize: { width: 128, height: 128 }, collision: { x: 57.3, y: 74.5, width: 33.7, height: 33.5 } },
+    6: { type: StructureType.BROKEN_TREE_STUMP_2, image: 'Broken_tree_shadow2_2-1.png', imageSize: { width: 128, height: 128 }, collision: { x: 43.3, y: 58.3, width: 30.3, height: 39.8 } },
+    7: { type: StructureType.BROKEN_TREE_STUMP_3, image: 'Broken_tree_shadow2_3-1.png', imageSize: { width: 64, height: 64 }, collision: { x: 21, y: 20.6, width: 34, height: 27.4 } },
+    8: { type: StructureType.DEAD_ARM_1, image: 'Dead_arm_shadow1_1.png', imageSize: { width: 64, height: 64 }, collision: { x: 24.8, y: 14.6, width: 37.2, height: 39.5 } },
+    9: { type: StructureType.DEAD_ARM_2, image: 'Dead_arm_shadow1_2.png', imageSize: { width: 64, height: 64 }, collision: { x: 16.5, y: 23.2, width: 25.7, height: 28.8 } },
+    10: { type: StructureType.DEAD_ARM_3, image: 'Dead_arm_shadow1_3.png', imageSize: { width: 64, height: 64 }, collision: { x: 23.6, y: 25.2, width: 17, height: 25.5 } },
+    11: { type: StructureType.DEAD_ARM_4, image: 'Dead_arm_shadow1_4.png', imageSize: { width: 64, height: 64 }, collision: { x: 20.7, y: 25.8, width: 19.3, height: 20.1 } },
+    12: { type: StructureType.PILE_SKULLS, image: 'Pile_sculls_shadow1.png', imageSize: { width: 128, height: 128 }, collision: { x: 34.4, y: 52.4, width: 59.7, height: 36.6 } },
+    13: { type: StructureType.PLANT_LARGE, image: 'Plant_shadow1_1.png', imageSize: { width: 128, height: 128 }, collision: { x: 32, y: 53.5, width: 64, height: 39.5 } },
+    14: { type: StructureType.PLANT_SMALL, image: 'Plant_shadow1_2.png', imageSize: { width: 64, height: 64 }, collision: { x: 11, y: 26.1, width: 42, height: 23.9 } },
+    15: { type: StructureType.ROCK_LARGE, image: 'Rock_shadow1_1.png', imageSize: { width: 64, height: 64 }, collision: { x: 3, y: 8.5, width: 57, height: 51.5 } },
+    16: { type: StructureType.ROCK_MEDIUM, image: 'Rock_shadow1_2.png', imageSize: { width: 64, height: 64 }, collision: { x: 9, y: 10, width: 45, height: 44 } },
+    17: { type: StructureType.THORN_PLANT_1, image: 'Thorn_plant_shadow1_1.png', imageSize: { width: 128, height: 128 }, collision: { x: 68.5, y: 69.8, width: 19.8, height: 18.5 } },
+    18: { type: StructureType.THORN_PLANT_2, image: 'Thorn_plant_shadow1_2.png', imageSize: { width: 128, height: 128 }, collision: { x: 17, y: 65.7, width: 25.6, height: 24.3 } },
+    19: { type: StructureType.TREE_SMALL, image: 'Tree_shadow1_2.png', imageSize: { width: 64, height: 64 }, collision: { x: 17.5, y: 36.2, width: 28.6, height: 26.8 } },
+    20: { type: StructureType.TREE_LARGE, image: 'Tree_shadow2_1.png', imageSize: { width: 128, height: 128 }, collision: { x: 44.2, y: 70.6, width: 34.6, height: 30.4 } }
+};
+
+/**
+ * Clase base para todas las estructuras - ACTUALIZADA PARA TILESET
+ */
+export class Structure extends Phaser.GameObjects.Container {
     public structureType: StructureType;
     public hasPhysics: boolean;
     public isDestructible: boolean;
     public health: number;
     public maxHealth: number;
 
-    // Sprites adicionales para estructuras complejas
-    protected shadowSprite?: Phaser.GameObjects.Rectangle;
-    protected supportSprites: Phaser.GameObjects.Rectangle[] = [];
-    protected roofSprite?: Phaser.GameObjects.Triangle;
-    protected markSprites: Phaser.GameObjects.Rectangle[] = [];
+    // Sprites para estructuras del tileset
+    protected mainSprite?: Phaser.GameObjects.Image;
+    protected collisionSprite?: Phaser.GameObjects.Rectangle;
+    protected markSprites: Phaser.GameObjects.GameObject[] = [];
+    protected structureScale: number = 1.0;
 
     constructor(scene: Scene, config: StructureConfig) {
-        // Calcular dimensiones principales
-        const { width, height } = Structure.calculateDimensions(config);
-
-        // Crear el sprite principal directamente
-        super(scene, config.x, config.y, width, height, config.color || 0x7f8c8d);
+        super(scene, config.x, config.y);
 
         this.structureType = config.type;
         this.hasPhysics = config.hasPhysics ?? true;
@@ -56,12 +107,15 @@ export class Structure extends Phaser.GameObjects.Rectangle {
         this.health = config.health ?? 1;
         this.maxHealth = this.health;
 
-        // Configurar el sprite principal
-        this.setStrokeStyle(2, config.strokeColor || 0x34495e);
-        this.setDepth(-60);
+        this.setDepth(30); // Estructuras por encima del jugador para efecto 2.5D
 
-        // Crear elementos visuales adicionales
-        this.createAdditionalVisuals(config, width, height);
+        // Crear el sprite de colisión PRIMERO si es del tileset
+        if (config.type !== StructureType.EXPLOSIVE_BARREL) {
+            this.createCollisionSpriteFromConfig(config);
+        }
+
+        // Crear el sprite principal
+        this.createMainSprite(config);
 
         // Agregar física si es necesario
         if (this.hasPhysics) {
@@ -73,139 +127,250 @@ export class Structure extends Phaser.GameObjects.Rectangle {
     }
 
     /**
-     * Calcula las dimensiones basadas en el tipo de estructura
+     * Crea el sprite de colisión desde la configuración (en el constructor)
      */
-    private static calculateDimensions(config: StructureConfig): { width: number; height: number } {
-        switch (config.type) {
-            case StructureType.CUBE:
-                const cubeSize = config.width || (30 + Math.random() * 40);
-                return { width: cubeSize, height: cubeSize };
+    private createCollisionSpriteFromConfig(config: StructureConfig): void {
+        // Buscar datos del tileset
+        const tileData = Object.values(TILESET_DATA).find(data => data.type === config.type);
 
-            case StructureType.TOWER:
-                return {
-                    width: config.width || (25 + Math.random() * 15),
-                    height: config.height || (60 + Math.random() * 40)
-                };
-
-            case StructureType.WALL:
-                const length = config.width || (80 + Math.random() * 60);
-                const wallHeight = config.height || (20 + Math.random() * 20);
-                const isHorizontal = Math.random() > 0.5;
-                return {
-                    width: isHorizontal ? length : wallHeight,
-                    height: isHorizontal ? wallHeight : length
-                };
-
-            case StructureType.PLATFORM:
-                return {
-                    width: config.width || (50 + Math.random() * 30),
-                    height: 15
-                };
-
-            case StructureType.EXPLOSIVE_BARREL:
-                const barrelSize = config.width || 24;
-                return { width: barrelSize, height: barrelSize };
-
-            default:
-                return { width: 30, height: 30 };
+        if (tileData) {
+            // Obtener la escala que se usará para el sprite visual
+            this.structureScale = this.getProceduralScale();
+            this.createCollisionSprite(tileData);
         }
     }
 
     /**
-     * Crea elementos visuales adicionales para estructuras complejas
+     * Crea el sprite principal según el tipo de estructura
      */
-    protected createAdditionalVisuals(config: StructureConfig, width: number, height: number): void {
-        switch (this.structureType) {
-            case StructureType.CUBE:
-                this.createCubeExtras(width, height);
-                break;
-            case StructureType.TOWER:
-                this.createTowerExtras(width, height);
-                break;
-            case StructureType.WALL:
-                // Los muros no necesitan extras
-                this.setFillStyle(config.color || 0x8e44ad);
-                this.setStrokeStyle(2, config.strokeColor || 0x6c3483);
-                break;
-            case StructureType.PLATFORM:
-                this.createPlatformExtras(width, height);
-                break;
-            case StructureType.EXPLOSIVE_BARREL:
-                this.createBarrelExtras(width, height);
-                break;
+    private createMainSprite(config: StructureConfig): void {
+        if (config.type === StructureType.EXPLOSIVE_BARREL) {
+            // Mantener la implementación original del barril explosivo
+            this.createBarrelSprite(config);
+            return;
+        }
+
+        // Buscar datos del tileset
+        const tileData = Object.values(TILESET_DATA).find(data => data.type === config.type);
+
+        if (!tileData) {
+            console.warn(`Tipo de estructura no encontrado en tileset: ${config.type}`);
+            this.createDefaultSprite(config);
+            return;
+        }
+
+        // Cargar la imagen si no está cargada
+        const imageKey = `structure_${config.type}`;
+        if (!this.scene.textures.exists(imageKey)) {
+            this.scene.load.image(imageKey, `src/assets/objects/${tileData.image}`);
+            this.scene.load.start();
+
+            // Esperar a que cargue la imagen para crear el sprite visual
+            this.scene.load.once('complete', () => {
+                this.createImageSprite(imageKey, tileData);
+            });
+        } else {
+            this.createImageSprite(imageKey, tileData);
         }
     }
 
     /**
-     * Crea elementos adicionales para cubos
+     * Crea el sprite de colisión basado en los datos del tileset
      */
-    private createCubeExtras(width: number, height: number): void {
-        // Sombra
-        this.shadowSprite = this.scene.add.rectangle(this.x + 3, this.y + 3, width, height, 0x2c3e50, 0.3);
-        this.shadowSprite.setDepth(-65);
-    }
+    private createCollisionSprite(tileData: any): void {
+        const collision = tileData.collision;
+        const imageSize = tileData.imageSize;
 
-    /**
-     * Crea elementos adicionales para torres
-     */
-    private createTowerExtras(width: number, height: number): void {
-        // Configurar color de torre
-        this.setFillStyle(0x95a5a6);
-        this.setStrokeStyle(2, 0x7f8c8d);
+        // Aplicar escala a las dimensiones de colisión
+        const scaledCollisionWidth = collision.width * this.structureScale;
+        const scaledCollisionHeight = collision.height * this.structureScale;
 
-        // Techo
-        const roofWidth = width + 10;
-        this.roofSprite = this.scene.add.triangle(
-            this.x,
-            this.y - height / 2 - 8,
-            0, 16,
-            roofWidth / 2, 0,
-            -roofWidth / 2, 0,
-            0xe74c3c
+        // Calcular la posición del sprite de colisión relativa al centro de la imagen (escalada)
+        const collisionX = (collision.x - imageSize.width / 2 + collision.width / 2) * this.structureScale;
+        const collisionY = (collision.y - imageSize.height / 2 + collision.height / 2) * this.structureScale;
+
+        // Calcular posición absoluta del sprite de colisión (no relativa al contenedor)
+        const absoluteCollisionX = this.x + collisionX;
+        const absoluteCollisionY = this.y + collisionY;
+
+        this.collisionSprite = this.scene.add.rectangle(
+            absoluteCollisionX, absoluteCollisionY,
+            scaledCollisionWidth, scaledCollisionHeight,
+            0x00ff00, 0.0 // Invisible - solo para colisiones
         );
-        this.roofSprite.setDepth(-60);
+
+        // Agregar referencia a la estructura original para que CollisionManager pueda acceder a ella
+        (this.collisionSprite as any).parentStructure = this;
+
+        // NO agregar al contenedor - mantenerlo independiente para física correcta
+        // Sprite de colisión creado correctamente con escala aplicada
     }
 
     /**
-     * Crea elementos adicionales para plataformas
+     * Crea el sprite de imagen del tileset
      */
-    private createPlatformExtras(width: number, height: number): void {
-        // Configurar color de plataforma
-        this.setFillStyle(0xf39c12);
-        this.setStrokeStyle(2, 0xe67e22);
+    private createImageSprite(imageKey: string, tileData: any): void {
+        // Crear el sprite principal con la imagen
+        this.mainSprite = this.scene.add.image(0, 0, imageKey);
+        this.mainSprite.setOrigin(0.5, 0.5);
 
-        // Soportes
-        const support1 = this.scene.add.rectangle(this.x - width / 3, this.y + 15, 8, 20, 0xd68910);
-        const support2 = this.scene.add.rectangle(this.x + width / 3, this.y + 15, 8, 20, 0xd68910);
+        // Aplicar la escala ya calculada (para mantener consistencia con la colisión)
+        this.mainSprite.setScale(this.structureScale);
 
-        support1.setDepth(-60);
-        support2.setDepth(-60);
+        this.add(this.mainSprite);
 
-        this.supportSprites.push(support1, support2);
+        // Sprite visual creado correctamente con escala aplicada
     }
+
+    /**
+     * Obtiene una escala procedural según el tipo de estructura
+     */
+    private getProceduralScale(): number {
+        const baseScale = 1.0;
+        let minScale = baseScale;
+        let maxScale = baseScale;
+
+        // Definir rangos de escala según el tipo de estructura
+        switch (this.structureType) {
+            // Árboles - Los más grandes (pueden ser muy variados)
+            case StructureType.TREE_LARGE:
+                minScale = 1.0;
+                maxScale = 1.8;
+                break;
+            case StructureType.TREE_SMALL:
+                minScale = 1.0;
+                maxScale = 1.5;
+                break;
+            case StructureType.BROKEN_TREE_LARGE:
+                minScale = 1.0;
+                maxScale = 1.6;
+                break;
+            case StructureType.BROKEN_TREE_MEDIUM:
+                minScale = 1.0;
+                maxScale = 1.4;
+                break;
+            case StructureType.BROKEN_TREE_SMALL:
+                minScale = 1.0;
+                maxScale = 1.3;
+                break;
+
+            // Tocones - Variación moderada
+            case StructureType.BROKEN_TREE_STUMP_1:
+            case StructureType.BROKEN_TREE_STUMP_2:
+            case StructureType.BROKEN_TREE_STUMP_3:
+                minScale = 1.0;
+                maxScale = 1.4;
+                break;
+
+            // Plantas - Bastante variadas
+            case StructureType.PLANT_LARGE:
+                minScale = 1.0;
+                maxScale = 1.6;
+                break;
+            case StructureType.PLANT_SMALL:
+                minScale = 1.0;
+                maxScale = 1.4;
+                break;
+            case StructureType.THORN_PLANT_1:
+            case StructureType.THORN_PLANT_2:
+                minScale = 1.0;
+                maxScale = 1.5;
+                break;
+
+            // Brazos muertos - Variación moderada
+            case StructureType.DEAD_ARM_1:
+            case StructureType.DEAD_ARM_2:
+            case StructureType.DEAD_ARM_3:
+            case StructureType.DEAD_ARM_4:
+                minScale = 1.0;
+                maxScale = 1.3;
+                break;
+
+            // Rocas - Variación moderada
+            case StructureType.ROCK_LARGE:
+                minScale = 1.0;
+                maxScale = 1.4;
+                break;
+            case StructureType.ROCK_MEDIUM:
+                minScale = 1.0;
+                maxScale = 1.3;
+                break;
+
+            // Huesos - Poca variación (los más consistentes)
+            case StructureType.BONES_LARGE:
+                minScale = 1.0;
+                maxScale = 1.2;
+                break;
+            case StructureType.BONES_SMALL:
+                minScale = 1.0;
+                maxScale = 1.15;
+                break;
+            case StructureType.PILE_SKULLS:
+                minScale = 1.0;
+                maxScale = 1.25;
+                break;
+
+            // Por defecto - Sin variación
+            default:
+                minScale = 1.0;
+                maxScale = 1.0;
+                break;
+        }
+
+        // Generar escala aleatoria dentro del rango
+        return minScale + Math.random() * (maxScale - minScale);
+    }
+
+    /**
+     * Crea el sprite de barril explosivo (mantiene la implementación original)
+     */
+    private createBarrelSprite(config: StructureConfig): void {
+        const barrelSize = config.width || 24;
+
+        // Crear el sprite principal del barril como rectángulo
+        const barrelRect = this.scene.add.rectangle(0, 0, barrelSize, barrelSize, 0x8b4513);
+        barrelRect.setStrokeStyle(3, 0x654321);
+        this.add(barrelRect);
+
+        // Crear elementos adicionales del barril
+        this.createBarrelExtras(barrelSize, barrelSize);
+    }
+
+    /**
+     * Crea sprite por defecto para tipos no reconocidos
+     */
+    private createDefaultSprite(config: StructureConfig): void {
+        const size = 30;
+        const defaultRect = this.scene.add.rectangle(0, 0, size, size, 0x7f8c8d);
+        defaultRect.setStrokeStyle(2, 0x34495e);
+        this.add(defaultRect);
+
+        this.collisionSprite = defaultRect;
+    }
+
+
 
     /**
      * Crea elementos adicionales para barriles explosivos - MEJORADO VISUALMENTE
      */
     private createBarrelExtras(width: number, height: number): void {
-        // Configurar color base del barril (marrón metálico)
-        this.setFillStyle(0x8b4513);
-        this.setStrokeStyle(3, 0x654321);
-
         // Sombra del barril
-        this.shadowSprite = this.scene.add.rectangle(this.x + 2, this.y + 2, width, height, 0x2c1810, 0.4);
-        this.shadowSprite.setDepth(-65);
+        const shadowSprite = this.scene.add.rectangle(2, 2, width, height, 0x2c1810, 0.4);
+        shadowSprite.setDepth(-65);
+        this.add(shadowSprite);
 
         // Anillos metálicos del barril (arriba y abajo)
-        const topRing = this.scene.add.rectangle(this.x, this.y - height * 0.3, width + 2, 3, 0x654321);
-        const bottomRing = this.scene.add.rectangle(this.x, this.y + height * 0.3, width + 2, 3, 0x654321);
+        const topRing = this.scene.add.rectangle(0, -height * 0.3, width + 2, 3, 0x654321);
+        const bottomRing = this.scene.add.rectangle(0, height * 0.3, width + 2, 3, 0x654321);
         topRing.setDepth(-58);
         bottomRing.setDepth(-58);
+        this.add(topRing);
+        this.add(bottomRing);
         this.markSprites.push(topRing, bottomRing);
 
         // Símbolo de peligro (triángulo amarillo con exclamación)
         const warningTriangle = this.scene.add.triangle(
-            this.x, this.y - height * 0.1,
+            0, -height * 0.1,
             0, -8,
             -7, 6,
             7, 6,
@@ -213,24 +378,28 @@ export class Structure extends Phaser.GameObjects.Rectangle {
         );
         warningTriangle.setStrokeStyle(1, 0xff8800);
         warningTriangle.setDepth(-57);
+        this.add(warningTriangle);
         this.markSprites.push(warningTriangle);
 
         // Exclamación dentro del triángulo
-        const exclamationBody = this.scene.add.rectangle(this.x, this.y - height * 0.15, 1.5, 6, 0xff0000);
-        const exclamationDot = this.scene.add.rectangle(this.x, this.y - height * 0.05, 1.5, 1.5, 0xff0000);
+        const exclamationBody = this.scene.add.rectangle(0, -height * 0.15, 1.5, 6, 0xff0000);
+        const exclamationDot = this.scene.add.rectangle(0, -height * 0.05, 1.5, 1.5, 0xff0000);
         exclamationBody.setDepth(-56);
         exclamationDot.setDepth(-56);
+        this.add(exclamationBody);
+        this.add(exclamationDot);
         this.markSprites.push(exclamationBody, exclamationDot);
 
         // Texto "TNT" en el barril
-        const tntText = this.scene.add.text(this.x, this.y + height * 0.15, 'TNT', {
+        const tntText = this.scene.add.text(0, height * 0.15, 'TNT', {
             fontSize: '8px',
             color: '#ff0000',
             fontStyle: 'bold',
             fontFamily: 'Arial'
         }).setOrigin(0.5);
         tntText.setDepth(-57);
-        this.markSprites.push(tntText as any);
+        this.add(tntText);
+        this.markSprites.push(tntText);
 
         // Efecto de brillo peligroso (parpadeo sutil)
         this.scene.tweens.add({
@@ -257,14 +426,11 @@ export class Structure extends Phaser.GameObjects.Rectangle {
     }
 
     /**
-     * Configura la física de la estructura - ARREGLADO para alineación perfecta
+     * Configura la física de la estructura - CORREGIDA PARA USAR COLISIONES DEL JSON
      */
     protected setupPhysics(): void {
-        // Agregar física directamente al sprite principal
-        this.scene.physics.add.existing(this, true); // true = static body
-
-        // El cuerpo de física ya está perfectamente alineado con el sprite
-        // No necesitamos ajustes adicionales
+        // NO agregar física aquí - se hará en el StructureManager
+        // Solo marcar que tiene física habilitada
     }
 
     /**
@@ -298,10 +464,20 @@ export class Structure extends Phaser.GameObjects.Rectangle {
      * Crea efecto visual de daño sin depender de setTint
      */
     private createDamageEffect(): void {
+        // Obtener dimensiones del sprite principal o usar valores por defecto
+        let width = 30, height = 30;
+        if (this.mainSprite) {
+            width = this.mainSprite.width;
+            height = this.mainSprite.height;
+        } else if (this.collisionSprite) {
+            width = this.collisionSprite.width;
+            height = this.collisionSprite.height;
+        }
+
         // Crear overlay rojo temporal
         const damageOverlay = this.scene.add.rectangle(
             this.x, this.y,
-            this.width, this.height,
+            width, height,
             0xff6666, 0.6
         );
         damageOverlay.setDepth(this.depth + 1);
@@ -357,10 +533,17 @@ export class Structure extends Phaser.GameObjects.Rectangle {
     }
 
     /**
-     * Obtiene el sprite principal para colisiones - ARREGLADO
+     * Obtiene el sprite de colisión específico del JSON - CORREGIDO
      */
-    public getMainSprite(): Phaser.GameObjects.Rectangle {
-        return this; // El sprite principal ES esta instancia
+    public getMainSprite(): Phaser.GameObjects.GameObject {
+        return this.collisionSprite || this;
+    }
+
+    /**
+     * Obtiene el sprite de colisión para física (usado por StructureManager)
+     */
+    public getCollisionSprite(): Phaser.GameObjects.GameObject | null {
+        return this.collisionSprite;
     }
 
     /**
@@ -371,25 +554,23 @@ export class Structure extends Phaser.GameObjects.Rectangle {
     }
 
     /**
-     * Destruye la estructura y limpia recursos - ARREGLADO
+     * Destruye la estructura y limpia recursos - ACTUALIZADO PARA TILESET
      */
     public destroyStructure(): void {
         // Limpiar sprites adicionales
-        if (this.shadowSprite) {
-            this.shadowSprite.destroy();
-        }
-
-        if (this.roofSprite) {
-            this.roofSprite.destroy();
-        }
-
-        this.supportSprites.forEach(sprite => sprite.destroy());
-        this.supportSprites = [];
-
-        this.markSprites.forEach(sprite => sprite.destroy());
+        this.markSprites.forEach(sprite => {
+            if (sprite && sprite.destroy) {
+                sprite.destroy();
+            }
+        });
         this.markSprites = [];
 
-        // Destruir el sprite principal
+        // Destruir el sprite de colisión independiente si existe
+        if (this.collisionSprite && this.collisionSprite.destroy) {
+            this.collisionSprite.destroy();
+        }
+
+        // Destruir el contenedor (que incluye todos los sprites hijos)
         this.destroy();
     }
 }
@@ -414,9 +595,19 @@ export class StructureManager {
         const structure = new Structure(this.scene, config);
         this.structures.push(structure);
 
-        // Agregar al grupo de física si tiene física
+        // Agregar al grupo de física si tiene física - CORREGIDO PARA USAR COLISIONES DEL JSON
         if (structure.getHasPhysics()) {
-            this.structureGroup.add(structure);
+            const collisionSprite = structure.getCollisionSprite();
+            if (collisionSprite) {
+                // Agregar física al sprite de colisión específico
+                this.scene.physics.add.existing(collisionSprite, true);
+                this.structureGroup.add(collisionSprite);
+            } else {
+                // Fallback para barriles explosivos y estructuras sin sprite de colisión específico
+                this.scene.physics.add.existing(structure, true);
+                this.structureGroup.add(structure);
+                console.log(`⚠️ Fallback: Física agregada al contenedor completo para ${config.type}`);
+            }
         }
 
         return structure;
@@ -437,9 +628,14 @@ export class StructureManager {
         if (index > -1) {
             this.structures.splice(index, 1);
 
-            // Remover del grupo de física
+            // Remover del grupo de física - CORREGIDO
             if (structure.getHasPhysics()) {
-                this.structureGroup.remove(structure);
+                const collisionSprite = structure.getCollisionSprite();
+                if (collisionSprite) {
+                    this.structureGroup.remove(collisionSprite);
+                } else {
+                    this.structureGroup.remove(structure);
+                }
             }
 
             structure.destroyStructure();
@@ -589,6 +785,44 @@ export class StructureManager {
         }
 
         return null; // No se encontró posición libre
+    }
+
+    /**
+     * Crea una estructura aleatoria del tileset (excluyendo barriles explosivos)
+     * @param x - Posición X
+     * @param y - Posición Y
+     * @returns La estructura creada
+     */
+    public createRandomTilesetStructure(x: number, y: number): Structure {
+        // Obtener todos los tipos de estructura del tileset (excluyendo barril explosivo)
+        const tilesetTypes = Object.values(StructureType).filter(type => type !== StructureType.EXPLOSIVE_BARREL);
+
+        // Seleccionar un tipo aleatorio
+        const randomType = tilesetTypes[Math.floor(Math.random() * tilesetTypes.length)];
+
+        return this.createStructure({
+            type: randomType,
+            x,
+            y,
+            hasPhysics: true,
+            isDestructible: false
+        });
+    }
+
+    /**
+     * Obtiene todos los tipos de estructura disponibles del tileset
+     */
+    public getTilesetStructureTypes(): StructureType[] {
+        return Object.values(StructureType).filter(type => type !== StructureType.EXPLOSIVE_BARREL);
+    }
+
+    /**
+     * Crea múltiples estructuras aleatorias del tileset
+     * @param positions - Array de posiciones {x, y}
+     * @returns Array de estructuras creadas
+     */
+    public createMultipleRandomTilesetStructures(positions: { x: number, y: number }[]): Structure[] {
+        return positions.map(pos => this.createRandomTilesetStructure(pos.x, pos.y));
     }
 
     /**

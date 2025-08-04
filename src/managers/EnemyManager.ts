@@ -178,7 +178,7 @@ export class EnemyManager {
   createEnemy(x: number, y: number, type: EnemyType = EnemyType.ZOMBIE): Phaser.GameObjects.Rectangle {
     const enemy = this.scene.add.rectangle(x, y, this.config.size, this.config.size, this.config.color);
     enemy.setStrokeStyle(2, this.config.strokeColor);
-    enemy.setDepth(5); // Enemigos por encima del terreno pero debajo de balas
+    enemy.setDepth(15); // Enemigos debajo de estructuras para efecto 2.5D
 
     // Configurar física
     this.scene.physics.add.existing(enemy);
