@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAdminStore } from '@/stores/adminStore';
-import { AdminIconTest } from '../AdminIconTest';
+import { AdminIconsTest } from '../AdminIconsTest';
 import { AdminDebug } from '../AdminDebug';
 
 export const AdminSettingsView: React.FC = () => {
@@ -12,7 +12,7 @@ export const AdminSettingsView: React.FC = () => {
       <AdminDebug />
 
       {/* Icon Test */}
-      <AdminIconTest />
+      <AdminIconsTest />
 
       {/* System Actions */}
       <div className="bg-white rounded-lg shadow-sm p-6">

@@ -13,9 +13,14 @@ export { AdminDeleteUserModal } from './AdminDeleteUserModal';
 export { AdminEmptyState } from './AdminEmptyState';
 export { AdminTest } from './AdminTest';
 export { AdminIconTest } from './AdminIconTest';
+export { AdminIconsTest } from './AdminIconsTest';
+export { AdminDebug } from './AdminDebug';
+export { GameAnalyticsStats } from './GameAnalyticsStats';
+export { GameAnalyticsCharts } from './GameAnalyticsCharts';
+export { PlayerRankings } from './PlayerRankings';
 
 // Views
-export { AdminOverviewView } from './views/AdminOverviewView';
+export { AdminGameAnalyticsView } from './views/AdminGameAnalyticsView';
 export { AdminUsersView } from './views/AdminUsersView';
 export { AdminSessionsView } from './views/AdminSessionsView';
 export { AdminMetricsView } from './views/AdminMetricsView';

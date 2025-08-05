@@ -3,7 +3,7 @@ import { useAdminStore } from '@/stores/adminStore';
 import { AdminLoading } from './AdminLoading';
 import { AdminHeader } from './AdminHeader';
 import { AdminTabs, AdminTabType } from './AdminTabs';
-import { AdminOverviewView } from './views/AdminOverviewView';
+import { AdminGameAnalyticsView } from './views/AdminGameAnalyticsView';
 import { AdminUsersView } from './views/AdminUsersView';
 import { AdminSessionsView } from './views/AdminSessionsView';
 import { AdminMetricsView } from './views/AdminMetricsView';
@@ -19,7 +19,7 @@ export const AdminDashboard: React.FC = () => {
     collectAndSaveMetrics
   } = useAdminStore();
 
-  const [activeTab, setActiveTab] = useState<AdminTabType>('overview');
+  const [activeTab, setActiveTab] = useState<AdminTabType>('game-analytics');
 
   useEffect(() => {
     loadDashboardData();
@@ -74,7 +74,7 @@ export const AdminDashboard: React.FC = () => {
         <AdminTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         {/* Tab Content */}
-        {activeTab === 'overview' && <AdminOverviewView data={dashboardData} />}
+        {activeTab === 'game-analytics' && <AdminGameAnalyticsView data={dashboardData} />}
         {activeTab === 'users' && <AdminUsersView data={dashboardData} />}
         {activeTab === 'sessions' && <AdminSessionsView data={dashboardData} />}
         {activeTab === 'metrics' && <AdminMetricsView data={dashboardData} />}
