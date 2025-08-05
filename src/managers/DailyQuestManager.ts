@@ -36,6 +36,7 @@ export enum QuestType {
 }
 
 export interface QuestProgress {
+  // Estadísticas básicas existentes
   enemiesKilled: number;
   zombiesKilled: number;
   dashersKilled: number;
@@ -46,10 +47,22 @@ export interface QuestProgress {
   barrelsDestroyed: number;
   bandagesUsed: number;
   levelsGained: number;
+  
   // Progreso de misiones permanentes
   hasImprovedMachinegun: boolean;
   hasGrenadeLauncher: boolean;
   hasLaserRifle: boolean;
+  
+  // Nuevos campos para coincidir con session_stats de Strapi
+  totalDamageDealt: number;
+  totalDamageReceived: number;
+  shotsFired: number;
+  shotsHit: number;
+  accuracyPercentage: number;
+  finalScore: number;
+  gamesPlayedTotal: number;
+  victoriesTotal: number;
+  defeatsTotal: number;
 }
 
 export class DailyQuestManager {
@@ -77,7 +90,16 @@ export class DailyQuestManager {
     levelsGained: 0,
     hasImprovedMachinegun: false,
     hasGrenadeLauncher: false,
-    hasLaserRifle: false
+    hasLaserRifle: false,
+    totalDamageDealt: 0,
+    totalDamageReceived: 0,
+    shotsFired: 0,
+    shotsHit: 0,
+    accuracyPercentage: 0,
+    finalScore: 0,
+    gamesPlayedTotal: 0,
+    victoriesTotal: 0,
+    defeatsTotal: 0
   };
 
   private lastQuestCheck: number = 0;
@@ -287,33 +309,97 @@ export class DailyQuestManager {
           this.questProgress.tanksKilled++;
           break;
       }
+      
+      // Actualizar progreso en localStorage inmediatamente
+      this.saveQuestProgress();
     });
 
     // Caja de suministros recolectada
     this.scene.events.on('supplyBoxCollected', () => {
       this.questProgress.supplyBoxesCollected++;
+      this.saveQuestProgress();
     });
 
     // Barril destruido
     this.scene.events.on('barrelDestroyed', () => {
       this.questProgress.barrelsDestroyed++;
+      this.saveQuestProgress();
     });
 
     // Vendaje usado
     this.scene.events.on('bandageUsed', () => {
       this.questProgress.bandagesUsed++;
+      this.saveQuestProgress();
     });
 
     // Nivel ganado
     this.scene.events.on('levelUp', () => {
       this.questProgress.currentLevel = this.experienceManager.getLevel();
       this.questProgress.levelsGained++;
+      this.saveQuestProgress();
     });
 
-    // Subida de nivel
-    this.scene.events.on('levelUp', () => {
-      this.questProgress.currentLevel = this.experienceManager.getLevel();
+    // NUEVOS EVENTOS PARA COMPLETAR ESTADÍSTICAS
+    
+    // Disparo realizado - emitir desde MainScene autoShoot
+    this.scene.events.on('bulletFired', (data?: { bulletsCount?: number }) => {
+      const bulletCount = data?.bulletsCount || 1;
+      this.questProgress.shotsFired += bulletCount;
+      this.updateAccuracy();
+      this.saveQuestProgress();
+      console.log(`🔫 Disparos registrados: +${bulletCount} (Total: ${this.questProgress.shotsFired})`);
     });
+
+    // Bala impacta enemigo - emitir desde CollisionManager
+    this.scene.events.on('bulletHit', (data?: { damage?: number }) => {
+      this.questProgress.shotsHit++;
+      if (data?.damage) {
+        this.questProgress.totalDamageDealt += data.damage;
+      }
+      this.updateAccuracy();
+      this.saveQuestProgress();
+      console.log(`🎯 Impacto registrado: ${this.questProgress.shotsHit}/${this.questProgress.shotsFired} (${this.questProgress.accuracyPercentage.toFixed(1)}%)`);
+    });
+
+    // Jugador recibe daño - emitir desde Player/CollisionManager
+    this.scene.events.on('playerDamaged', (data: { damage: number }) => {
+      this.questProgress.totalDamageReceived += data.damage;
+      this.saveQuestProgress();
+      console.log(`💔 Daño recibido: +${data.damage} (Total: ${this.questProgress.totalDamageReceived})`);
+    });
+
+    // Actualización de score - emitir desde MainScene/UIManager
+    this.scene.events.on('scoreUpdate', (data: { score: number }) => {
+      this.questProgress.finalScore = data.score;
+      // No guardar en cada actualización de score para evitar spam
+    });
+
+    // Victoria del juego
+    this.scene.events.on('gameWin', () => {
+      this.questProgress.victoriesTotal++;
+      this.questProgress.gamesPlayedTotal++;
+      this.saveQuestProgress();
+      console.log(`🏆 Victoria registrada: ${this.questProgress.victoriesTotal} victorias de ${this.questProgress.gamesPlayedTotal} juegos`);
+    });
+
+    // Derrota del juego
+    this.scene.events.on('gameOver', () => {
+      this.questProgress.defeatsTotal++;
+      this.questProgress.gamesPlayedTotal++;
+      this.saveQuestProgress();
+      console.log(`💀 Derrota registrada: ${this.questProgress.defeatsTotal} derrotas de ${this.questProgress.gamesPlayedTotal} juegos`);
+    });
+  }
+
+  /**
+   * Actualiza el porcentaje de precisión
+   */
+  private updateAccuracy(): void {
+    if (this.questProgress.shotsFired > 0) {
+      this.questProgress.accuracyPercentage = (this.questProgress.shotsHit / this.questProgress.shotsFired) * 100;
+    } else {
+      this.questProgress.accuracyPercentage = 0;
+    }
   }
 
   /**
@@ -331,6 +417,12 @@ export class DailyQuestManager {
       
       // Actualizar nivel actual
       this.questProgress.currentLevel = this.experienceManager.getLevel();
+      
+      // Actualizar score final (obtenido desde UIManager)
+      const uiData = (this.scene as any).uiManager?.getData();
+      if (uiData?.score !== undefined) {
+        this.questProgress.finalScore = uiData.score;
+      }
       
       // Verificar progreso de misiones diarias
       await this.checkQuestProgress();
@@ -912,7 +1004,16 @@ export class DailyQuestManager {
       levelsGained: 0,
       hasImprovedMachinegun: false,
       hasGrenadeLauncher: false,
-      hasLaserRifle: false
+      hasLaserRifle: false,
+      totalDamageDealt: 0,
+      totalDamageReceived: 0,
+      shotsFired: 0,
+      shotsHit: 0,
+      accuracyPercentage: 0,
+      finalScore: 0,
+      gamesPlayedTotal: 0,
+      victoriesTotal: 0,
+      defeatsTotal: 0
     };
   }
 
@@ -941,5 +1042,71 @@ export class DailyQuestManager {
     this.scene.events.off('levelUp');
     
     console.log('🗑️ DailyQuestManager destruido');
+  }
+
+  /**
+   * Función de debug para mostrar el estado actual de las estadísticas
+   */
+  public debugQuestProgress(): void {
+    console.log('🔍 === DEBUG: Estado Actual de QuestProgress ===');
+    console.log('📊 Estadísticas básicas:');
+    console.log(`  • Enemigos eliminados: ${this.questProgress.enemiesKilled}`);
+    console.log(`  • Zombies eliminados: ${this.questProgress.zombiesKilled}`);
+    console.log(`  • Dashers eliminados: ${this.questProgress.dashersKilled}`);
+    console.log(`  • Tanques eliminados: ${this.questProgress.tanksKilled}`);
+    console.log(`  • Nivel actual: ${this.questProgress.currentLevel}`);
+    console.log(`  • Tiempo de supervivencia: ${this.questProgress.survivalTime.toFixed(2)}s`);
+    console.log(`  • Cajas recolectadas: ${this.questProgress.supplyBoxesCollected}`);
+    console.log(`  • Barriles destruidos: ${this.questProgress.barrelsDestroyed}`);
+    console.log(`  • Vendajes usados: ${this.questProgress.bandagesUsed}`);
+    console.log(`  • Niveles ganados: ${this.questProgress.levelsGained}`);
+    
+    console.log('🎯 Estadísticas de combate:');
+    console.log(`  • Disparos realizados: ${this.questProgress.shotsFired}`);
+    console.log(`  • Disparos que dieron: ${this.questProgress.shotsHit}`);
+    console.log(`  • Precisión: ${this.questProgress.accuracyPercentage.toFixed(1)}%`);
+    console.log(`  • Daño total causado: ${this.questProgress.totalDamageDealt}`);
+    console.log(`  • Daño total recibido: ${this.questProgress.totalDamageReceived}`);
+    console.log(`  • Score final: ${this.questProgress.finalScore}`);
+    
+    console.log('🏆 Estadísticas generales:');
+    console.log(`  • Juegos jugados: ${this.questProgress.gamesPlayedTotal}`);
+    console.log(`  • Victorias: ${this.questProgress.victoriesTotal}`);
+    console.log(`  • Derrotas: ${this.questProgress.defeatsTotal}`);
+    
+    console.log('🔧 Armas especiales:');
+    console.log(`  • Ametralladora mejorada: ${this.questProgress.hasImprovedMachinegun ? '✅' : '❌'}`);
+    console.log(`  • Lanzagranadas: ${this.questProgress.hasGrenadeLauncher ? '✅' : '❌'}`);
+    console.log(`  • Rifle láser: ${this.questProgress.hasLaserRifle ? '✅' : '❌'}`);
+    
+    console.log('💾 Datos en localStorage:');
+    const stored = localStorage.getItem(`questProgress_${this.userId}`);
+    if (stored) {
+      try {
+        const parsedData = JSON.parse(stored);
+        console.log('  • Datos guardados:', parsedData);
+      } catch (error) {
+        console.log('  • Error parsing localStorage:', error);
+      }
+    } else {
+      console.log('  • No hay datos en localStorage');
+    }
+    
+    console.log('🔍 === FIN DEBUG ===');
+  }
+
+  /**
+   * Obtiene un resumen compacto de las estadísticas para logging
+   */
+  public getStatsResumen(): string {
+    return `Stats: ${this.questProgress.enemiesKilled}E/${this.questProgress.shotsFired}S/${this.questProgress.shotsHit}H/${this.questProgress.accuracyPercentage.toFixed(1)}%A/${this.questProgress.finalScore}P`;
+  }
+
+  /**
+   * Fuerza el guardado inmediato de las estadísticas
+   */
+  public forceSaveProgress(): void {
+    this.saveQuestProgress();
+    console.log('💾 Progreso guardado forzadamente:', this.getStatsResumen());
   }
 } 

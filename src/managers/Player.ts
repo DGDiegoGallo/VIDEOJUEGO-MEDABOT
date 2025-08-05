@@ -132,6 +132,8 @@ export class Player {
    * @returns true si el jugador sobrevivió, false si murió
    */
   takeDamage(amount: number): boolean {
+    const originalAmount = amount;
+    
     // Primero absorber daño con el escudo
     if (this.shieldStrength > 0) {
       const absorbedDamage = Math.min(amount, this.shieldStrength);
@@ -148,6 +150,9 @@ export class Player {
     if (amount > 0) {
       this.health = Math.max(0, this.health - amount);
     }
+
+    // Emitir evento de daño para estadísticas
+    this.scene.events.emit('playerDamaged', { damage: originalAmount });
 
     return this.health > 0;
   }

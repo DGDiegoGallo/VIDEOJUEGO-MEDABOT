@@ -44,6 +44,15 @@ interface UpdateSessionStatsData {
     barrelsDestroyed: number;
     bandagesUsed: number;
     levelsGained: number;
+    // NUEVOS CAMPOS DE COMBATE
+    totalDamageDealt: number;
+    totalDamageReceived: number;
+    shotsFired: number;
+    shotsHit: number;
+    accuracyPercentage: number;
+    gamesPlayedTotal: number;
+    victoriesTotal: number;
+    defeatsTotal: number;
   };
   gameStats: {
     finalScore: number;
@@ -285,11 +294,11 @@ class GameSessionService {
         zombies_killed: (currentStats.zombies_killed || 0) + questProgress.zombiesKilled,
         dashers_killed: (currentStats.dashers_killed || 0) + questProgress.dashersKilled,
         tanks_killed: (currentStats.tanks_killed || 0) + questProgress.tanksKilled,
-        total_damage_dealt: currentStats.total_damage_dealt, // Se podría calcular si tuviéramos el dato
-        total_damage_received: currentStats.total_damage_received, // Se podría calcular si tuviéramos el dato
-        shots_fired: currentStats.shots_fired, // Se podría calcular si tuviéramos el dato
-        shots_hit: currentStats.shots_hit, // Se podría calcular si tuviéramos el dato
-        accuracy_percentage: currentStats.accuracy_percentage, // Se calcularía basado en shots_fired/shots_hit
+        total_damage_dealt: (currentStats.total_damage_dealt || 0) + questProgress.totalDamageDealt,
+        total_damage_received: (currentStats.total_damage_received || 0) + questProgress.totalDamageReceived,
+        shots_fired: (currentStats.shots_fired || 0) + questProgress.shotsFired,
+        shots_hit: (currentStats.shots_hit || 0) + questProgress.shotsHit,
+        accuracy_percentage: questProgress.accuracyPercentage, // Usar el valor calculado más reciente
         final_score: Math.max(currentStats.final_score, gameStats.finalScore), // Tomar el mejor score
         level_reached: Math.max(currentStats.level_reached, questProgress.currentLevel), // Tomar el nivel más alto alcanzado
         duration_seconds: currentStats.duration_seconds + Math.floor(gameStats.gameTime), // Tiempo total acumulado
@@ -298,9 +307,9 @@ class GameSessionService {
         barrels_destroyed_total: (currentStats.barrels_destroyed_total || 0) + questProgress.barrelsDestroyed,
         bandages_used_total: (currentStats.bandages_used_total || 0) + questProgress.bandagesUsed,
         levels_gained_total: (currentStats.levels_gained_total || 0) + questProgress.levelsGained,
-        games_played_total: (currentStats.games_played_total || 0) + 1, // Incrementar contador de partidas jugadas
-        victories_total: (currentStats.victories_total || 0) + (gameStats.isVictory ? 1 : 0), // Contar victorias
-        defeats_total: (currentStats.defeats_total || 0) + (gameStats.isVictory ? 0 : 1), // Contar derrotas
+        games_played_total: questProgress.gamesPlayedTotal, // Usar el total acumulado
+        victories_total: questProgress.victoriesTotal, // Usar el total acumulado de victorias
+        defeats_total: questProgress.defeatsTotal, // Usar el total acumulado de derrotas
         started_at: currentStats.started_at || new Date().toISOString(), // Mantener la fecha de inicio si existe
         ended_at: new Date().toISOString(),
         game_state: gameStats.isVictory ? 'victory' : 'defeat',

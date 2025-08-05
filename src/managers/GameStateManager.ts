@@ -191,6 +191,17 @@ export class GameStateManager {
         console.log('📊 Actualizando estadísticas acumulativas de la sesión...');
         const questProgress = this.dailyQuestManager.getQuestProgress();
         
+        // DEBUG: Mostrar todos los campos que se van a enviar
+        console.log('🔍 DEBUG GameStateManager: Campos de combate a enviar:');
+        console.log('  • shotsFired:', questProgress.shotsFired);
+        console.log('  • shotsHit:', questProgress.shotsHit);
+        console.log('  • accuracyPercentage:', questProgress.accuracyPercentage?.toFixed(1) + '%');
+        console.log('  • totalDamageDealt:', questProgress.totalDamageDealt);
+        console.log('  • totalDamageReceived:', questProgress.totalDamageReceived);
+        console.log('  • gamesPlayedTotal:', questProgress.gamesPlayedTotal);
+        console.log('  • victoriesTotal:', questProgress.victoriesTotal);
+        console.log('  • defeatsTotal:', questProgress.defeatsTotal);
+        
         const statsResult = await gameSessionService.updateSessionStats({
           sessionId: this.sessionDocumentId,
           questProgress: {
@@ -203,7 +214,16 @@ export class GameStateManager {
             supplyBoxesCollected: questProgress.supplyBoxesCollected,
             barrelsDestroyed: questProgress.barrelsDestroyed,
             bandagesUsed: questProgress.bandagesUsed,
-            levelsGained: questProgress.levelsGained
+            levelsGained: questProgress.levelsGained,
+            // NUEVOS CAMPOS DE COMBATE AGREGADOS
+            totalDamageDealt: questProgress.totalDamageDealt,
+            totalDamageReceived: questProgress.totalDamageReceived,
+            shotsFired: questProgress.shotsFired,
+            shotsHit: questProgress.shotsHit,
+            accuracyPercentage: questProgress.accuracyPercentage,
+            gamesPlayedTotal: questProgress.gamesPlayedTotal,
+            victoriesTotal: questProgress.victoriesTotal,
+            defeatsTotal: questProgress.defeatsTotal
           },
           gameStats: {
             finalScore: gameOverData.score,
@@ -317,6 +337,17 @@ export class GameStateManager {
         console.log('📊 Actualizando estadísticas acumulativas de la sesión...');
         const questProgress = this.dailyQuestManager.getQuestProgress();
         
+        // DEBUG: Mostrar todos los campos que se van a enviar (VICTORIA)
+        console.log('🔍 DEBUG GameStateManager: Campos de combate a enviar (VICTORIA):');
+        console.log('  • shotsFired:', questProgress.shotsFired);
+        console.log('  • shotsHit:', questProgress.shotsHit);
+        console.log('  • accuracyPercentage:', questProgress.accuracyPercentage?.toFixed(1) + '%');
+        console.log('  • totalDamageDealt:', questProgress.totalDamageDealt);
+        console.log('  • totalDamageReceived:', questProgress.totalDamageReceived);
+        console.log('  • gamesPlayedTotal:', questProgress.gamesPlayedTotal);
+        console.log('  • victoriesTotal:', questProgress.victoriesTotal);
+        console.log('  • defeatsTotal:', questProgress.defeatsTotal);
+        
         const statsResult = await gameSessionService.updateSessionStats({
           sessionId: this.sessionDocumentId,
           questProgress: {
@@ -329,7 +360,16 @@ export class GameStateManager {
             supplyBoxesCollected: questProgress.supplyBoxesCollected,
             barrelsDestroyed: questProgress.barrelsDestroyed,
             bandagesUsed: questProgress.bandagesUsed,
-            levelsGained: questProgress.levelsGained
+            levelsGained: questProgress.levelsGained,
+            // NUEVOS CAMPOS DE COMBATE AGREGADOS
+            totalDamageDealt: questProgress.totalDamageDealt,
+            totalDamageReceived: questProgress.totalDamageReceived,
+            shotsFired: questProgress.shotsFired,
+            shotsHit: questProgress.shotsHit,
+            accuracyPercentage: questProgress.accuracyPercentage,
+            gamesPlayedTotal: questProgress.gamesPlayedTotal,
+            victoriesTotal: questProgress.victoriesTotal,
+            defeatsTotal: questProgress.defeatsTotal
           },
           gameStats: {
             finalScore: gameOverData.score,
@@ -352,6 +392,11 @@ export class GameStateManager {
 
     // Emitir evento con datos completos
     console.log('📡 Emitiendo evento gameOver (victoria)...');
+    
+    // Emitir evento específico de victoria para estadísticas
+    this.scene.events.emit('gameWin', gameOverData);
+    
+    // Emitir evento general de game over
     this.scene.events.emit('gameOver', gameOverData);
     console.log('✅ Game win completado');
   }

@@ -324,6 +324,9 @@ export class CollisionManager {
     // Usar el nuevo sistema de daño (false = no es explosión)
     const enemyDied = this.enemyManager.damageEnemy(enemy, 1, false);
 
+    // Emitir evento de impacto para estadísticas
+    this.scene.events.emit('bulletHit', { damage: 1 });
+
     if (enemyDied) {
       // Solo notificar al ExperienceManager - él se encarga de todo
       this.experienceManager.onEnemyKilled(enemyX, enemyY, enemyType);

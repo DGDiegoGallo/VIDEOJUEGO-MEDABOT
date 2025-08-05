@@ -131,6 +131,16 @@ export class MainScene extends Scene {
       }
     });
 
+    // Tecla Q para debug - mostrar estadísticas de DailyQuestManager
+    this.input.keyboard!.on('keydown-Q', () => {
+      if (this.dailyQuestManager && typeof this.dailyQuestManager.debugQuestProgress === 'function') {
+        console.log('🔍 DEBUG: Mostrando estadísticas del DailyQuestManager');
+        this.dailyQuestManager.debugQuestProgress();
+      } else {
+        console.warn('⚠️ DailyQuestManager no disponible o no tiene función debug');
+      }
+    });
+
     // Configurar eventos
     this.setupEvents();
 
@@ -147,6 +157,7 @@ export class MainScene extends Scene {
     console.log('🎮 ESPACIO: Crear explosión de prueba');
     console.log('🎮 B: Usar vendaje rápidamente');
     console.log('🎮 V: Agregar 99 vendajes (debug)');
+    console.log('🎮 Q: Mostrar estadísticas completas (debug)');
     console.log('🎮 Z: Ganar partida (debug)');
     console.log('🎮 X: Perder partida (debug)');
     console.log('🎮 ======================================');
@@ -456,6 +467,10 @@ export class MainScene extends Scene {
 
     if (closestEnemy) {
       this.bulletManager.shootAtEnemy(playerPos.x, playerPos.y, closestEnemy.x, closestEnemy.y);
+      
+      // Emitir evento de disparo para estadísticas
+      const bulletsCount = this.bulletManager.getBulletsPerShot();
+      this.events.emit('bulletFired', { bulletsCount });
     }
   }
 
@@ -466,6 +481,9 @@ export class MainScene extends Scene {
     this.events.on('enemyKilled', (data: { score: number }) => {
       this.score += data.score;
       this.uiManager.addScore(data.score);
+
+      // Emitir evento de actualización de score para estadísticas
+      this.events.emit('scoreUpdate', { score: this.score });
 
       // No re-emitir el evento para evitar bucle infinito
       // this.events.emit('enemyKilled', data);
