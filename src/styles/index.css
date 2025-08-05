@@ -47,6 +47,41 @@
   }
 }
 
+/* Animaciones para el botón de Mesa de Creación */
+@keyframes bloom {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(251, 146, 60, 0.5), 0 0 20px rgba(239, 68, 68, 0.3), 0 0 35px rgba(239, 68, 68, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(251, 146, 60, 0.8), 0 0 30px rgba(239, 68, 68, 0.6), 0 0 50px rgba(239, 68, 68, 0.4);
+  }
+}
+
+@keyframes crafting-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(251, 146, 60, 0.6);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(251, 146, 60, 0.9), 0 0 60px rgba(239, 68, 68, 0.5);
+  }
+}
+
+/* Clase para el botón de Mesa de Creación */
+.crafting-btn {
+  background: linear-gradient(135deg, #ea580c, #dc2626);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  animation: bloom 3s ease-in-out infinite, crafting-pulse 2s ease-in-out infinite;
+  position: relative;
+}
+
+.crafting-btn:hover {
+  animation: crafting-pulse 0.5s ease-in-out infinite;
+  box-shadow: 0 0 40px rgba(251, 146, 60, 1), 0 0 80px rgba(239, 68, 68, 0.7) !important;
+}
+
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);

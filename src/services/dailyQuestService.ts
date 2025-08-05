@@ -72,6 +72,107 @@ class DailyQuestService {
   }
 
   /**
+   * Verifica si hay nuevas misiones diarias disponibles comparando fechas con el backend
+   * @param userId - ID del usuario
+   * @returns Promise<boolean> - true si hay nuevas misiones disponibles
+   */
+  async checkForNewDailyQuests(userId: string | number): Promise<{
+    hasNewQuests: boolean;
+    lastCompletedDate?: string;
+    currentDate: string;
+  }> {
+    try {
+      console.log('🔍 Verificando nuevas misiones diarias para usuario:', userId);
+      
+      // Obtener la fecha actual
+      const currentDate = new Date().toDateString();
+      
+      // Obtener datos de la sesión del backend
+      const sessionData = await gameSessionService.getUserGameSession(Number(userId));
+      
+      if (!sessionData || !sessionData.daily_quests_completed) {
+        console.log('📅 No hay datos de misiones completadas en el backend');
+        return {
+          hasNewQuests: true,
+          currentDate
+        };
+      }
+      
+      const lastCompletedDate = sessionData.daily_quests_completed.date;
+      const lastCompletedDateObj = new Date(lastCompletedDate);
+      const currentDateObj = new Date(currentDate);
+      
+      console.log('📅 Fecha última misión completada:', lastCompletedDate);
+      console.log('📅 Fecha actual:', currentDate);
+      
+      // Verificar si la fecha actual está adelantada
+      const hasNewQuests = currentDateObj > lastCompletedDateObj;
+      
+      console.log('🎯 ¿Hay nuevas misiones disponibles?', hasNewQuests);
+      
+      return {
+        hasNewQuests,
+        lastCompletedDate,
+        currentDate
+      };
+    } catch (error) {
+      console.error('❌ Error verificando nuevas misiones diarias:', error);
+      // En caso de error, asumir que hay nuevas misiones disponibles
+      return {
+        hasNewQuests: true,
+        currentDate: new Date().toDateString()
+      };
+    }
+  }
+
+  /**
+   * Actualiza las misiones diarias limpiando localStorage y generando nuevas misiones
+   * @param userId - ID del usuario
+   * @returns Promise<boolean> - true si se actualizaron exitosamente
+   */
+  async updateDailyQuests(userId: string | number): Promise<boolean> {
+    try {
+      console.log('🔄 Actualizando misiones diarias para usuario:', userId);
+      
+      // Verificar si hay nuevas misiones disponibles
+      const { hasNewQuests, lastCompletedDate, currentDate } = await this.checkForNewDailyQuests(userId);
+      
+      if (!hasNewQuests) {
+        console.log('⏰ No hay nuevas misiones disponibles aún');
+        return false;
+      }
+      
+      console.log('🧹 Limpiando localStorage de misiones diarias...');
+      
+      // Limpiar localStorage de misiones diarias
+      localStorage.removeItem(`dailyQuests_${userId}`);
+      localStorage.removeItem(`questProgress_${userId}`);
+      
+      console.log('✅ localStorage limpiado exitosamente');
+      console.log('📝 Misiones diarias actualizadas desde:', lastCompletedDate || 'primera vez', 'a:', currentDate);
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Error actualizando misiones diarias:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Fuerza la actualización de misiones diarias (útil para testing)
+   * @param userId - ID del usuario
+   */
+  forceUpdateDailyQuests(userId: string | number): void {
+    console.log('🔧 Forzando actualización de misiones diarias para usuario:', userId);
+    
+    // Limpiar localStorage de misiones diarias
+    localStorage.removeItem(`dailyQuests_${userId}`);
+    localStorage.removeItem(`questProgress_${userId}`);
+    
+    console.log('✅ Actualización forzada completada');
+  }
+
+  /**
    * Agrega alimentos al localStorage
    * @param userId - ID del usuario
    * @param amount - Cantidad de alimentos a agregar
@@ -112,7 +213,7 @@ class DailyQuestService {
   private async updateSessionFood(sessionId: string, foodAmount: number): Promise<void> {
     try {
       // Obtener la sesión actual
-      const session = await gameSessionService.getSession(sessionId);
+      const session = await gameSessionService.getUserGameSession(Number(sessionId));
       
       if (!session) {
         console.warn('⚠️ No se encontró la sesión para actualizar food');

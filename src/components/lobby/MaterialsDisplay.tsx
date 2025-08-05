@@ -19,12 +19,14 @@ interface MaterialsDisplayProps {
   };
   showTitle?: boolean;
   compact?: boolean;
+  titleOverride?: string;
 }
 
 export const MaterialsDisplay: React.FC<MaterialsDisplayProps> = ({ 
   materials, 
   showTitle = true,
-  compact = false 
+  compact = false,
+  titleOverride
 }) => {
   const { steel, energy_cells, medicine, food } = materials;
 
@@ -283,7 +285,7 @@ export const MaterialsDisplay: React.FC<MaterialsDisplayProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <FaCoins className="text-yellow-400" />
-            <span className="text-gray-300 font-semibold">Total de Materiales:</span>
+                            <span className="text-gray-300 font-semibold">{titleOverride || 'Total de Materiales'}:</span>
           </div>
           <div className="text-2xl font-bold text-white">
             {formatNumber(steel + energy_cells + medicine + food)}
