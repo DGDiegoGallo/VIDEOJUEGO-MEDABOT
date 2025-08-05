@@ -24,14 +24,20 @@ export const LoginPage: React.FC = () => {
     try {
       await login(credentials);
       
-      // After successful login, load game data
+      // After successful login, check user role and redirect accordingly
       const user = useAuthStore.getState().user;
       if (user) {
-        await loadUserGameData(user.id);
+        const isAdmin = user.rol === 'admin' || user.role?.name === 'admin';
+        
+        if (isAdmin) {
+          // Redirect admin users to dashboard
+          navigate('/admin');
+        } else {
+          // Load game data for regular users
+          await loadUserGameData(user.id);
+          navigate('/lobby');
+        }
       }
-      
-      // Navigate to game after successful login
-      navigate('/lobby');
     } catch (error) {
       console.error('Login error:', error);
       setError(error instanceof Error ? error.message : 'Error de login');

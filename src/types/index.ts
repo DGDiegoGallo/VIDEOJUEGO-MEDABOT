@@ -40,5 +40,6 @@ export interface EventEmitter {
   emit<K extends keyof GameEvents>(event: K, data: GameEvents[K]): void;
 }
 
-// Re-exportar tipos de cajas de suministros
+// Re-exportar tipos
+export * from './admin';
 export * from './supplyBox';

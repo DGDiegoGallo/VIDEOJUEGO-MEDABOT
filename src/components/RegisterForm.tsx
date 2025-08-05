@@ -13,6 +13,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, loading, e
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
+  const [fechaNacimiento, setFechaNacimiento] = useState('');
+  const [documentoID, setDocumentoID] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +24,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, loading, e
 
     if (!username.trim() || !email.trim() || !password || password !== confirm) return;
 
-    await onSubmit({ username: username.trim(), email: email.trim(), password });
+    await onSubmit({ 
+      username: username.trim(), 
+      email: email.trim(), 
+      password,
+      nombre: nombre.trim() || undefined,
+      apellido: apellido.trim() || undefined,
+      fechaNacimiento: fechaNacimiento || undefined,
+      documentoID: documentoID.trim() || undefined
+    });
   };
 
   const passwordsMatch = password === confirm;
@@ -63,6 +75,69 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, loading, e
               className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="tu@email.com"
               required
+              disabled={loading}
+            />
+          </div>
+
+          {/* Nombre */}
+          <div>
+            <label htmlFor="nombre" className="block text-sm font-medium text-gray-300 mb-2">
+              Nombre (opcional)
+            </label>
+            <input
+              type="text"
+              id="nombre"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Tu nombre"
+              disabled={loading}
+            />
+          </div>
+
+          {/* Apellido */}
+          <div>
+            <label htmlFor="apellido" className="block text-sm font-medium text-gray-300 mb-2">
+              Apellido (opcional)
+            </label>
+            <input
+              type="text"
+              id="apellido"
+              value={apellido}
+              onChange={(e) => setApellido(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Tu apellido"
+              disabled={loading}
+            />
+          </div>
+
+          {/* Fecha de Nacimiento */}
+          <div>
+            <label htmlFor="fechaNacimiento" className="block text-sm font-medium text-gray-300 mb-2">
+              Fecha de Nacimiento (opcional)
+            </label>
+            <input
+              type="date"
+              id="fechaNacimiento"
+              value={fechaNacimiento}
+              onChange={(e) => setFechaNacimiento(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={loading}
+            />
+          </div>
+
+          {/* Documento ID */}
+          <div>
+            <label htmlFor="documentoID" className="block text-sm font-medium text-gray-300 mb-2">
+              Documento de Identidad (opcional)
+            </label>
+            <input
+              type="text"
+              id="documentoID"
+              value={documentoID}
+              onChange={(e) => setDocumentoID(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Número de documento"
               disabled={loading}
             />
           </div>

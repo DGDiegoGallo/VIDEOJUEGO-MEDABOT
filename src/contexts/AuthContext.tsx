@@ -11,18 +11,26 @@ type ExtendedAuthContextType = AuthContextType & {
   isUser: boolean;
   isAgent: boolean;
   isCompany: boolean;
+  isAdmin: boolean;
 };
 
 const AuthContext = createContext<ExtendedAuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const auth = useAuthStore();
-  const rol = auth.user?.rol ?? (auth.user?.role?.name === 'Authenticated' ? 'user' : auth.user?.role?.name ?? 'guest');
+  
+  // Check if user is admin based on username or email since roles are not used
+  const isAdmin = auth.user?.username === 'admin' || 
+                  auth.user?.email?.includes('admin') ||
+                  auth.user?.rol === 'admin' ||
+                  auth.user?.role?.name === 'admin';
+  
   const value: ExtendedAuthContextType = {
     ...auth,
-    isUser: rol === 'user',
-    isAgent: rol === 'agent',
-    isCompany: rol === 'company'
+    isUser: !isAdmin,
+    isAgent: false, // No roles in this system
+    isCompany: false, // No roles in this system
+    isAdmin: isAdmin
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

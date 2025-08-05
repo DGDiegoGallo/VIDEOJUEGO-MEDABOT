@@ -28,6 +28,10 @@ export interface RegisterData {
   username: string;
   email: string;
   password: string;
+  nombre?: string;
+  apellido?: string;
+  fechaNacimiento?: string;
+  documentoID?: string;
 }
 
 export interface AuthResponse {

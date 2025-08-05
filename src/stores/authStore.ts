@@ -47,6 +47,10 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             id: response.user.id.toString(),
             username: response.user.username,
             email: response.user.email,
+            nombre: response.user.nombre || null,
+            apellido: response.user.apellido || null,
+            rol: response.user.rol || null,
+            role: response.user.role || null,
             createdAt: response.user.createdAt,
             updatedAt: response.user.updatedAt,
           };
@@ -197,6 +201,10 @@ export const useAuthStore = create<AuthState & AuthActions>()(
               id: response.user.id.toString(),
               username: response.user.username,
               email: response.user.email,
+              nombre: response.user.nombre || null,
+              apellido: response.user.apellido || null,
+              rol: response.user.rol || null,
+              role: response.user.role || null,
               createdAt: response.user.createdAt,
               updatedAt: response.user.updatedAt,
             };

@@ -60,11 +60,19 @@ class ApiClient {
   }
 
   async register(data: RegisterData): Promise<AuthResponse> {
-    const response = await this.client.post<AuthResponse>('/auth/local/register', {
+    const payload: any = {
       username: data.username,
       email: data.email,
       password: data.password,
-    });
+    };
+
+    // Add optional fields if provided
+    if (data.nombre) payload.nombre = data.nombre;
+    if (data.apellido) payload.apellido = data.apellido;
+    if (data.fechaNacimiento) payload.fechaNacimiento = data.fechaNacimiento;
+    if (data.documentoID) payload.documentoID = data.documentoID;
+
+    const response = await this.client.post<AuthResponse>('/auth/local/register', payload);
     return response.data;
   }
 
