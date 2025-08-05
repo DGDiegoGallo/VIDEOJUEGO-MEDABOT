@@ -7,6 +7,7 @@ import { nftMarketplaceService } from '@/services/nftMarketplaceService';
 import { NFTGrid } from './NFTGrid';
 import { NFTModal } from './NFTModal';
 import { UnlistNFTModal } from './UnlistNFTModal';
+import { MarketplaceParticles } from '@/components/effects/MarketplaceParticles';
 import type { UserNFT } from '@/types/nft';
 
 export const UserNFTCollection: React.FC = () => {
@@ -289,7 +290,12 @@ export const UserNFTCollection: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto">
+    <div className="relative w-full max-w-7xl mx-auto">
+      {/* Background Particles - mismo efecto que el marketplace */}
+      <MarketplaceParticles />
+      
+      {/* Content */}
+      <div className="relative z-10">
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-3xl font-bold text-white mb-2">Mi Colección de NFTs</h2>
@@ -314,17 +320,17 @@ export const UserNFTCollection: React.FC = () => {
         )}
       </div>
 
-      {/* Filters and Search */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      {/* Filters and Search - Estilo marketplace */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         {/* Search */}
-        <div className="relative flex-1">
+        <div className="relative sm:col-span-2">
           <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder="Buscar NFTs..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+            className="w-full pl-10 pr-4 py-2 bg-gray-800/80 backdrop-blur-sm border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
           />
         </div>
 
@@ -334,7 +340,7 @@ export const UserNFTCollection: React.FC = () => {
           <select
             value={filterRarity}
             onChange={(e) => setFilterRarity(e.target.value)}
-            className="pl-10 pr-8 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 appearance-none"
+            className="w-full pl-10 pr-8 py-2 bg-gray-800/80 backdrop-blur-sm border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 appearance-none transition-all"
           >
             <option value="all">Todas las rarezas</option>
             <option value="common">Común</option>
@@ -344,6 +350,32 @@ export const UserNFTCollection: React.FC = () => {
           </select>
         </div>
       </div>
+
+      {/* Stats similares al marketplace */}
+      {allNFTsToRender.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+          <div className="bg-gray-800/80 backdrop-blur-sm p-4 rounded-lg text-center border border-gray-600 shadow-lg hover:bg-gray-700/80 transition-all duration-300">
+            <div className="text-2xl font-bold text-white">{allNFTsToRender.length}</div>
+            <div className="text-gray-400 text-sm">NFTs en Colección</div>
+          </div>
+          <div className="bg-gray-800/80 backdrop-blur-sm p-4 rounded-lg text-center border border-gray-600 shadow-lg hover:bg-gray-700/80 transition-all duration-300">
+            <div className="text-2xl font-bold text-green-400">{equippedNFTs.length}</div>
+            <div className="text-gray-400 text-sm">Equipados</div>
+          </div>
+          <div className="bg-gray-800/80 backdrop-blur-sm p-4 rounded-lg text-center border border-gray-600 shadow-lg hover:bg-gray-700/80 transition-all duration-300">
+            <div className="text-2xl font-bold text-orange-400">
+              {listedNFTs.length}
+            </div>
+            <div className="text-gray-400 text-sm">En Venta</div>
+          </div>
+          <div className="bg-gray-800/80 backdrop-blur-sm p-4 rounded-lg text-center border border-gray-600 shadow-lg hover:bg-gray-700/80 transition-all duration-300">
+            <div className="text-2xl font-bold text-purple-400">
+              {allNFTsToRender.filter(nft => nft.metadata.rarity === 'legendary').length}
+            </div>
+            <div className="text-gray-400 text-sm">Legendarios</div>
+          </div>
+        </div>
+      )}
 
       {/* NFT Grid with Equip/Unequip functionality */}
       {(isListingLoading || isUnlistingLoading) && (
@@ -357,133 +389,40 @@ export const UserNFTCollection: React.FC = () => {
         </div>
       )}
       
-      {allNFTsToRender.length === 0 && !isListingLoading && !isUnlistingLoading ? (
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="text-gray-400 text-6xl mb-4">🎨</div>
-          <h3 className="text-white text-xl font-semibold mb-2">No tienes NFTs</h3>
-          <p className="text-gray-400 text-center mb-4">
-            {isLoading ? 'Cargando tu colección...' : 'Tu colección de NFTs está vacía'}
-          </p>
-          {!isLoading && (
-            <button
-              onClick={refetch}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors"
-            >
-              Recargar
-            </button>
-          )}
+      {/* NFT Grid usando el mismo diseño del marketplace */}
+      <NFTGrid
+        nfts={allNFTsToRender}
+        isLoading={isLoading}
+        showPrice={false}
+        showActions={false}
+        onSelect={handleSelectNFT}
+        emptyMessage={isLoading ? 'Cargando tu colección...' : 'Tu colección de NFTs está vacía'}
+        className="mb-6"
+      />
+
+      {/* Información adicional sobre acciones disponibles */}
+      {allNFTsToRender.length > 0 && (
+        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-600 rounded-lg p-4 mb-6">
+          <h3 className="text-white font-semibold mb-3 flex items-center">
+            <FaShieldAlt className="mr-2 text-blue-400" />
+            Acciones Disponibles
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <span className="text-gray-300">Haz clic en un NFT para equipar/desequipar</span>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {allNFTsToRender.map((nft) => {
-            const isListed = isNFTListed(nft);
-            const listedNFT = getListedNFT(nft);
-            
-            return (
-              <div
-                key={nft.documentId}
-                className={`bg-gray-800 border rounded-lg p-4 transition-all duration-300 hover:shadow-lg ${
-                  isNFTEquipped(nft) 
-                    ? 'border-green-500 bg-green-900/20' 
-                    : isListed
-                    ? 'border-orange-500 bg-orange-900/20'
-                    : 'border-gray-700 hover:border-gray-600'
-                }`}
-              >
-                {/* NFT Icon */}
-                <div className="text-center mb-4">
-                  <div className="text-4xl text-yellow-400 mb-2">🏆</div>
-                  <h3 className="text-lg font-semibold text-white">{nft.metadata.name}</h3>
-                  <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                    nft.metadata.rarity === 'legendary' ? 'bg-purple-900 text-purple-300' :
-                    nft.metadata.rarity === 'epic' ? 'bg-blue-900 text-blue-300' :
-                    nft.metadata.rarity === 'rare' ? 'bg-green-900 text-green-300' :
-                    'bg-gray-700 text-gray-300'
-                  }`}>
-                    {nft.metadata.rarity.toUpperCase()}
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <span className="text-gray-300">Usa el modal para listar en el marketplace</span>
+                </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+              <span className="text-gray-300">
+                NFTs equipados: <span className="text-white font-medium">{equippedNFTs.length}</span>
                   </span>
                 </div>
-
-                {/* NFT Description */}
-                <p className="text-gray-400 text-sm mb-4 line-clamp-3">
-                  {nft.metadata.description}
-                </p>
-
-                {/* Achievement Type */}
-                <div className="mb-4">
-                  <span className="inline-block px-2 py-1 bg-blue-900 text-blue-300 text-xs rounded">
-                    {nft.metadata.achievement_type?.toUpperCase() || 'UNKNOWN'}
-                  </span>
-                </div>
-
-                {/* Listed Price Info */}
-                {isListed && listedNFT && (
-                  <div className="mb-4 p-2 bg-orange-900/30 border border-orange-500/50 rounded text-center">
-                    <p className="text-orange-400 text-sm font-medium">
-                      Listado por {listedNFT.listing_price_eth} ETH
-                    </p>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="space-y-2">
-                  {isNFTEquipped(nft) ? (
-                    <button
-                      onClick={() => handleUnequipNFT(nft)}
-                      disabled={isEquipping}
-                      className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded transition-colors flex items-center justify-center space-x-2"
-                    >
-                      <FaTimes />
-                      <span>Desequipar</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleEquipNFT(nft)}
-                      disabled={isEquipping || isListed}
-                      className={`w-full py-2 px-4 rounded transition-colors flex items-center justify-center space-x-2 ${
-                        isListed
-                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                          : 'bg-green-600 hover:bg-green-700 text-white'
-                      }`}
-                    >
-                      <FaShieldAlt />
-                      <span>{isListed ? 'No Equipable' : 'Equipar'}</span>
-                    </button>
-                  )}
-
-                  {isListed ? (
-                    <button
-                      onClick={() => handleUnlistNFT(listedNFT!)}
-                      className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 px-4 rounded transition-colors flex items-center justify-center space-x-2"
-                    >
-                      <FaShoppingCart />
-                      <span>Quitar de Venta</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleListNFT(nft)}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition-colors"
-                    >
-                      Listar
-                    </button>
-                  )}
-                </div>
-
-                {/* Status Indicators */}
-                {isNFTEquipped(nft) && (
-                  <div className="mt-3 p-2 bg-green-900/30 border border-green-500/50 rounded text-center">
-                    <span className="text-green-400 text-sm font-medium">✓ Equipado</span>
-                  </div>
-                )}
-                
-                {isListed && (
-                  <div className="mt-3 p-2 bg-orange-900/30 border border-orange-500/50 rounded text-center">
-                    <span className="text-orange-400 text-sm font-medium">📋 Listado en Marketplace</span>
-                  </div>
-                )}
               </div>
-            );
-          })}
         </div>
       )}
 
@@ -509,6 +448,7 @@ export const UserNFTCollection: React.FC = () => {
         onClose={() => setShowUnlistModal(false)}
         onSuccess={handleUnlistSuccess}
       />
+      </div>
     </div>
   );
 };

@@ -84,8 +84,8 @@ class DailyQuestService {
     try {
       console.log('🔍 Verificando nuevas misiones diarias para usuario:', userId);
       
-      // Obtener la fecha actual
-      const currentDate = new Date().toDateString();
+      // Obtener la fecha actual en formato ISO (YYYY-MM-DD) para coincidir con el backend
+      const currentDate = new Date().toISOString().split('T')[0];
       
       // Obtener datos de la sesión del backend
       const sessionData = await gameSessionService.getUserGameSession(Number(userId));
@@ -99,14 +99,12 @@ class DailyQuestService {
       }
       
       const lastCompletedDate = sessionData.daily_quests_completed.date;
-      const lastCompletedDateObj = new Date(lastCompletedDate);
-      const currentDateObj = new Date(currentDate);
       
       console.log('📅 Fecha última misión completada:', lastCompletedDate);
       console.log('📅 Fecha actual:', currentDate);
       
-      // Verificar si la fecha actual está adelantada
-      const hasNewQuests = currentDateObj > lastCompletedDateObj;
+      // Verificar si la fecha actual es diferente a la última fecha completada
+      const hasNewQuests = currentDate !== lastCompletedDate;
       
       console.log('🎯 ¿Hay nuevas misiones disponibles?', hasNewQuests);
       
@@ -120,7 +118,7 @@ class DailyQuestService {
       // En caso de error, asumir que hay nuevas misiones disponibles
       return {
         hasNewQuests: true,
-        currentDate: new Date().toDateString()
+        currentDate: new Date().toISOString().split('T')[0]
       };
     }
   }

@@ -13,7 +13,7 @@ export const AdminHeader: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    // La función logout ahora maneja la redirección automáticamente
   };
 
   return (

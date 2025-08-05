@@ -37,6 +37,16 @@ interface CraftWeaponData {
   };
 }
 
+interface CraftBandageData {
+  sessionId: string;
+  materialsUsed: {
+    steel: number;
+    energy_cells: number;
+    medicine: number;
+    food: number;
+  };
+}
+
 interface UpdateMaterialsData {
   sessionId: string;
   materials: GameMaterials;
@@ -379,26 +389,6 @@ class GameSessionService {
     } catch (error) {
       console.error('❌ Error actualizando estadísticas:', error);
       throw error;
-    }
-  }
-
-  /**
-   * Actualiza los materiales en localStorage
-   */
-  private updateLocalStorageMaterials(materials: GameMaterials): void {
-    try {
-      // Obtener el userId del token o de localStorage
-      const userData = localStorage.getItem('user-data');
-      if (userData) {
-        const user = JSON.parse(userData);
-        const storageKey = `game-materials-${user.id}`;
-        
-        // Guardar los materiales totales actualizados
-        localStorage.setItem(storageKey, JSON.stringify(materials));
-        console.log('💾 Materiales actualizados en localStorage:', materials);
-      }
-    } catch (error) {
-      console.error('❌ Error actualizando localStorage:', error);
     }
   }
 
@@ -778,8 +768,95 @@ class GameSessionService {
       const result = await response.json();
       console.log('✅ Arma creada exitosamente:', result);
       return { success: true, data: result };
+
     } catch (error) {
-      console.error('❌ Error creando arma:', error);
+      console.error('❌ Error en craftWeapon:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Crea un vendaje y resta los materiales utilizados
+   */
+  async craftBandage({ sessionId, materialsUsed }: CraftBandageData): Promise<any> {
+    try {
+      console.log('🩹 Creando vendaje en sesión:', sessionId);
+
+      // Primero obtener la sesión actual
+      const currentSession = await this.getSessionById(sessionId);
+      if (!currentSession) {
+        throw new Error('Sesión de juego no encontrada');
+      }
+
+      // Obtener materiales actuales
+      const currentMaterials = currentSession.materials || {
+        steel: 0,
+        energy_cells: 0,
+        medicine: 0,
+        food: 0
+      };
+
+      // Verificar que hay suficientes materiales
+      if (currentMaterials.steel < materialsUsed.steel ||
+          currentMaterials.energy_cells < materialsUsed.energy_cells ||
+          currentMaterials.medicine < materialsUsed.medicine ||
+          currentMaterials.food < materialsUsed.food) {
+        throw new Error('Materiales insuficientes para crear vendaje');
+      }
+
+      // Calcular nuevos materiales después de restar
+      const newMaterials = {
+        steel: currentMaterials.steel - materialsUsed.steel,
+        energy_cells: currentMaterials.energy_cells - materialsUsed.energy_cells,
+        medicine: currentMaterials.medicine - materialsUsed.medicine,
+        food: currentMaterials.food - materialsUsed.food
+      };
+
+      // Obtener equipped_items actuales
+      const currentEquippedItems = currentSession.equipped_items || {
+        nfts: [],
+        weapons: [],
+        active_effects: [],
+        bandages: 0
+      };
+
+      // Agregar 1 vendaje al inventario
+      const newEquippedItems = {
+        ...currentEquippedItems,
+        bandages: (currentEquippedItems.bandages || 0) + 1
+      };
+
+      // Actualizar la sesión con materiales reducidos y vendaje agregado
+      const updateData = {
+        data: {
+          materials: newMaterials,
+          equipped_items: newEquippedItems
+        }
+      };
+
+      console.log('📤 Actualizando sesión con vendaje:', updateData);
+
+      const response = await fetch(
+        `${this.baseURL}/game-sessions/${sessionId}`,
+        {
+          method: 'PUT',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(updateData)
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Error response:', errorData);
+        throw new Error(`Error creando vendaje: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Vendaje creado exitosamente:', result);
+      return { success: true, data: result };
+
+    } catch (error) {
+      console.error('❌ Error en craftBandage:', error);
       throw error;
     }
   }

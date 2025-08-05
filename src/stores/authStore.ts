@@ -240,12 +240,40 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       },
 
       logout: () => {
+        // Limpiar el estado de Zustand
         set((state) => {
           state.user = null;
           state.token = null;
           state.isAuthenticated = false;
           state.error = null;
         });
+
+        // Limpiar TODO el localStorage completamente
+        // Primero obtener todas las claves
+        const allKeys = Object.keys(localStorage);
+        
+        // Eliminar todas las claves excepto las de Zustand (que se manejan por separado)
+        allKeys.forEach(key => {
+          if (!key.startsWith('auth-storage')) {
+            localStorage.removeItem(key);
+          }
+        });
+        
+        // Ahora limpiar específicamente las claves de Zustand
+        localStorage.removeItem('auth-storage');
+        
+        // Limpiar cookies
+        document.cookie.split(";").forEach((c) => {
+          document.cookie = c
+            .replace(/^ +/, "")
+            .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+        });
+
+        // Limpiar sessionStorage
+        sessionStorage.clear();
+
+        // Redirigir a la landing page
+        window.location.href = '/';
       },
 
       clearError: () => {

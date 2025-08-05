@@ -179,6 +179,22 @@ export const GamePage: React.FC = () => {
     setShowSupplyBoxModal(true);
   }, []);
 
+  // Pausar/reanudar juego cuando se abre/cierra el modal de caja de suministros
+  useEffect(() => {
+    if (!gameRef.current) return;
+
+    const mainScene = gameRef.current.scene.getScene('MainScene') as MainScene;
+    if (!mainScene) return;
+
+    if (showSupplyBoxModal) {
+      console.log('📦 Pausando juego por modal de caja de suministros');
+      mainScene.pauseGame();
+    } else {
+      console.log('📦 Reanudando juego tras cerrar modal de caja de suministros');
+      mainScene.resumeGame();
+    }
+  }, [showSupplyBoxModal]);
+
   const handleBandageStarted = useCallback((bandageData: any) => {
     console.log('🩹 GamePage: Curación iniciada:', bandageData);
     // Actualizar estadísticas del vendaje
@@ -790,7 +806,7 @@ export const GamePage: React.FC = () => {
       {gameOver && finalStats && (
         <GameOverStats
           score={finalStats.score}
-          time={finalStats.time}
+          time={finalStats.gameTime || 0}
           level={finalStats.level}
           reason={finalStats.reason}
           survivalBonus={finalStats.survivalBonus}

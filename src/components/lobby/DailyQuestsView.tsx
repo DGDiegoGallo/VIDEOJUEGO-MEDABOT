@@ -31,6 +31,30 @@ interface DailyQuestsViewProps {
 }
 
 export const DailyQuestsView: React.FC<DailyQuestsViewProps> = ({ userId, onClose }) => {
+  /**
+   * SISTEMA DE MISIONES DIARIAS - ARQUITECTURA MEJORADA
+   * 
+   * 🔄 FLUJO PRINCIPAL:
+   * 1. Verificar misiones completadas en backend (daily_quests_completed.date)
+   * 2. Si fecha backend = hoy → Sincronizar quests completadas + mostrar pendientes
+   * 3. Si fecha backend ≠ hoy → Generar nuevas quests en localStorage
+   * 4. Si no hay backend → Usar/generar localStorage
+   * 
+   * 📅 FORMATO DE FECHAS:
+   * - Uso consistente de ISO format (YYYY-MM-DD) como el backend
+   * - getCurrentDateISO() centraliza el formato
+   * 
+   * 🎮 INTEGRACIÓN CON GAMEPLAY:
+   * - questProgress se mantiene separado (para tiempo real en juego)
+   * - Este sistema maneja el estado final/completado
+   * - smartSyncQuests() evita conflictos entre lobby y gameplay
+   * 
+   * 💾 ALMACENAMIENTO:
+   * - localStorage: quests activas del día actual
+   * - Backend (Strapi): quests completadas + fecha de completación
+   * - Sincronización bidireccional inteligente
+   */
+  
   const [dailyQuests, setDailyQuests] = useState<DailyQuest[]>([]);
   const [permanentQuests, setPermanentQuests] = useState<DailyQuest[]>([]);
   const [availableFood, setAvailableFood] = useState(0);
@@ -39,52 +63,219 @@ export const DailyQuestsView: React.FC<DailyQuestsViewProps> = ({ userId, onClos
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [selectedQuest, setSelectedQuest] = useState<DailyQuest | null>(null);
 
+  // Función utilitaria para obtener fecha en formato ISO (YYYY-MM-DD)
+  const getCurrentDateISO = (): string => {
+    return new Date().toISOString().split('T')[0];
+  };
+
+  // Función para sincronizar quests sin interferir con el progreso del juego
+  const smartSyncQuests = async (): Promise<void> => {
+    try {
+      const sessionData = await gameSessionService.getUserGameSession(Number(userId));
+      const today = getCurrentDateISO();
+      
+      // Si hay misiones completadas en el backend para hoy, sincronizar
+      if (sessionData?.daily_quests_completed?.date === today) {
+        console.log('🔄 Sincronizando misiones completadas desde backend');
+        
+        // También sincronizar el progreso con session_stats si están disponibles
+        if (sessionData.session_stats) {
+          console.log('📊 Sincronizando progreso con session_stats del backend');
+          console.log('📊 Session stats:', sessionData.session_stats);
+          
+          // Aquí podrías llamar a una función del DailyQuestManager si tuvieras acceso
+          // Por ahora, la sincronización se hará cuando se abra el juego
+        }
+        
+        await loadQuestsFromBackend();
+      } else {
+        console.log('📅 No hay misiones completadas para hoy en el backend');
+      }
+    } catch (error) {
+      console.error('❌ Error en sincronización inteligente:', error);
+    }
+  };
+
+  // Función para validar que las misiones sean del día actual
+  const validateQuestsAreToday = (quests: DailyQuest[]): DailyQuest[] => {
+    const today = getCurrentDateISO();
+    return quests.filter(quest => {
+      // Si la misión está completada, verificar que fue completada hoy
+      if (quest.completed && quest.completedAt) {
+        const completedDate = new Date(quest.completedAt).toISOString().split('T')[0];
+        const isToday = completedDate === today;
+        if (!isToday) {
+          console.log(`🗑️ Filtrando misión completada en fecha pasada: ${quest.title} (${completedDate})`);
+          return false;
+        }
+        return true;
+      }
+      
+      // Si la misión no está completada, mantenerla (son las nuevas generadas para hoy)
+      if (!quest.completed) {
+        return true;
+      }
+      
+      // Fallback: mantener misiones sin fecha de completación pero que no estén marcadas como completadas
+      return !quest.completed;
+    });
+  };
+
   useEffect(() => {
     loadQuestsFromBackend();
     loadPermanentQuests();
+    
+    // Sincronización inteligente adicional después de 1 segundo
+    const syncTimer = setTimeout(() => {
+      smartSyncQuests();
+    }, 1000);
+    
+    return () => clearTimeout(syncTimer);
   }, [userId]);
 
   const loadQuestsFromBackend = async () => {
     try {
       setIsLoading(true);
+      console.log('🔍 Cargando misiones desde backend para usuario:', userId);
       
       // Obtener datos de la sesión del backend
       const sessionData = await gameSessionService.getUserGameSession(Number(userId));
+      const today = getCurrentDateISO(); // Usar función utilitaria
       
       if (sessionData && sessionData.daily_quests_completed) {
-        // Obtener misiones completadas del backend
+        const backendDate = sessionData.daily_quests_completed.date;
         const completedQuests = sessionData.daily_quests_completed.quests || [];
         
-        // Cargar misiones desde localStorage para obtener las no completadas
-        const localStorageQuests = loadQuestsFromLocalStorage();
+        console.log('📅 Fecha backend:', backendDate, '- Fecha hoy:', today);
+        console.log('📋 Misiones completadas en backend:', completedQuests.length);
         
-        // Combinar misiones: completadas del backend + no completadas del localStorage
-        const allQuests = [...localStorageQuests];
-        
-        // Marcar como completadas las que están en el backend
-        completedQuests.forEach((completedQuest: any) => {
-          const existingQuest = allQuests.find(q => q.id === completedQuest.id);
-          if (existingQuest) {
-            existingQuest.completed = true;
-            existingQuest.completedAt = completedQuest.completedAt;
-            existingQuest.progress = completedQuest.progress;
+        // Verificar si las misiones del backend son del día actual
+        if (backendDate === today) {
+          // Usar las misiones del backend como referencia principal
+          console.log('✅ Usando misiones del backend (mismo día)');
+          
+          // Filtrar solo las misiones completadas del día actual del backend
+          const todayCompletedQuests = completedQuests.filter((quest: any) => {
+            // Verificar que la quest fue completada hoy
+            if (quest.completedAt) {
+              const completedDate = new Date(quest.completedAt).toISOString().split('T')[0];
+              const isToday = completedDate === today;
+              
+              console.log(`🔍 Quest ${quest.id} (${quest.title}): completedAt=${quest.completedAt}, date=${completedDate}, isToday=${isToday}`);
+              
+              return isToday;
+            } else {
+              console.log(`⚠️ Quest ${quest.id} (${quest.title}): Sin completedAt, se excluye`);
+              return false;
+            }
+          });
+          
+          console.log('📋 Total misiones en backend:', completedQuests.length);
+          console.log('📋 Misiones completadas hoy (filtradas):', todayCompletedQuests.length);
+          console.log('📋 IDs de misiones de hoy:', todayCompletedQuests.map((q: any) => q.id));
+          
+          // En lugar de usar localStorage, generar solo las misiones faltantes para completar 3
+          const completedIds = new Set(todayCompletedQuests.map((q: any) => q.id));
+          const missingQuestsCount = Math.max(0, 3 - todayCompletedQuests.length);
+          
+          console.log('🔢 Misiones faltantes para completar 3:', missingQuestsCount);
+          
+          // Generar misiones faltantes con IDs únicos que no conflicten
+          const missingQuests: DailyQuest[] = [];
+          if (missingQuestsCount > 0) {
+            const questTemplates = [
+              {
+                type: 'kill_enemies',
+                titles: ['Cazador de Enemigos'],
+                descriptions: ['Elimina {target} enemigos'],
+                targets: [1], // Target muy bajo para demo
+                rewards: [2]
+              },
+              {
+                type: 'destroy_barrels',
+                titles: ['Demoledor'],
+                descriptions: ['Explota {target} barriles'],
+                targets: [1], // Target muy bajo para demo
+                rewards: [1]
+              },
+              {
+                type: 'use_bandages',
+                titles: ['Médico de Campo'],
+                descriptions: ['Aplica {target} vendajes'],
+                targets: [3], // Target bajo para demo
+                rewards: [1]
+              }
+            ];
+
+            // Generar IDs únicos basados en timestamp para evitar conflictos
+            const timestamp = Date.now();
+            for (let i = 0; i < missingQuestsCount; i++) {
+              const template = questTemplates[i % questTemplates.length];
+              const newId = `daily_${timestamp}_${i + 1}`;
+              
+              missingQuests.push({
+                id: newId,
+                title: template.titles[0],
+                description: template.descriptions[0].replace('{target}', template.targets[0].toString()),
+                type: template.type,
+                target: template.targets[0],
+                progress: 0,
+                reward: template.rewards[0],
+                completed: false
+              });
+              
+              console.log(`🆕 Generada misión faltante: ${newId} - ${template.titles[0]}`);
+            }
           }
-        });
-        
-        setDailyQuests(allQuests);
-        
-        // Calcular alimentos disponibles basado en misiones pendientes
-        const pendingQuests = allQuests.filter(q => !q.completed);
-        const totalAvailableFood = pendingQuests.reduce((sum, quest) => sum + quest.reward, 0);
-        setAvailableFood(totalAvailableFood);
-        
-        console.log('📊 Misiones cargadas del backend:', {
-          completed: completedQuests.length,
-          pending: pendingQuests.length,
-          availableFood: totalAvailableFood
-        });
+          
+          // Combinar misiones completadas del backend + misiones faltantes generadas
+          const combinedQuests: DailyQuest[] = [
+            // Misiones completadas del backend
+            ...todayCompletedQuests.map((backendQuest: any) => ({
+              id: backendQuest.id,
+              title: backendQuest.title,
+              description: backendQuest.description,
+              type: backendQuest.type,
+              target: backendQuest.target,
+              progress: backendQuest.progress || backendQuest.target,
+              reward: backendQuest.reward,
+              completed: true,
+              completedAt: backendQuest.completedAt
+            })),
+            // Misiones faltantes generadas
+            ...missingQuests
+          ];
+          
+          // Validar que todas las misiones sean del día actual antes de mostrarlas
+          const validatedQuests = validateQuestsAreToday(combinedQuests);
+          console.log('🔍 Misiones después de validación:', validatedQuests.length, '/', combinedQuests.length);
+          
+          setDailyQuests(validatedQuests);
+          
+          // Calcular alimentos disponibles basado en misiones pendientes
+          const pendingQuests = validatedQuests.filter(q => !q.completed);
+          const totalAvailableFood = pendingQuests.reduce((sum, quest) => sum + quest.reward, 0);
+          setAvailableFood(totalAvailableFood);
+          
+          console.log('📊 Estado final:', {
+            total: validatedQuests.length,
+            completed: validatedQuests.filter(q => q.completed).length,
+            pending: pendingQuests.length,
+            availableFood: totalAvailableFood
+          });
+          
+        } else {
+          // Las misiones del backend son de otro día, generar nuevas
+          console.log('📅 Misiones del backend son de otro día, generando nuevas');
+          const newQuests = generateNewQuests();
+          setDailyQuests(newQuests);
+          
+          const totalAvailableFood = newQuests.reduce((sum, quest) => sum + quest.reward, 0);
+          setAvailableFood(totalAvailableFood);
+        }
       } else {
-        // Si no hay datos del backend, usar localStorage
+        // No hay datos del backend, usar localStorage o generar nuevas
+        console.log('📅 No hay datos del backend, verificando localStorage');
         const localStorageQuests = loadQuestsFromLocalStorage();
         setDailyQuests(localStorageQuests);
         
@@ -93,7 +284,7 @@ export const DailyQuestsView: React.FC<DailyQuestsViewProps> = ({ userId, onClos
         setAvailableFood(totalAvailableFood);
       }
     } catch (error) {
-      console.error('Error loading quests from backend:', error);
+      console.error('❌ Error loading quests from backend:', error);
       // Fallback a localStorage
       const localStorageQuests = loadQuestsFromLocalStorage();
       setDailyQuests(localStorageQuests);
@@ -108,7 +299,7 @@ export const DailyQuestsView: React.FC<DailyQuestsViewProps> = ({ userId, onClos
 
   const loadQuestsFromLocalStorage = (): DailyQuest[] => {
     try {
-      const today = new Date().toDateString();
+      const today = getCurrentDateISO(); // Usar función utilitaria
       const storageKey = `dailyQuests_${userId}`;
       const stored = localStorage.getItem(storageKey);
       
@@ -261,7 +452,7 @@ export const DailyQuestsView: React.FC<DailyQuestsViewProps> = ({ userId, onClos
 
     // Guardar las nuevas misiones
     const questData = {
-      date: new Date().toDateString(),
+      date: getCurrentDateISO(), // Usar función utilitaria
       userId: userId,
       quests: newQuests
     };
@@ -315,11 +506,14 @@ export const DailyQuestsView: React.FC<DailyQuestsViewProps> = ({ userId, onClos
       setIsUpdating(true);
       console.log('🔄 Verificando nuevas misiones diarias...');
       
-      // Verificar si hay nuevas misiones disponibles
+      // Verificar si hay nuevas misiones disponibles usando el servicio mejorado
       const updateResult = await dailyQuestService.updateDailyQuests(userId);
       
       if (updateResult) {
         console.log('✅ Misiones diarias actualizadas, recargando...');
+        
+        // Importante: No limpiar questProgress aquí para no interferir con el juego
+        // Solo limpiar las dailyQuests que no interfieren con el progreso en tiempo real
         
         // Recargar las misiones después de la actualización
         await loadQuestsFromBackend();
@@ -327,7 +521,16 @@ export const DailyQuestsView: React.FC<DailyQuestsViewProps> = ({ userId, onClos
         alert('¡Misiones diarias actualizadas! Se han generado nuevas misiones.');
       } else {
         console.log('⏰ No hay nuevas misiones disponibles aún');
-        alert('No hay nuevas misiones disponibles. Las misiones se renuevan diariamente.');
+        
+        // Verificar si las misiones actuales del backend ya están sincronizadas
+        const sessionData = await gameSessionService.getUserGameSession(Number(userId));
+        if (sessionData?.daily_quests_completed?.date === getCurrentDateISO()) {
+          console.log('✅ Las misiones ya están actualizadas para hoy');
+          await loadQuestsFromBackend(); // Recargar para mostrar el estado actual
+          alert('Las misiones ya están actualizadas para el día de hoy.');
+        } else {
+          alert('No hay nuevas misiones disponibles. Las misiones se renuevan diariamente.');
+        }
       }
     } catch (error) {
       console.error('❌ Error actualizando misiones diarias:', error);

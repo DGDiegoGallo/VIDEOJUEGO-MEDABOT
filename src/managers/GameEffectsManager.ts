@@ -442,26 +442,19 @@ export class GameEffectsManager {
 
     // Actualizar configuración de balas
     if (this.bulletManager) {
-      // Combinar efectos del arma con los efectos de NFT/habilidades
+      // PRIMERO: Configurar el arma base
+      this.bulletManager.setWeapon(this.equippedWeapon.id);
+      
+      // SEGUNDO: Aplicar modificadores de NFTs/habilidades por encima del arma base
       const weaponBulletsPerShot = this.equippedWeapon.effects.bulletsPerShot || 1;
       const combinedBulletsPerShot = Math.max(weaponBulletsPerShot, this.currentStats.projectileCount);
       
-      console.log(`🔫 Updating BulletManager - Weapon: ${weaponBulletsPerShot}, NFT/Skills: ${this.currentStats.projectileCount}, Combined: ${combinedBulletsPerShot}`);
-      
+      // Aplicar los efectos combinados por encima de la configuración del arma
       this.bulletManager.updateConfig({
-        damage: this.equippedWeapon.effects.damage || this.currentStats.damage,
         bulletsPerShot: combinedBulletsPerShot,
-        fireRate: this.equippedWeapon.effects.fireRate || this.currentStats.fireRate,
-        speed: this.equippedWeapon.effects.bulletSpeed || this.currentStats.bulletSpeed,
-        lifetime: this.equippedWeapon.effects.bulletLifetime || this.currentStats.bulletLifetime
-      } as any);
-      
-      // Configurar el arma específicamente en el BulletManager
-      this.bulletManager.setWeapon(this.equippedWeapon.id);
-      
-      // Verificar que se aplicó correctamente
-      const currentBulletsPerShot = this.bulletManager.getBulletsPerShot();
-      console.log(`🔫 BulletManager bulletsPerShot after update: ${currentBulletsPerShot}`);
+        speed: this.currentStats.bulletSpeed,
+        lifetime: this.currentStats.bulletLifetime
+      });
     }
 
     // Actualizar configuración de experiencia

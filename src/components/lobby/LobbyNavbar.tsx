@@ -24,7 +24,7 @@ export const LobbyNavbar: React.FC<Props> = ({ onSectionChange, activeSection, m
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    // La función logout ahora maneja la redirección automáticamente
   };
 
   const navItems: { id: LobbySection | 'logout'; icon: React.ReactNode; label: string; action?: () => void }[] = [

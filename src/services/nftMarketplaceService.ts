@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { API_CONFIG } from '../config/api';
+// Importar datos demo del JSON
+import marketplaceNFTData from '../../docs/marketplace-nft-data.json';
 
 const API_URL = API_CONFIG.STRAPI_URL;
 
@@ -31,6 +33,24 @@ class NFTMarketplaceService {
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` })
     };
+  }
+
+  /**
+   * Buscar NFT en datos demo por token_id
+   */
+  private findDemoNFTByTokenId(tokenId: string): any | null {
+    return marketplaceNFTData.data.find(nft => nft.token_id === tokenId) || null;
+  }
+
+  /**
+   * Buscar NFT en datos demo por documentId (usando token_id como fallback)
+   */
+  private findDemoNFTByDocumentId(documentId: string): any | null {
+    // Primero buscar por token_id ya que los datos demo usan token_id como identificador
+    return marketplaceNFTData.data.find(nft => 
+      nft.token_id === documentId || 
+      nft.token_id.toLowerCase().includes(documentId.toLowerCase())
+    ) || null;
   }
 
   /**
@@ -140,11 +160,40 @@ class NFTMarketplaceService {
         { headers: this.getAuthHeaders() }
       );
 
-      if (!marketplaceNFTResponse.data.data || marketplaceNFTResponse.data.data.length === 0) {
-        throw new Error('NFT no encontrado en el marketplace');
-      }
+      let marketplaceNFT = null;
+      let isDemoNFT = false;
 
-      const marketplaceNFT = marketplaceNFTResponse.data.data[0];
+      if (!marketplaceNFTResponse.data.data || marketplaceNFTResponse.data.data.length === 0) {
+        // Si no se encuentra en la base de datos, buscar en datos demo
+        console.log('🔍 NFT no encontrado en la base de datos, buscando en datos demo...');
+        const demoNFT = this.findDemoNFTByDocumentId(request.nftDocumentId);
+        
+        if (demoNFT) {
+          console.log('✅ NFT encontrado en datos demo:', demoNFT.metadata.name);
+          
+          // Convertir datos demo al formato esperado
+          marketplaceNFT = {
+            id: `demo_${demoNFT.token_id}`,
+            documentId: request.nftDocumentId,
+            token_id: demoNFT.token_id,
+            contract_address: demoNFT.contract_address,
+            token_uri: demoNFT.token_uri,
+            metadata: demoNFT.metadata,
+            network: demoNFT.network,
+            owner_address: demoNFT.owner_address,
+            is_listed_for_sale: demoNFT.is_listed_for_sale,
+            listing_price_eth: demoNFT.listing_price_eth,
+            listing_price_usdt: demoNFT.listing_price_usdt,
+            minted_at: demoNFT.minted_at,
+            last_transfer_at: demoNFT.last_transfer_at
+          };
+          isDemoNFT = true;
+        } else {
+          throw new Error('NFT no encontrado en el marketplace ni en datos demo');
+      }
+      } else {
+        marketplaceNFT = marketplaceNFTResponse.data.data[0];
+      }
       console.log('✅ NFT encontrado en marketplace:', marketplaceNFT.metadata?.name);
       console.log('🆔 Document ID del NFT en marketplace:', marketplaceNFT.documentId);
 
@@ -161,13 +210,17 @@ class NFTMarketplaceService {
       const buyerWallet = buyerWalletResponse.data.data[0];
       console.log('✅ Wallet del comprador encontrada:', buyerWallet.wallet_address);
 
-      // 3. Eliminar el NFT del marketplace usando documentId
+      // 3. Eliminar el NFT del marketplace usando documentId (solo si no es un NFT demo)
+      if (!isDemoNFT) {
       const deleteUrl = `${this.baseURL}${API_CONFIG.ENDPOINTS.BLOCKCHAIN.NFT_MARKETPLACE}/${marketplaceNFT.documentId}`;
       console.log('🗑️ URL para eliminar NFT del marketplace:', deleteUrl);
       
       const deleteResponse = await axios.delete(deleteUrl, { headers: this.getAuthHeaders() });
       console.log('🗑️ Respuesta de eliminación del marketplace:', deleteResponse.status, deleteResponse.data);
       console.log('✅ NFT eliminado del marketplace');
+      } else {
+        console.log('ℹ️ NFT demo - no se elimina del marketplace ya que es datos de demostración');
+      }
 
       // 4. Crear el NFT en la colección del comprador (user-nfts)
       const buyerNFTData = {
@@ -211,7 +264,7 @@ class NFTMarketplaceService {
       return {
         success: true,
         data: buyerNFT,
-        message: `NFT "${marketplaceNFT.metadata?.name}" comprado exitosamente`
+        message: `NFT "${marketplaceNFT.metadata?.name}" comprado exitosamente${isDemoNFT ? ' (Demo)' : ''}`
       };
 
     } catch (error) {
@@ -233,32 +286,102 @@ class NFTMarketplaceService {
     try {
       console.log('🔍 Obteniendo NFTs del marketplace...');
 
+      let allNFTs = [];
+
+      // 1. Obtener NFTs de la base de datos
+      try {
       const response = await axios.get(
         `${this.baseURL}${API_CONFIG.ENDPOINTS.BLOCKCHAIN.NFT_MARKETPLACE}?filters[is_listed_for_sale][$eq]=True&populate=*&pagination[page]=${page}&pagination[pageSize]=${pageSize}&sort[0]=createdAt:desc`,
         { headers: this.getAuthHeaders() }
       );
 
-      const nfts = response.data.data || [];
-      const pagination = response.data.meta?.pagination;
+        const dbNFTs = response.data.data || [];
+        allNFTs.push(...dbNFTs.map((nft: any) => ({
+          ...nft,
+          source: 'database'
+        })));
+        
+        console.log(`✅ ${dbNFTs.length} NFTs encontrados en la base de datos`);
+      } catch (dbError) {
+        console.log('⚠️ Error obteniendo NFTs de la base de datos:', dbError);
+      }
 
-      console.log(`✅ ${nfts.length} NFTs encontrados en el marketplace`);
+      // 2. Agregar NFTs demo con estructura compatible
+      const demoNFTs = marketplaceNFTData.data.map((demoNFT, index) => ({
+        id: `demo_${demoNFT.token_id}`,
+        documentId: demoNFT.token_id, // Usar token_id como documentId para los demos
+        createdAt: demoNFT.minted_at,
+        updatedAt: demoNFT.last_transfer_at,
+        publishedAt: demoNFT.minted_at,
+        token_id: demoNFT.token_id,
+        contract_address: demoNFT.contract_address,
+        token_uri: demoNFT.token_uri,
+        metadata: demoNFT.metadata,
+        network: demoNFT.network,
+        owner_address: demoNFT.owner_address,
+        is_listed_for_sale: demoNFT.is_listed_for_sale,
+        listing_price_eth: demoNFT.listing_price_eth,
+        listing_price_usdt: demoNFT.listing_price_usdt,
+        minted_at: demoNFT.minted_at,
+        last_transfer_at: demoNFT.last_transfer_at,
+        source: 'demo'
+      }));
+
+      allNFTs.push(...demoNFTs);
+      console.log(`✅ ${demoNFTs.length} NFTs demo agregados`);
+
+      console.log(`🎯 Total NFTs disponibles: ${allNFTs.length}`);
+
+      // 3. Aplicar paginación manual para todos los NFTs
+      const startIndex = (page - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const paginatedNFTs = allNFTs.slice(startIndex, endIndex);
+
+      const totalPages = Math.ceil(allNFTs.length / pageSize);
 
       return {
         success: true,
         data: {
-          nfts,
-          pagination
+          nfts: paginatedNFTs,
+          pagination: {
+            page,
+            pageSize,
+            pageCount: totalPages,
+            total: allNFTs.length
+          }
         }
       };
 
     } catch (error) {
       console.error('❌ Error obteniendo NFTs del marketplace:', error);
+      
+      // En caso de error, retornar al menos los NFTs demo
+      const demoNFTs = marketplaceNFTData.data.map((demoNFT) => ({
+        id: `demo_${demoNFT.token_id}`,
+        documentId: demoNFT.token_id,
+        createdAt: demoNFT.minted_at,
+        updatedAt: demoNFT.last_transfer_at,
+        publishedAt: demoNFT.minted_at,
+        token_id: demoNFT.token_id,
+        contract_address: demoNFT.contract_address,
+        token_uri: demoNFT.token_uri,
+        metadata: demoNFT.metadata,
+        network: demoNFT.network,
+        owner_address: demoNFT.owner_address,
+        is_listed_for_sale: demoNFT.is_listed_for_sale,
+        listing_price_eth: demoNFT.listing_price_eth,
+        listing_price_usdt: demoNFT.listing_price_usdt,
+        minted_at: demoNFT.minted_at,
+        last_transfer_at: demoNFT.last_transfer_at,
+        source: 'demo'
+      }));
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error obteniendo NFTs del marketplace',
         data: {
-          nfts: [],
-          pagination: { page: 1, pageSize, pageCount: 1, total: 0 }
+          nfts: demoNFTs,
+          pagination: { page: 1, pageSize: demoNFTs.length, pageCount: 1, total: demoNFTs.length }
         }
       };
     }

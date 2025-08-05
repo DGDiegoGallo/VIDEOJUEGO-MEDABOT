@@ -68,18 +68,58 @@ export const WeaponArsenal: React.FC<WeaponArsenalProps> = ({
   };
 
   if (compact) {
+    // Mostrar solo el arma equipada
+    const equippedWeapon = guns.find(gun => equippedWeapons.includes(gun.id));
+    
+    if (!equippedWeapon) {
+      return (
+        <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 border border-gray-700 rounded-xl p-4 backdrop-blur-sm">
+          <h4 className="text-lg font-bold text-white mb-3">Arsenal Cargado</h4>
+          <div className="text-center text-gray-400">
+            <FaShieldAlt className="text-3xl mx-auto mb-2 opacity-50" />
+            <div className="text-sm">Sin arma equipada</div>
+          </div>
+        </div>
+      );
+    }
+
+    // Obtener descripción simple del arma equipada
+    const getWeaponDescription = (weaponId: string) => {
+      switch (weaponId) {
+        case 'pistol_default':
+          return 'Arma básica confiable para supervivencia';
+        case 'improved_machinegun':
+          return 'Arma automática con mayor cadencia de fuego y daño mejorado';
+        case 'grenade_launcher':
+          return 'Arma explosiva para daño en área masivo';
+        case 'laser_rifle':
+          return 'Arma de energía de alta precisión y daño crítico';
+        default:
+          return 'Arma de combate';
+      }
+    };
+
     return (
       <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 border border-gray-700 rounded-xl p-4 backdrop-blur-sm">
         <h4 className="text-lg font-bold text-white mb-3">Arsenal Cargado</h4>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-orange-100 mb-1">
-            {guns.length}
+        
+        <div className="flex items-center space-x-3 mb-3">
+          <div className={getRarityColor(equippedWeapon.rarity)}>
+            {getWeaponIcon(equippedWeapon.id)}
           </div>
-          <div className="text-orange-400 text-sm">
-            {guns.length === 0 ? 'Sin armas' : 
-             guns.length === 1 ? '1 arma disponible' : 
-             `${guns.length} armas disponibles`}
+          <div className="flex-1">
+            <h5 className={`font-bold ${getRarityColor(equippedWeapon.rarity)}`}>
+              {equippedWeapon.name}
+            </h5>
+            <p className="text-xs text-gray-400 uppercase">
+              {equippedWeapon.rarity}
+            </p>
           </div>
+          <FaCheckCircle className="text-green-400" />
+        </div>
+        
+        <div className="text-sm text-gray-300 leading-relaxed">
+          {getWeaponDescription(equippedWeapon.id)}
         </div>
       </div>
     );

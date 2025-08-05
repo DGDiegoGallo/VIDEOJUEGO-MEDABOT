@@ -22,16 +22,20 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, loading, e
     e.preventDefault();
     if (error) onClearError();
 
-    if (!username.trim() || !email.trim() || !password || password !== confirm) return;
+    // Validar que todos los campos obligatorios estén completos
+    if (!username.trim() || !email.trim() || !password || password !== confirm || 
+        !nombre.trim() || !apellido.trim() || !fechaNacimiento || !documentoID.trim()) {
+      return;
+    }
 
     await onSubmit({ 
       username: username.trim(), 
       email: email.trim(), 
       password,
-      nombre: nombre.trim() || undefined,
-      apellido: apellido.trim() || undefined,
-      fechaNacimiento: fechaNacimiento || undefined,
-      documentoID: documentoID.trim() || undefined
+      nombre: nombre.trim(),
+      apellido: apellido.trim(),
+      fechaNacimiento: fechaNacimiento,
+      documentoID: documentoID.trim()
     });
   };
 
@@ -82,7 +86,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, loading, e
           {/* Nombre */}
           <div>
             <label htmlFor="nombre" className="block text-sm font-medium text-gray-300 mb-2">
-              Nombre (opcional)
+              Nombre
             </label>
             <input
               type="text"
@@ -91,6 +95,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, loading, e
               onChange={(e) => setNombre(e.target.value)}
               className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Tu nombre"
+              required
               disabled={loading}
             />
           </div>
@@ -98,7 +103,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, loading, e
           {/* Apellido */}
           <div>
             <label htmlFor="apellido" className="block text-sm font-medium text-gray-300 mb-2">
-              Apellido (opcional)
+              Apellido
             </label>
             <input
               type="text"
@@ -107,6 +112,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, loading, e
               onChange={(e) => setApellido(e.target.value)}
               className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Tu apellido"
+              required
               disabled={loading}
             />
           </div>
@@ -114,7 +120,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, loading, e
           {/* Fecha de Nacimiento */}
           <div>
             <label htmlFor="fechaNacimiento" className="block text-sm font-medium text-gray-300 mb-2">
-              Fecha de Nacimiento (opcional)
+              Fecha de Nacimiento
             </label>
             <input
               type="date"
@@ -122,6 +128,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, loading, e
               value={fechaNacimiento}
               onChange={(e) => setFechaNacimiento(e.target.value)}
               className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
               disabled={loading}
             />
           </div>
@@ -129,7 +136,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, loading, e
           {/* Documento ID */}
           <div>
             <label htmlFor="documentoID" className="block text-sm font-medium text-gray-300 mb-2">
-              Documento de Identidad (opcional)
+              Documento de Identidad
             </label>
             <input
               type="text"
@@ -138,6 +145,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, loading, e
               onChange={(e) => setDocumentoID(e.target.value)}
               className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Número de documento"
+              required
               disabled={loading}
             />
           </div>
@@ -193,7 +201,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, loading, e
               !username.trim() ||
               !email.trim() ||
               !password ||
-              !passwordsMatch
+              !passwordsMatch ||
+              !nombre.trim() ||
+              !apellido.trim() ||
+              !fechaNacimiento ||
+              !documentoID.trim()
             }
             className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
           >

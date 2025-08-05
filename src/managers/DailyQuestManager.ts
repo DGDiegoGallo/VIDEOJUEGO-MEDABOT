@@ -128,14 +128,35 @@ export class DailyQuestManager {
    */
   private generateDailyQuests(): void {
     const questTemplates = [
+      // Coincidir con session_stats.barrels_destroyed_total
       { id: 'quest_1', title: 'Demoledor', description: 'Explota 1 barriles', type: 'destroy_barrels', target: 1, reward: 1 },
-      { id: 'quest_2', title: 'Cazador de Enemigos', description: 'Elimina 10 enemigos', type: 'kill_enemies', target: 10, reward: 2 },
-      { id: 'quest_3', title: 'Exterminio de Zombies', description: 'Elimina 5 zombies', type: 'kill_zombies', target: 5, reward: 1 },
-      { id: 'quest_4', title: 'Cazador de Dashers', description: 'Elimina 3 dashers', type: 'kill_dashers', target: 3, reward: 2 },
-      { id: 'quest_5', title: 'Guerrero Anti-Tanque', description: 'Elimina 2 tanques', type: 'kill_tanks', target: 2, reward: 3 },
+      
+      // Coincidir con session_stats.enemies_defeated  
+      { id: 'quest_2', title: 'Cazador de Enemigos', description: 'Elimina 1 enemigos', type: 'kill_enemies', target: 1, reward: 2 },
+      
+      // Coincidir con session_stats.zombies_killed
+      { id: 'quest_3', title: 'Exterminador de No-Muertos', description: 'Elimina 1 zombies', type: 'kill_zombies', target: 1, reward: 1 },
+      
+      // Coincidir con session_stats.dashers_killed
+      { id: 'quest_4', title: 'Cazador de Velocistas', description: 'Derrota 1 dashers', type: 'kill_dashers', target: 1, reward: 3 },
+      
+      // Coincidir con session_stats.tanks_killed
+      { id: 'quest_5', title: 'Guerrero Anti-Tanque', description: 'Elimina 1 tanques', type: 'kill_tanks', target: 1, reward: 3 },
+      
+      // Coincidir con session_stats.bandages_used_total
       { id: 'quest_6', title: 'Curador', description: 'Usa 1 vendajes', type: 'use_bandages', target: 1, reward: 1 },
-      { id: 'quest_7', title: 'Recolector', description: 'Recolecta 3 cajas de suministros', type: 'collect_boxes', target: 3, reward: 2 },
-      { id: 'quest_8', title: 'Superviviente', description: 'Sobrevive por 120 segundos', type: 'survive_time', target: 120, reward: 3 }
+      
+      // Coincidir con session_stats.supply_boxes_total
+      { id: 'quest_7', title: 'Recolector', description: 'Recolecta 1 cajas de suministros', type: 'collect_boxes', target: 1, reward: 2 },
+      
+      // Coincidir con session_stats.survival_time_total (en segundos)
+      { id: 'quest_8', title: 'Superviviente', description: 'Sobrevive por 30 segundos', type: 'survive_time', target: 30, reward: 3 },
+      
+      // Coincidir con session_stats.level_reached
+      { id: 'quest_9', title: 'Ascenso de Poder', description: 'Alcanza el nivel 2', type: 'reach_level', target: 2, reward: 2 },
+      
+      // Coincidir con session_stats.levels_gained_total
+      { id: 'quest_10', title: 'Evolución Constante', description: 'Gana 1 niveles', type: 'gain_levels', target: 1, reward: 2 }
     ];
 
     // Seleccionar 3 misiones aleatorias
@@ -330,7 +351,7 @@ export class DailyQuestManager {
 
       let currentProgress = 0;
 
-      // Usar los datos del questProgress para verificar el progreso
+      // Usar los datos del questProgress local para verificar el progreso
       switch (quest.type) {
         case 'destroy_barrels':
           currentProgress = this.questProgress.barrelsDestroyed;
@@ -422,10 +443,23 @@ export class DailyQuestManager {
    */
   private saveQuests(): void {
     try {
+      // Crear una copia limpia de las misiones sin referencias circulares
+      const cleanQuests = this.dailyQuests.map(quest => ({
+        id: quest.id,
+        title: quest.title,
+        description: quest.description,
+        type: quest.type,
+        target: quest.target,
+        progress: quest.progress,
+        reward: quest.reward,
+        completed: quest.completed,
+        completedAt: quest.completedAt
+      }));
+
       const questData: StoredQuests = {
         userId: this.userId,
         date: new Date().toISOString().split('T')[0],
-        quests: this.dailyQuests
+        quests: cleanQuests
       };
       
       localStorage.setItem(`dailyQuests_${this.userId}`, JSON.stringify(questData));
@@ -851,7 +885,98 @@ export class DailyQuestManager {
     };
   }
 
-
+  /**
+   * Sincroniza el progreso local con session_stats del backend
+   * @param sessionStats - Estadísticas de la sesión del backend
+   */
+  public syncWithBackendStats(sessionStats: any): void {
+    if (!sessionStats) return;
+    
+    console.log('🔄 Sincronizando progreso con session_stats del backend:', sessionStats);
+    
+    // Actualizar questProgress con datos del backend
+    if (sessionStats.enemies_defeated !== undefined) {
+      this.questProgress.enemiesKilled = Math.max(this.questProgress.enemiesKilled, sessionStats.enemies_defeated);
+    }
+    
+    if (sessionStats.zombies_killed !== undefined) {
+      this.questProgress.zombiesKilled = Math.max(this.questProgress.zombiesKilled, sessionStats.zombies_killed);
+    }
+    
+    if (sessionStats.dashers_killed !== undefined) {
+      this.questProgress.dashersKilled = Math.max(this.questProgress.dashersKilled, sessionStats.dashers_killed);
+    }
+    
+    if (sessionStats.tanks_killed !== undefined) {
+      this.questProgress.tanksKilled = Math.max(this.questProgress.tanksKilled, sessionStats.tanks_killed);
+    }
+    
+    if (sessionStats.barrels_destroyed_total !== undefined) {
+      this.questProgress.barrelsDestroyed = Math.max(this.questProgress.barrelsDestroyed, sessionStats.barrels_destroyed_total);
+    }
+    
+    if (sessionStats.supply_boxes_total !== undefined) {
+      this.questProgress.supplyBoxesCollected = Math.max(this.questProgress.supplyBoxesCollected, sessionStats.supply_boxes_total);
+    }
+    
+    if (sessionStats.bandages_used_total !== undefined) {
+      this.questProgress.bandagesUsed = Math.max(this.questProgress.bandagesUsed, sessionStats.bandages_used_total);
+    }
+    
+    if (sessionStats.survival_time_total !== undefined) {
+      this.questProgress.survivalTime = Math.max(this.questProgress.survivalTime, sessionStats.survival_time_total);
+    }
+    
+    if (sessionStats.level_reached !== undefined) {
+      this.questProgress.currentLevel = Math.max(this.questProgress.currentLevel, sessionStats.level_reached);
+    }
+    
+    if (sessionStats.levels_gained_total !== undefined) {
+      this.questProgress.levelsGained = Math.max(this.questProgress.levelsGained, sessionStats.levels_gained_total);
+    }
+    
+    // Sincronizar otras estadísticas
+    if (sessionStats.total_damage_dealt !== undefined) {
+      this.questProgress.totalDamageDealt = Math.max(this.questProgress.totalDamageDealt, sessionStats.total_damage_dealt);
+    }
+    
+    if (sessionStats.total_damage_received !== undefined) {
+      this.questProgress.totalDamageReceived = Math.max(this.questProgress.totalDamageReceived, sessionStats.total_damage_received);
+    }
+    
+    if (sessionStats.shots_fired !== undefined) {
+      this.questProgress.shotsFired = Math.max(this.questProgress.shotsFired, sessionStats.shots_fired);
+    }
+    
+    if (sessionStats.shots_hit !== undefined) {
+      this.questProgress.shotsHit = Math.max(this.questProgress.shotsHit, sessionStats.shots_hit);
+    }
+    
+    if (sessionStats.accuracy_percentage !== undefined) {
+      this.questProgress.accuracyPercentage = sessionStats.accuracy_percentage;
+    }
+    
+    if (sessionStats.final_score !== undefined) {
+      this.questProgress.finalScore = Math.max(this.questProgress.finalScore, sessionStats.final_score);
+    }
+    
+    if (sessionStats.games_played_total !== undefined) {
+      this.questProgress.gamesPlayedTotal = Math.max(this.questProgress.gamesPlayedTotal, sessionStats.games_played_total);
+    }
+    
+    if (sessionStats.victories_total !== undefined) {
+      this.questProgress.victoriesTotal = Math.max(this.questProgress.victoriesTotal, sessionStats.victories_total);
+    }
+    
+    if (sessionStats.defeats_total !== undefined) {
+      this.questProgress.defeatsTotal = Math.max(this.questProgress.defeatsTotal, sessionStats.defeats_total);
+    }
+    
+    // Guardar el progreso actualizado
+    this.saveQuestProgress();
+    
+    console.log('✅ Progreso sincronizado con backend');
+  }
 
   /**
    * Destruye el manager y limpia recursos

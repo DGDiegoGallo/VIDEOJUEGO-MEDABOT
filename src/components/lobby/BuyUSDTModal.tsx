@@ -36,7 +36,7 @@ export const BuyUSDTModal: React.FC<BuyUSDTModalProps> = ({ isOpen, onClose, onS
   const { user } = useAuthStore();
   const [step, setStep] = useState<'amount' | 'payment' | 'processing' | 'success' | 'error'>('amount');
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkOption>(NETWORKS[0]);
-  const [amount, setAmount] = useState(100);
+  const [amount, setAmount] = useState(NETWORKS[0].minAmount); // Usar el valor mínimo como inicial
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [usdtPrice] = useState(1.00); // Precio fijo de USDT
@@ -72,8 +72,19 @@ export const BuyUSDTModal: React.FC<BuyUSDTModalProps> = ({ isOpen, onClose, onS
     }
   }, [isOpen, checkWindowClosedInterval, paymentTimeout]);
 
+  // Actualizar monto cuando cambie la red seleccionada
+  useEffect(() => {
+    // Solo ajustar si el monto actual está fuera de los límites de la nueva red
+    if (amount < selectedNetwork.minAmount) {
+      setAmount(selectedNetwork.minAmount);
+    } else if (amount > selectedNetwork.maxAmount) {
+      setAmount(selectedNetwork.maxAmount);
+    }
+  }, [selectedNetwork]); // Remover 'amount' de las dependencias para evitar bucle infinito
+
   const handleAmountChange = (value: number) => {
-    setAmount(Math.max(selectedNetwork.minAmount, Math.min(selectedNetwork.maxAmount, value)));
+    // Permitir escribir cualquier número, sin restricciones en tiempo real
+    setAmount(value);
   };
 
   const handleCancelPayment = () => {
@@ -113,9 +124,31 @@ export const BuyUSDTModal: React.FC<BuyUSDTModalProps> = ({ isOpen, onClose, onS
     return amount + networkFee + stripeFee;
   };
 
+  // Validar si el monto es válido
+  const isAmountValid = () => {
+    return amount >= selectedNetwork.minAmount && amount <= selectedNetwork.maxAmount;
+  };
+
+  // Obtener mensaje de error si el monto no es válido
+  const getAmountError = () => {
+    if (amount < selectedNetwork.minAmount) {
+      return `El monto mínimo es $${selectedNetwork.minAmount}`;
+    }
+    if (amount > selectedNetwork.maxAmount) {
+      return `El monto máximo es $${selectedNetwork.maxAmount}`;
+    }
+    return null;
+  };
+
   const handleBuyUSDT = async () => {
     if (!user) {
       setError('Usuario no autenticado');
+      return;
+    }
+
+    // Validar que el monto esté dentro de los límites
+    if (!isAmountValid()) {
+      setError(getAmountError() || 'Monto inválido');
       return;
     }
 
@@ -350,10 +383,10 @@ export const BuyUSDTModal: React.FC<BuyUSDTModalProps> = ({ isOpen, onClose, onS
                     type="number"
                     value={amount}
                     onChange={(e) => handleAmountChange(Number(e.target.value))}
-                    className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white text-lg focus:outline-none focus:border-blue-500"
-                    placeholder="100"
-                    min={selectedNetwork.minAmount}
-                    max={selectedNetwork.maxAmount}
+                    className={`w-full bg-gray-800 border rounded-lg px-4 py-3 text-white text-lg focus:outline-none focus:border-blue-500 ${
+                      !isAmountValid() ? 'border-red-500' : 'border-gray-600'
+                    }`}
+                    placeholder={selectedNetwork.minAmount.toString()}
                   />
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                     USDT
@@ -363,6 +396,12 @@ export const BuyUSDTModal: React.FC<BuyUSDTModalProps> = ({ isOpen, onClose, onS
                   <span>Mín: ${selectedNetwork.minAmount}</span>
                   <span>Máx: ${selectedNetwork.maxAmount}</span>
                 </div>
+                {getAmountError() && (
+                  <div className="mt-2 text-red-400 text-sm flex items-center">
+                    <FaInfoCircle className="mr-1" />
+                    {getAmountError()}
+                  </div>
+                )}
               </div>
 
               {/* Network Selection */}
@@ -423,7 +462,7 @@ export const BuyUSDTModal: React.FC<BuyUSDTModalProps> = ({ isOpen, onClose, onS
               {/* Buy Button */}
               <button
                 onClick={handleBuyUSDT}
-                disabled={isLoading}
+                disabled={isLoading || !isAmountValid()}
                 className="w-full btn-gradient text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (

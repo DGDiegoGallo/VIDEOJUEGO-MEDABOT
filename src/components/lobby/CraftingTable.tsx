@@ -41,6 +41,7 @@ interface CraftingTableProps {
     food: number;
   };
   onCraft?: (recipeId: string) => void;
+  onCraftSuccess?: () => void; // Nuevo callback para actualizar datos
   equippedWeapons?: string[];
   onWeaponEquip?: (weaponId: string) => void;
 }
@@ -111,6 +112,7 @@ const CRAFTING_RECIPES: CraftingRecipe[] = [
 export const CraftingTable: React.FC<CraftingTableProps> = ({ 
   materials, 
   onCraft,
+  onCraftSuccess,
   equippedWeapons = [],
   onWeaponEquip
 }) => {
@@ -118,10 +120,16 @@ export const CraftingTable: React.FC<CraftingTableProps> = ({
   const [isEquipping, setIsEquipping] = useState<string | null>(null);
   const [isCrafting, setIsCrafting] = useState<string | null>(null);
   const [craftedWeapons, setCraftedWeapons] = useState<string[]>([]);
+  const [localMaterials, setLocalMaterials] = useState(materials); // Estado local para materiales
   const { user } = useAuthStore();
   const userId = user ? parseInt(user.id) : 0;
   const { sessions } = useGameSessionData(userId);
   const activeSession = sessions.length > 0 ? sessions[0] : null;
+
+  // Actualizar materiales locales cuando cambien los materiales del prop
+  useEffect(() => {
+    setLocalMaterials(materials);
+  }, [materials]);
 
   // Cargar armas ya creadas al montar el componente
   useEffect(() => {
@@ -134,16 +142,16 @@ export const CraftingTable: React.FC<CraftingTableProps> = ({
 
   const canCraft = (recipe: CraftingRecipe): boolean => {
     return (
-      materials.steel >= recipe.materials.steel &&
-      materials.energy_cells >= recipe.materials.energy_cells &&
-      materials.medicine >= recipe.materials.medicine &&
-      materials.food >= recipe.materials.food &&
-      materials.food >= recipe.food_requirement
+      localMaterials.steel >= recipe.materials.steel &&
+      localMaterials.energy_cells >= recipe.materials.energy_cells &&
+      localMaterials.medicine >= recipe.materials.medicine &&
+      localMaterials.food >= recipe.materials.food &&
+      localMaterials.food >= recipe.food_requirement
     );
   };
 
   const isUnlocked = (recipe: CraftingRecipe): boolean => {
-    return materials.food >= recipe.food_requirement;
+    return localMaterials.food >= recipe.food_requirement;
   };
 
   const getRarityColor = (rarity: string) => {
@@ -206,8 +214,57 @@ export const CraftingTable: React.FC<CraftingTableProps> = ({
         // Actualizar estado local
         setCraftedWeapons(prev => [...prev, recipeId]);
         
+        // Notificar éxito para actualizar datos
+        if (onCraftSuccess) {
+          onCraftSuccess();
+        }
+        
       } catch (error) {
         console.error('❌ Error creando arma:', error);
+      } finally {
+        setIsCrafting(null);
+      }
+    }
+    
+    // Si es un vendaje, agregarlo al inventario
+    if (recipe.type === 'consumable' && recipeId === 'bandage') {
+      setIsCrafting(recipeId);
+
+      try {
+        console.log('🩹 Creando vendaje...');
+        
+        // Actualización optimista: restar materiales localmente ANTES de la llamada al backend
+        setLocalMaterials(prev => ({
+          steel: prev.steel - recipe.materials.steel,
+          energy_cells: prev.energy_cells - recipe.materials.energy_cells,
+          medicine: prev.medicine - recipe.materials.medicine,
+          food: prev.food - recipe.materials.food
+        }));
+        
+        // Restar materiales y agregar vendaje
+        await gameSessionService.craftBandage({
+          sessionId: activeSession.documentId,
+          materialsUsed: {
+            steel: recipe.materials.steel,
+            energy_cells: recipe.materials.energy_cells,
+            medicine: recipe.materials.medicine,
+            food: recipe.materials.food
+          }
+        });
+
+        console.log('✅ Vendaje creado exitosamente');
+        
+        // Notificar éxito para actualizar datos
+        if (onCraftSuccess) {
+          onCraftSuccess();
+        }
+        
+      } catch (error) {
+        console.error('❌ Error creando vendaje:', error);
+        
+        // Si falla, revertir la actualización optimista
+        setLocalMaterials(materials);
+        
       } finally {
         setIsCrafting(null);
       }
@@ -267,19 +324,19 @@ export const CraftingTable: React.FC<CraftingTableProps> = ({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="flex items-center space-x-2 bg-blue-900/30 rounded-lg p-2">
             <GiSteelClaws className="text-blue-400" />
-            <span className="text-blue-300 text-sm">Acero: {materials.steel}</span>
+            <span className="text-blue-300 text-sm">Acero: {localMaterials.steel}</span>
           </div>
           <div className="flex items-center space-x-2 bg-yellow-900/30 rounded-lg p-2">
             <FaBolt className="text-yellow-400" />
-            <span className="text-yellow-300 text-sm">Energía: {materials.energy_cells}</span>
+            <span className="text-yellow-300 text-sm">Energía: {localMaterials.energy_cells}</span>
           </div>
           <div className="flex items-center space-x-2 bg-red-900/30 rounded-lg p-2">
             <FaHeart className="text-red-400" />
-            <span className="text-red-300 text-sm">Medicina: {materials.medicine}</span>
+            <span className="text-red-300 text-sm">Medicina: {localMaterials.medicine}</span>
           </div>
           <div className="flex items-center space-x-2 bg-green-900/30 rounded-lg p-2">
             <FaAppleAlt className="text-green-400" />
-            <span className="text-green-300 text-sm">Comida: {materials.food}</span>
+            <span className="text-green-300 text-sm">Comida: {localMaterials.food}</span>
           </div>
         </div>
       </div>
@@ -328,7 +385,7 @@ export const CraftingTable: React.FC<CraftingTableProps> = ({
               {/* Requisitos */}
               <div className="space-y-2 mb-4">
                 <div className="text-xs text-gray-400">
-                  Requisitos de comida: {recipe.food_requirement} (Tienes: {materials.food})
+                  Requisitos de comida: {recipe.food_requirement} (Tienes: {localMaterials.food})
                 </div>
                 
                 {unlocked && (
@@ -336,24 +393,24 @@ export const CraftingTable: React.FC<CraftingTableProps> = ({
                     {recipe.materials.steel > 0 && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-300">Acero:</span>
-                        <span className={materials.steel >= recipe.materials.steel ? 'text-green-400' : 'text-red-400'}>
-                          {materials.steel}/{recipe.materials.steel}
+                        <span className={localMaterials.steel >= recipe.materials.steel ? 'text-green-400' : 'text-red-400'}>
+                          {localMaterials.steel}/{recipe.materials.steel}
                         </span>
                       </div>
                     )}
                     {recipe.materials.energy_cells > 0 && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-300">Energía:</span>
-                        <span className={materials.energy_cells >= recipe.materials.energy_cells ? 'text-green-400' : 'text-red-400'}>
-                          {materials.energy_cells}/{recipe.materials.energy_cells}
+                        <span className={localMaterials.energy_cells >= recipe.materials.energy_cells ? 'text-green-400' : 'text-red-400'}>
+                          {localMaterials.energy_cells}/{recipe.materials.energy_cells}
                         </span>
                       </div>
                     )}
                     {recipe.materials.medicine > 0 && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-300">Medicina:</span>
-                        <span className={materials.medicine >= recipe.materials.medicine ? 'text-green-400' : 'text-red-400'}>
-                          {materials.medicine}/{recipe.materials.medicine}
+                        <span className={localMaterials.medicine >= recipe.materials.medicine ? 'text-green-400' : 'text-red-400'}>
+                          {localMaterials.medicine}/{recipe.materials.medicine}
                         </span>
                       </div>
                     )}

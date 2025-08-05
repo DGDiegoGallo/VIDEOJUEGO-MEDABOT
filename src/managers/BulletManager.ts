@@ -50,7 +50,7 @@ export class BulletManager {
   }
 
   /**
-   * Dispara balas hacia un enemigo desde la posición del jugador
+   * Dispara una bala hacia un enemigo específico
    * @param playerX - Posición X del jugador
    * @param playerY - Posición Y del jugador
    * @param enemyX - Posición X del enemigo
@@ -59,19 +59,16 @@ export class BulletManager {
   shootAtEnemy(playerX: number, playerY: number, enemyX: number, enemyY: number): void {
     const baseAngle = Phaser.Math.Angle.Between(playerX, playerY, enemyX, enemyY);
 
-    console.log(`🔫 Shooting ${this.bulletsPerShot} bullets at enemy`);
-
     // Disparar múltiples balas según el nivel de multiShot
     for (let i = 0; i < this.bulletsPerShot; i++) {
       let angle = baseAngle;
-
-      // Si hay múltiples balas, distribuirlas en un arco
+      
       if (this.bulletsPerShot > 1) {
-        const spreadAngle = Math.PI / 6; // 30 grados de dispersión total
-        const angleStep = spreadAngle / (this.bulletsPerShot - 1);
-        angle = baseAngle - spreadAngle / 2 + (angleStep * i);
+        const spread = 0.2; // 0.2 radianes de dispersión total
+        const angleOffset = (i - (this.bulletsPerShot - 1) / 2) * (spread / Math.max(1, this.bulletsPerShot - 1));
+        angle = baseAngle + angleOffset;
       }
-
+      
       this.createBullet(playerX, playerY, angle);
     }
   }
@@ -328,13 +325,6 @@ export class BulletManager {
     if (this.currentWeapon.effects.bulletLifetime) {
       this.config.lifetime = this.currentWeapon.effects.bulletLifetime;
     }
-
-    console.log(`🔫 Configuración actualizada para ${this.currentWeapon.name}:`, {
-      bulletsPerShot: this.bulletsPerShot,
-      speed: this.config.speed,
-      lifetime: this.config.lifetime,
-      specialEffect: this.currentWeapon.effects.specialEffect
-    });
   }
 
   /**
@@ -343,7 +333,6 @@ export class BulletManager {
   setWeapon(weaponId: string): void {
     this.currentWeapon = getWeaponConfig(weaponId);
     this.updateFromWeaponConfig();
-    console.log(`🔫 Arma cambiada a: ${this.currentWeapon.name}`);
   }
 
   /**

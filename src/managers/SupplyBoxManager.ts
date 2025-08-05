@@ -6,7 +6,7 @@ export interface SupplyBoxConfig {
   materials: {
     steel: { min: number; max: number; chance: number };
     energy_cells: { min: number; max: number; chance: number };
-    // medicine: { min: number; max: number; chance: number }; // Deshabilitado - se obtiene del lobby
+    medicine: { min: number; max: number; chance: number }; // Habilitado
     // food: { min: number; max: number; chance: number }; // No incluido por ahora
   };
   visualEffects: {
@@ -23,7 +23,7 @@ export interface SupplyBoxData {
   materials: {
     steel?: number;
     energy_cells?: number;
-    // medicine?: number; // Deshabilitado - se obtiene del lobby
+    medicine?: number; // Habilitado
   };
   isCollected: boolean;
 }
@@ -51,9 +51,9 @@ export class SupplyBoxManager {
     this.config = {
       spawnChance: 0.15, // 15% de probabilidad de spawn (alto para testing)
       materials: {
-        steel: { min: 1, max: 3, chance: 0.4 },
-        energy_cells: { min: 1, max: 2, chance: 0.3 },
-        // medicine: { min: 1, max: 1, chance: 0.2 }, // Deshabilitado - se obtiene del lobby
+        steel: { min: 1, max: 3, chance: 1.0 }, // Cambiado a 100% de probabilidad
+        energy_cells: { min: 1, max: 2, chance: 1.0 }, // Cambiado a 100% de probabilidad
+        medicine: { min: 1, max: 1, chance: 1.0 }, // Habilitado con 100% de probabilidad
       },
       visualEffects: {
         glowColor: 0x00ff00,
@@ -111,17 +111,18 @@ export class SupplyBoxManager {
   }
 
   /**
-   * Genera materiales aleatorios basados en las probabilidades configuradas
+   * Genera materiales aleatorios para la caja
+   * Ahora garantiza que siempre se generen los 3 tipos de materiales
    * @returns Objeto con los materiales generados
    */
   private generateRandomMaterials(): { [key: string]: number } {
     const materials: { [key: string]: number } = {};
 
+    // Garantizar que siempre se generen los 3 tipos de materiales
     Object.entries(this.config.materials).forEach(([materialType, config]) => {
-      if (Math.random() < config.chance) {
-        const amount = Math.floor(Math.random() * (config.max - config.min + 1)) + config.min;
-        materials[materialType] = amount;
-      }
+      // Siempre generar el material, independientemente de la probabilidad
+      const amount = Math.floor(Math.random() * (config.max - config.min + 1)) + config.min;
+      materials[materialType] = amount;
     });
 
     return materials;
@@ -394,7 +395,7 @@ export class SupplyBoxManager {
     const sessionMaterials: GameMaterials = {
       steel: this.sessionMaterials.get('steel') || 0,
       energy_cells: this.sessionMaterials.get('energy_cells') || 0,
-      medicine: 0, // No se recolecta en cajas
+      medicine: this.sessionMaterials.get('medicine') || 0, // Ahora incluye medicina de las cajas
       food: 0 // No implementado
     };
 

@@ -217,12 +217,8 @@ export class MainScene extends Scene {
     if (userId) {
       this.dailyQuestManager = new DailyQuestManager(
         this,
-        this.player,
-        this.enemyManager,
         this.experienceManager,
-        this.supplyBoxManager,
-        this.explosionManager,
-        userId
+        userId.toString()
       );
       console.log('🎯 DailyQuestManager inicializado para usuario:', userId);
     } else {
@@ -805,11 +801,12 @@ export class MainScene extends Scene {
   }
 
   public getPermanentQuests(): any[] {
-    return this.dailyQuestManager.getPermanentQuests();
+    // Los DailyQuestManager no tienen permanentQuests separadas, todas están en getDailyQuests
+    return this.dailyQuestManager.getDailyQuests();
   }
 
   public getAllQuests(): any[] {
-    return this.dailyQuestManager.getAllQuests();
+    return this.dailyQuestManager.getDailyQuests();
   }
 
   public rerollDailyQuests(): void {

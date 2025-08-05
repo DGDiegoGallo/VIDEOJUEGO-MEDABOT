@@ -122,6 +122,24 @@ export const SurvivalLobbyView: React.FC = () => {
 
   const enhancedStats = getEnhancedStats();
 
+  // Función helper para completar los datos de las armas
+  const completeWeaponData = (guns: any[]) => {
+    return guns.map(gun => ({
+      ...gun,
+      type: gun.type || 'unknown',
+      rarity: gun.rarity || 'common',
+      is_default: gun.is_default || false
+    }));
+  };
+
+  if (!initialSession) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-gray-400">Cargando sesión de juego...</div>
+      </div>
+    );
+  }
+
   if (isLoading || sessionsLoading) {
     return (
       <div className="flex flex-col items-center justify-center w-full h-full text-white bg-black/40 rounded-lg p-8">
@@ -494,6 +512,10 @@ export const SurvivalLobbyView: React.FC = () => {
                 onCraft={(recipeId) => {
                   console.log('🎮 Crafting recipe:', recipeId);
                 }}
+                onCraftSuccess={() => {
+                  console.log('✅ Crafting exitoso - refrescando datos...');
+                  refreshData();
+                }}
                 onWeaponEquip={handleWeaponEquip}
               />
             </div>
@@ -517,9 +539,14 @@ export const SurvivalLobbyView: React.FC = () => {
               </div>
               
               <WeaponArsenal 
-                guns={initialSession.guns || []}
+                guns={completeWeaponData(
+                  (initialSession.guns || []).filter(gun => 
+                    equippedWeapons.includes(gun.id)
+                  )
+                )}
                 equippedWeapons={equippedWeapons}
                 onEquipWeapon={handleWeaponEquip}
+                compact={true}
               />
             </div>
           </div>
