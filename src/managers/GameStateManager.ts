@@ -27,7 +27,7 @@ export class GameStateManager {
   private supplyBoxManager: SupplyBoxManager;
   private dailyQuestManager: DailyQuestManager;
   private userId: string | number;
-  private sessionId: string | null = null;
+  private sessionDocumentId: string | null = null;
   
   private isGameOver: boolean = false;
   private isGameWon: boolean = false;
@@ -51,7 +51,9 @@ export class GameStateManager {
     this.supplyBoxManager = supplyBoxManager;
     this.dailyQuestManager = dailyQuestManager;
     this.userId = userId;
-    this.sessionId = sessionId || null;
+    this.sessionDocumentId = sessionId || null;
+    
+
 
     // Configurar teclas de debug
     this.setupDebugKeys();
@@ -133,14 +135,19 @@ export class GameStateManager {
 
     console.log('💀 Game Over - Datos:', gameOverData);
     console.log('🎯 Food de misiones completadas:', questReward);
-    console.log('🎯 SessionId para actualización:', this.sessionId);
+    console.log('🎯 DocumentId para actualización:', this.sessionDocumentId);
+    console.log('🔧 DEBUG gameOver() - sessionDocumentId type:', typeof this.sessionDocumentId);
+    console.log('🔧 DEBUG gameOver() - sessionDocumentId value:', this.sessionDocumentId);
+    console.log('🔧 DEBUG gameOver() - sessionDocumentId === null:', this.sessionDocumentId === null);
+    console.log('🔧 DEBUG gameOver() - sessionDocumentId === undefined:', this.sessionDocumentId === undefined);
+    console.log('🔧 DEBUG gameOver() - !sessionDocumentId:', !this.sessionDocumentId);
 
     // Actualizar materiales en Strapi (sin bonus, pero incluyendo food de misiones)
-    if (this.sessionId) {
+    if (this.sessionDocumentId) {
       try {
         console.log('📤 Enviando materiales a Strapi...');
         const result = await gameSessionService.updateSessionMaterials({
-          sessionId: this.sessionId,
+          sessionId: this.sessionDocumentId,
           materials: materialsWithQuestFood,
           isVictory: false
         });
@@ -163,13 +170,49 @@ export class GameStateManager {
         
         if (completedQuests.length > 0) {
           console.log('📤 Enviando misiones completadas a Strapi...');
+          const questsToSend = completedQuests.filter(quest => quest.completedAt).map(quest => ({
+            id: quest.id,
+            title: quest.title,
+            description: quest.description,
+            type: quest.type,
+            reward: quest.reward,
+            completedAt: quest.completedAt!
+          }));
+          
           const questsResult = await gameSessionService.updateDailyQuestsCompleted({
-            sessionId: this.sessionId,
-            completedQuests: completedQuests
+            sessionId: this.sessionDocumentId,
+            completedQuests: questsToSend
           });
 
           console.log('✅ Misiones diarias actualizadas en Strapi (derrota):', questsResult);
         }
+
+        // Actualizar estadísticas acumulativas de la sesión
+        console.log('📊 Actualizando estadísticas acumulativas de la sesión...');
+        const questProgress = this.dailyQuestManager.getQuestProgress();
+        
+        const statsResult = await gameSessionService.updateSessionStats({
+          sessionId: this.sessionDocumentId,
+          questProgress: {
+            enemiesKilled: questProgress.enemiesKilled,
+            zombiesKilled: questProgress.zombiesKilled,
+            dashersKilled: questProgress.dashersKilled,
+            tanksKilled: questProgress.tanksKilled,
+            currentLevel: questProgress.currentLevel,
+            survivalTime: questProgress.survivalTime,
+            supplyBoxesCollected: questProgress.supplyBoxesCollected,
+            barrelsDestroyed: questProgress.barrelsDestroyed,
+            bandagesUsed: questProgress.bandagesUsed,
+            levelsGained: questProgress.levelsGained
+          },
+          gameStats: {
+            finalScore: gameOverData.score,
+            gameTime: gameOverData.gameTime,
+            isVictory: false
+          }
+        });
+
+        console.log('✅ Estadísticas acumulativas actualizadas en Strapi (derrota):', statsResult);
         
         // Limpiar materiales de la sesión después de enviar a Strapi
         this.supplyBoxManager.clearSessionMaterials();
@@ -178,7 +221,7 @@ export class GameStateManager {
         console.error('❌ Error actualizando datos en Strapi:', error);
       }
     } else {
-      console.warn('⚠️ No hay sessionId, no se actualizarán datos en Strapi');
+      console.warn('⚠️ No hay documentId de sesión válido, no se actualizarán datos en Strapi');
     }
 
     // Emitir evento con datos completos
@@ -221,14 +264,14 @@ export class GameStateManager {
 
     console.log('🏆 ¡Victoria! - Datos:', gameOverData);
     console.log('🎯 Food de misiones completadas:', questReward);
-    console.log('🎯 SessionId para actualización:', this.sessionId);
+    console.log('🎯 DocumentId para actualización:', this.sessionDocumentId);
 
     // Actualizar materiales en Strapi (con bonus de victoria, incluyendo food de misiones)
-    if (this.sessionId) {
+    if (this.sessionDocumentId) {
       try {
         console.log('📤 Enviando materiales a Strapi (victoria)...');
         const result = await gameSessionService.updateSessionMaterials({
-          sessionId: this.sessionId,
+          sessionId: this.sessionDocumentId,
           materials: materialsWithQuestFood,
           isVictory: true,
           victoryBonusPercentage: 0.25 // 25% de bonus por victoria
@@ -253,13 +296,49 @@ export class GameStateManager {
         
         if (completedQuests.length > 0) {
           console.log('📤 Enviando misiones completadas a Strapi...');
+          const questsToSend = completedQuests.filter(quest => quest.completedAt).map(quest => ({
+            id: quest.id,
+            title: quest.title,
+            description: quest.description,
+            type: quest.type,
+            reward: quest.reward,
+            completedAt: quest.completedAt!
+          }));
+          
           const questsResult = await gameSessionService.updateDailyQuestsCompleted({
-            sessionId: this.sessionId,
-            completedQuests: completedQuests
+            sessionId: this.sessionDocumentId,
+            completedQuests: questsToSend
           });
 
           console.log('✅ Misiones diarias actualizadas en Strapi (victoria):', questsResult);
         }
+
+        // Actualizar estadísticas acumulativas de la sesión
+        console.log('📊 Actualizando estadísticas acumulativas de la sesión...');
+        const questProgress = this.dailyQuestManager.getQuestProgress();
+        
+        const statsResult = await gameSessionService.updateSessionStats({
+          sessionId: this.sessionDocumentId,
+          questProgress: {
+            enemiesKilled: questProgress.enemiesKilled,
+            zombiesKilled: questProgress.zombiesKilled,
+            dashersKilled: questProgress.dashersKilled,
+            tanksKilled: questProgress.tanksKilled,
+            currentLevel: questProgress.currentLevel,
+            survivalTime: questProgress.survivalTime,
+            supplyBoxesCollected: questProgress.supplyBoxesCollected,
+            barrelsDestroyed: questProgress.barrelsDestroyed,
+            bandagesUsed: questProgress.bandagesUsed,
+            levelsGained: questProgress.levelsGained
+          },
+          gameStats: {
+            finalScore: gameOverData.score,
+            gameTime: gameOverData.gameTime,
+            isVictory: true
+          }
+        });
+
+        console.log('✅ Estadísticas acumulativas actualizadas en Strapi (victoria):', statsResult);
         
         // Limpiar materiales de la sesión después de enviar a Strapi
         this.supplyBoxManager.clearSessionMaterials();
@@ -268,7 +347,7 @@ export class GameStateManager {
         console.error('❌ Error actualizando datos en Strapi:', error);
       }
     } else {
-      console.warn('⚠️ No hay sessionId, no se actualizarán datos en Strapi');
+      console.warn('⚠️ No hay documentId de sesión válido, no se actualizarán datos en Strapi');
     }
 
     // Emitir evento con datos completos
@@ -312,11 +391,21 @@ export class GameStateManager {
   }
 
   /**
-   * Establece el ID de la sesión
+   * Establece el ID de la sesión (documentId)
    */
-  public setSessionId(sessionId: string): void {
-    this.sessionId = sessionId;
-    console.log('🎮 GameStateManager: SessionId establecido:', sessionId);
+  public setSessionId(sessionDocumentId: string): void {
+    console.log('🔧 GameStateManager.setSessionId(): ANTES - sessionDocumentId:', this.sessionDocumentId);
+    this.sessionDocumentId = sessionDocumentId;
+    console.log('🔧 GameStateManager.setSessionId(): DESPUÉS - sessionDocumentId:', this.sessionDocumentId);
+    console.log('🎮 GameStateManager: DocumentId establecido:', sessionDocumentId);
+    
+    // También establecer en DailyQuestManager
+    if (this.dailyQuestManager) {
+      this.dailyQuestManager.setSessionId(sessionDocumentId);
+      console.log('🔗 GameStateManager: DocumentId también establecido en DailyQuestManager');
+    } else {
+      console.warn('⚠️ GameStateManager: DailyQuestManager no disponible para establecer sessionId');
+    }
   }
 
   /**

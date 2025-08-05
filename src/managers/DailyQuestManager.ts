@@ -60,7 +60,7 @@ export class DailyQuestManager {
   private supplyBoxManager: SupplyBoxManager;
   private explosionManager: ExplosionManager;
   private userId: string | number;
-  private sessionId: string | null = null;
+  private sessionDocumentId: string | null = null;
 
   private dailyQuests: DailyQuest[] = [];
   private permanentQuests: DailyQuest[] = [];
@@ -420,7 +420,7 @@ export class DailyQuestManager {
           questTitle: quest.title,
           reward: quest.reward,
           completedAt: quest.completedAt!,
-          sessionId: this.sessionId || undefined
+          sessionId: this.sessionDocumentId || undefined
         });
       }
     }
@@ -475,7 +475,7 @@ export class DailyQuestManager {
           questTitle: quest.title,
           reward: quest.reward,
           completedAt: quest.completedAt!,
-          sessionId: this.sessionId || undefined
+          sessionId: this.sessionDocumentId || undefined
         });
       }
     }
@@ -586,7 +586,7 @@ export class DailyQuestManager {
   public debugQuests(): void {
     console.log('🔍 DEBUG: Estado actual de las misiones');
     console.log('🔍 DEBUG: UserId:', this.userId);
-    console.log('🔍 DEBUG: SessionId:', this.sessionId);
+    console.log('🔍 DEBUG: DocumentId:', this.sessionDocumentId);
     console.log('🔍 DEBUG: Misiones diarias cargadas:', this.dailyQuests);
     console.log('🔍 DEBUG: Progreso actual:', this.questProgress);
     
@@ -886,11 +886,13 @@ export class DailyQuestManager {
   }
 
   /**
-   * Establece el ID de la sesión
+   * Establece el ID de la sesión (documentId)
    */
-  public setSessionId(sessionId: string): void {
-    this.sessionId = sessionId;
-    console.log('🎯 DailyQuestManager: SessionId establecido:', sessionId);
+  public setSessionId(sessionDocumentId: string): void {
+    console.log('🔧 DailyQuestManager.setSessionId(): ANTES - sessionDocumentId:', this.sessionDocumentId);
+    this.sessionDocumentId = sessionDocumentId;
+    console.log('🔧 DailyQuestManager.setSessionId(): DESPUÉS - sessionDocumentId:', this.sessionDocumentId);
+    console.log('🎯 DailyQuestManager: DocumentId establecido:', sessionDocumentId);
   }
 
   /**

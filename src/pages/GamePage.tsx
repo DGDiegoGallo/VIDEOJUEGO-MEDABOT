@@ -84,10 +84,20 @@ export const GamePage: React.FC = () => {
   } = useEquipment(user?.id);
 
   // Obtener datos de la sesión de juego
-  const { sessions } = useGameSessionData(user ? parseInt(user.id) : 0);
+  const userId = user ? parseInt(user.id) : 0;
+  const { sessions } = useGameSessionData(userId);
   
   // Obtener la sesión activa (la primera sesión del usuario)
   const activeSession = sessions.length > 0 ? sessions[0] : null;
+  
+  // Debug logging (solo cuando hay cambios significativos)
+  useEffect(() => {
+    if (user && sessions.length > 0) {
+      console.log('🎮 GamePage: Usuario logueado:', user.id, user.username);
+      console.log('🎮 GamePage: Sesiones encontradas:', sessions.length);
+      console.log('🎮 GamePage: Sesión activa:', activeSession?.documentId);
+    }
+  }, [user, sessions.length, activeSession?.documentId]);
   
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
@@ -360,8 +370,41 @@ export const GamePage: React.FC = () => {
           
           // Establecer el sessionId en el GameStateManager si existe una sesión activa
           if (activeSession?.documentId) {
-            mainScene.gameStateManager?.setSessionId(activeSession.documentId);
-            console.log('🎮 GamePage: SessionId establecido:', activeSession.documentId);
+            console.log('🔧 DEBUG GamePage: mainScene existe:', !!mainScene);
+            console.log('🔧 DEBUG GamePage: mainScene.gameStateManager existe:', !!mainScene.gameStateManager);
+            
+            // Función para intentar establecer sessionId con reintentos
+            const setSessionIdWithRetry = (documentId: string, maxRetries = 10, delay = 100) => {
+              let attempts = 0;
+              
+              const trySet = () => {
+                attempts++;
+                console.log(`🔄 Intento ${attempts}/${maxRetries} de establecer sessionId:`, documentId);
+                
+                if (mainScene.gameStateManager) {
+                  mainScene.gameStateManager.setSessionId(documentId);
+                  console.log('✅ GamePage: SessionId establecido exitosamente:', documentId);
+                  return true;
+                } else if (attempts < maxRetries) {
+                  console.log(`⏳ GameStateManager no disponible, reintentando en ${delay}ms...`);
+                  setTimeout(trySet, delay);
+                  return false;
+                } else {
+                  console.error('❌ GamePage: No se pudo establecer sessionId después de', maxRetries, 'intentos');
+                  console.error('❌ GamePage: mainScene:', mainScene);
+                  return false;
+                }
+              };
+              
+              trySet();
+            };
+            
+            setSessionIdWithRetry(activeSession.documentId);
+          } else {
+            console.warn('⚠️ GamePage: No se pudo establecer sessionId - no hay sesión activa');
+            console.warn('⚠️ GamePage: activeSession:', activeSession);
+            console.warn('⚠️ GamePage: user:', user);
+            console.warn('⚠️ GamePage: sessions:', sessions);
           }
           
           mainScene.events.on('updateUI', handleUIUpdate);

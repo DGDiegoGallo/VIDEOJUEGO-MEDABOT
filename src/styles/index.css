@@ -47,42 +47,64 @@
   }
 }
 
-@keyframes loading-dots {
-  0%, 20% {
-    color: rgba(156, 163, 175, 0);
-    text-shadow: 0.25em 0 0 rgba(156, 163, 175, 0), 0.5em 0 0 rgba(156, 163, 175, 0);
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
   }
-  40% {
-    color: rgba(156, 163, 175, 1);
-    text-shadow: 0.25em 0 0 rgba(156, 163, 175, 0), 0.5em 0 0 rgba(156, 163, 175, 0);
-  }
-  60% {
-    text-shadow: 0.25em 0 0 rgba(156, 163, 175, 1), 0.5em 0 0 rgba(156, 163, 175, 0);
-  }
-  80%, 100% {
-    text-shadow: 0.25em 0 0 rgba(156, 163, 175, 1), 0.5em 0 0 rgba(156, 163, 175, 1);
+  100% {
+    transform: translateX(100%);
   }
 }
 
-.animate-slide-in {
+@keyframes loading-dots {
+  0%, 20% {
+    color: transparent;
+    text-shadow: .25em 0 0 transparent, .5em 0 0 transparent;
+  }
+  40% {
+    color: white;
+    text-shadow: .25em 0 0 transparent, .5em 0 0 transparent;
+  }
+  60% {
+    text-shadow: .25em 0 0 white, .5em 0 0 transparent;
+  }
+  80%, 100% {
+    text-shadow: .25em 0 0 white, .5em 0 0 white;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Clases de utilidad para animaciones */
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+.slide-in {
   animation: slide-in 0.3s ease-out;
 }
 
-.animate-slide-out {
-  animation: slide-out 0.3s ease-in;
+.slide-out {
+  animation: slide-out 0.3s ease-out;
 }
 
-.animate-fade-in {
-  animation: fade-in 0.2s ease-out;
+.fade-in {
+  animation: fade-in 0.3s ease-out;
 }
 
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
+.pulse-glow {
+  animation: pulse-glow 2s infinite;
 }
 
-.animate-loading-dots::after {
-  content: '...';
-  animation: loading-dots 1.5s steps(5, end) infinite;
+.loading-dots {
+  animation: loading-dots 1.4s infinite;
 }
 
 /* Estilos para el modal de compra */
@@ -618,4 +640,9 @@ Game UI specific animations */
 
 .enemy-blink {
   animation: enemy-blink 1s infinite;
+}
+
+/* Animación shimmer para barras de progreso */
+.animate-shimmer {
+  animation: shimmer 2s infinite;
 }

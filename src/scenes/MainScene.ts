@@ -194,24 +194,41 @@ export class MainScene extends Scene {
     );
 
     // Obtener userId para los managers
-    const userId = this.getUserId() || 'default';
+    const userId = this.getUserId();
 
-    // Inicializar SupplyBoxManager con userId
-    this.supplyBoxManager = new SupplyBoxManager(this, userId);
+    // Inicializar SupplyBoxManager con userId (usar 'guest' si no hay usuario)
+    this.supplyBoxManager = new SupplyBoxManager(this, userId || 'guest');
 
     // Inicializar BandageManager
     this.bandageManager = new BandageManager(this, this.player);
 
-    // Inicializar DailyQuestManager
-    this.dailyQuestManager = new DailyQuestManager(
-      this,
-      this.player,
-      this.enemyManager,
-      this.experienceManager,
-      this.supplyBoxManager,
-      this.explosionManager,
-      userId
-    );
+    // Inicializar DailyQuestManager (solo si hay usuario logueado)
+    if (userId) {
+      this.dailyQuestManager = new DailyQuestManager(
+        this,
+        this.player,
+        this.enemyManager,
+        this.experienceManager,
+        this.supplyBoxManager,
+        this.explosionManager,
+        userId
+      );
+      console.log('🎯 DailyQuestManager inicializado para usuario:', userId);
+    } else {
+      console.warn('⚠️ DailyQuestManager no inicializado - no hay usuario logueado');
+      // Crear un manager dummy para evitar errores
+      this.dailyQuestManager = {
+        getDailyQuests: () => [],
+        getQuestProgress: () => ({}),
+        getCompletedQuests: () => [],
+        areAllQuestsCompleted: () => false,
+        getTotalReward: () => 0,
+        forceCheckProgress: () => Promise.resolve(),
+        setSessionId: () => {},
+        update: () => Promise.resolve(),
+        destroy: () => {}
+      } as any;
+    }
 
     // Inicializar CollisionManager - CRÍTICO: debe ir después de todos los managers
     this.collisionManager = new CollisionManager(
@@ -235,7 +252,7 @@ export class MainScene extends Scene {
       this.uiManager,
       this.supplyBoxManager,
       this.dailyQuestManager,
-      userId
+      userId || 'guest'
     );
 
     // Conectar EnemyManager con SupplyBoxManager
@@ -549,9 +566,9 @@ export class MainScene extends Scene {
       return (window as any).user.id;
     }
     
-    // Intentar obtener desde localStorage
+    // Intentar obtener desde localStorage (usar 'user-data' que es donde se guarda)
     try {
-      const userData = localStorage.getItem('user');
+      const userData = localStorage.getItem('user-data');
       if (userData) {
         const user = JSON.parse(userData);
         return user.id;
@@ -560,8 +577,22 @@ export class MainScene extends Scene {
       console.warn('⚠️ Error parsing user data from localStorage:', error);
     }
     
-    // Valor por defecto para testing (usuario 78 según los logs)
-    return 78;
+    // Intentar obtener desde auth-storage como backup
+    try {
+      const authData = localStorage.getItem('auth-storage');
+      if (authData) {
+        const parsedAuth = JSON.parse(authData);
+        if (parsedAuth.state?.user?.id) {
+          return parsedAuth.state.user.id;
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Error parsing auth data from localStorage:', error);
+    }
+    
+    // Si no se encuentra usuario, retornar null para evitar problemas
+    console.warn('⚠️ No se pudo obtener el ID del usuario - usuario no logueado');
+    return null;
   }
 
   /**
@@ -673,6 +704,16 @@ export class MainScene extends Scene {
    * Obtiene las estadísticas del sistema de vendajes
    */
   public getBandageStats() {
+    if (!this.bandageManager) {
+      return {
+        medicineInventory: 0,
+        canUse: false,
+        cooldownRemaining: 0,
+        healProgress: 0,
+        isHealing: false,
+        totalHealAmount: 0
+      };
+    }
     return this.bandageManager.getStats();
   }
 
@@ -694,6 +735,9 @@ export class MainScene extends Scene {
    * Obtiene las misiones diarias actuales
    */
   public getDailyQuests(): any[] {
+    if (!this.dailyQuestManager) {
+      return [];
+    }
     return this.dailyQuestManager.getDailyQuests();
   }
 
@@ -701,6 +745,23 @@ export class MainScene extends Scene {
    * Obtiene el progreso de las misiones diarias
    */
   public getQuestProgress(): any {
+    if (!this.dailyQuestManager) {
+      return {
+        enemiesKilled: 0,
+        zombiesKilled: 0,
+        dashersKilled: 0,
+        tanksKilled: 0,
+        currentLevel: 1,
+        survivalTime: 0,
+        supplyBoxesCollected: 0,
+        barrelsDestroyed: 0,
+        bandagesUsed: 0,
+        levelsGained: 0,
+        hasImprovedMachinegun: false,
+        hasGrenadeLauncher: false,
+        hasLaserRifle: false
+      };
+    }
     return this.dailyQuestManager.getQuestProgress();
   }
 
