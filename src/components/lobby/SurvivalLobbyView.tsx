@@ -28,6 +28,7 @@ import { EquipmentDisplay } from '@/components/lobby/EquipmentDisplay';
 import { CraftingTable } from '@/components/lobby/CraftingTable';
 import { DailyQuestsView } from './DailyQuestsView';
 import type { GameSession } from '@/types/gameSession';
+import { WeaponArsenal } from './WeaponArsenal';
 
 export const SurvivalLobbyView: React.FC = () => {
   const navigate = useNavigate();
@@ -37,6 +38,8 @@ export const SurvivalLobbyView: React.FC = () => {
   const [showSessionDetails, setShowSessionDetails] = useState(false);
   const [showCraftingModal, setShowCraftingModal] = useState(false);
   const [showDailyQuests, setShowDailyQuests] = useState(false);
+  const [equippedWeapons, setEquippedWeapons] = useState<string[]>([]);
+  const [showArsenal, setShowArsenal] = useState(false);
 
   // Obtener sesiones del usuario
   const { sessions, loading: sessionsLoading, refreshData } = useGameSessionData(user ? parseInt(user.id) : 0);
@@ -48,8 +51,13 @@ export const SurvivalLobbyView: React.FC = () => {
       const selectedSession = initial || sessions[0];
       setInitialSession(selectedSession);
       
+      // Extraer armas equipadas
+      const equipped = selectedSession?.equipped_items?.weapons || ['pistol_default'];
+      setEquippedWeapons(equipped);
+      
       console.log('🎮 Sessions found:', sessions.length);
       console.log('🎮 Selected session:', selectedSession);
+      console.log('🔫 Equipped weapons:', equipped);
     }
     setIsLoading(false);
   }, [sessions]);
@@ -75,6 +83,22 @@ export const SurvivalLobbyView: React.FC = () => {
 
   const handleCreateNewSession = () => {
     navigate('/game-session-test');
+  };
+
+  const handleWeaponEquip = (weaponId: string) => {
+    console.log('🔫 Arma equipada desde CraftingTable:', weaponId);
+    // Actualizar estado local
+    setEquippedWeapons(prev => {
+      if (prev.includes(weaponId)) {
+        return prev; // Ya está equipada
+      }
+      return [weaponId, ...prev.filter(w => w !== weaponId)]; // Reemplazar arma principal
+    });
+    
+    // Refrescar datos para obtener la información actualizada del backend
+    setTimeout(() => {
+      refreshData();
+    }, 1000);
   };
 
   // Calcular estadísticas mejoradas
@@ -205,13 +229,6 @@ export const SurvivalLobbyView: React.FC = () => {
                 <FaShieldAlt className="mr-3 text-blue-400" />
                 Arsenal Disponible
               </h3>
-              <button
-                onClick={() => setShowCraftingModal(true)}
-                className="crafting-btn text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center space-x-2"
-              >
-                <FaHammer />
-                <span>Mesa de Creación</span>
-              </button>
             </div>
             
             {/* Equipment Display */}
@@ -300,6 +317,32 @@ export const SurvivalLobbyView: React.FC = () => {
               Acciones de Combate
             </h3>
             
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <button
+                onClick={() => setShowDailyQuests(true)}
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2"
+              >
+                <FaTasks />
+                <span>Misiones Diarias</span>
+              </button>
+              
+              <button
+                onClick={() => setShowCraftingModal(true)}
+                className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2"
+              >
+                <FaHammer />
+                <span>Mesa de Creación</span>
+              </button>
+
+              <button
+                onClick={() => setShowArsenal(true)}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2"
+              >
+                <FaShieldAlt />
+                <span>Arsenal</span>
+              </button>
+            </div>
+            
             <div className="space-y-4">
               <button
                 onClick={handleQuickPlay}
@@ -307,14 +350,6 @@ export const SurvivalLobbyView: React.FC = () => {
               >
                 <FaPlay className="text-xl" />
                 <span className="text-xl">¡COMBATE RÁPIDO!</span>
-              </button>
-              
-              <button
-                onClick={() => setShowDailyQuests(true)}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3 shadow-lg"
-              >
-                <FaTasks className="text-xl" />
-                <span className="text-xl">Misiones Diarias</span>
               </button>
               
               <button
@@ -455,9 +490,36 @@ export const SurvivalLobbyView: React.FC = () => {
               
               <CraftingTable 
                 materials={initialSession.materials}
+                equippedWeapons={equippedWeapons}
                 onCraft={(recipeId) => {
                   console.log('🎮 Crafting recipe:', recipeId);
                 }}
+                onWeaponEquip={handleWeaponEquip}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Arsenal Modal */}
+      {showArsenal && initialSession && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-3xl font-bold text-white">Arsenal de Armas</h2>
+                <button
+                  onClick={() => setShowArsenal(false)}
+                  className="text-gray-400 hover:text-white text-2xl font-bold transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <WeaponArsenal 
+                guns={initialSession.guns || []}
+                equippedWeapons={equippedWeapons}
+                onEquipWeapon={handleWeaponEquip}
               />
             </div>
           </div>

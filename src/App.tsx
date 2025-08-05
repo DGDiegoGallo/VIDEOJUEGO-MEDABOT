@@ -8,6 +8,7 @@ import { LobbyPage } from '@/pages/LobbyPage';
 import { GamePage } from '@/pages/GamePage';
 import { AdminPage } from '@/pages/AdminPage';
 import GameSessionTestPage from '@/pages/GameSessionTestPage';
+import { NFTUploadPage } from '@/pages/NFTUploadPage';
 
 export const App: React.FC = () => {
   return (
@@ -34,6 +35,9 @@ export const App: React.FC = () => {
             
             {/* Página de prueba de sesiones de juego */}
             <Route path="/test-sessions" element={<GameSessionTestPage />} />
+            
+            {/* Página de upload de NFTs para desarrollo */}
+            <Route path="/nft-upload" element={<NFTUploadPage />} />
             
             {/* Redirección por defecto */}
             <Route path="*" element={<Navigate to="/" replace />} />

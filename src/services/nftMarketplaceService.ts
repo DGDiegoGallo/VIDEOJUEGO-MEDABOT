@@ -126,15 +126,15 @@ class NFTMarketplaceService {
 
   /**
    * Comprar un NFT del marketplace
-   * 1. Obtiene el NFT del marketplace
-   * 2. Lo elimina del marketplace
-   * 3. Lo agrega a la colección del comprador
+   * 1. Obtiene el NFT del marketplace usando documentId
+   * 2. Lo elimina del marketplace usando documentId
+   * 3. Lo agrega a la colección del comprador (user-nfts)
    */
   async buyNFT(request: BuyNFTRequest): Promise<NFTMarketplaceResult> {
     try {
       console.log('🛒 Comprando NFT:', request);
 
-      // 1. Obtener el NFT del marketplace
+      // 1. Obtener el NFT del marketplace usando documentId
       const marketplaceNFTResponse = await axios.get(
         `${this.baseURL}${API_CONFIG.ENDPOINTS.BLOCKCHAIN.NFT_MARKETPLACE}?filters[documentId][$eq]=${request.nftDocumentId}&populate=*`,
         { headers: this.getAuthHeaders() }
@@ -146,6 +146,7 @@ class NFTMarketplaceService {
 
       const marketplaceNFT = marketplaceNFTResponse.data.data[0];
       console.log('✅ NFT encontrado en marketplace:', marketplaceNFT.metadata?.name);
+      console.log('🆔 Document ID del NFT en marketplace:', marketplaceNFT.documentId);
 
       // 2. Obtener la wallet del comprador
       const buyerWalletResponse = await axios.get(
@@ -158,15 +159,17 @@ class NFTMarketplaceService {
       }
 
       const buyerWallet = buyerWalletResponse.data.data[0];
+      console.log('✅ Wallet del comprador encontrada:', buyerWallet.wallet_address);
 
-      // 3. Eliminar el NFT del marketplace
-      await axios.delete(
-        `${this.baseURL}${API_CONFIG.ENDPOINTS.BLOCKCHAIN.NFT_MARKETPLACE}/${marketplaceNFT.id}`,
-        { headers: this.getAuthHeaders() }
-      );
+      // 3. Eliminar el NFT del marketplace usando documentId
+      const deleteUrl = `${this.baseURL}${API_CONFIG.ENDPOINTS.BLOCKCHAIN.NFT_MARKETPLACE}/${marketplaceNFT.documentId}`;
+      console.log('🗑️ URL para eliminar NFT del marketplace:', deleteUrl);
+      
+      const deleteResponse = await axios.delete(deleteUrl, { headers: this.getAuthHeaders() });
+      console.log('🗑️ Respuesta de eliminación del marketplace:', deleteResponse.status, deleteResponse.data);
       console.log('✅ NFT eliminado del marketplace');
 
-      // 4. Crear el NFT en la colección del comprador
+      // 4. Crear el NFT en la colección del comprador (user-nfts)
       const buyerNFTData = {
         token_id: marketplaceNFT.token_id,
         contract_address: marketplaceNFT.contract_address,
@@ -181,6 +184,8 @@ class NFTMarketplaceService {
         user_wallet: buyerWallet.id
       };
 
+      console.log('📝 Datos del NFT a crear en user-nfts:', buyerNFTData);
+
       const buyerNFTResponse = await axios.post(
         `${this.baseURL}/user-nfts`,
         { data: buyerNFTData },
@@ -192,12 +197,15 @@ class NFTMarketplaceService {
       }
 
       const buyerNFT = buyerNFTResponse.data.data;
+      console.log('✅ NFT creado en user-nfts:', buyerNFT.id);
 
       console.log('✅ NFT comprado exitosamente:', {
         nftName: marketplaceNFT.metadata?.name,
         buyerId: request.buyerUserId,
         buyerWallet: buyerWallet.wallet_address,
-        newNFTId: buyerNFT.id
+        newNFTId: buyerNFT.id,
+        marketplaceDeleted: marketplaceNFT.documentId,
+        userNFTCreated: buyerNFT.id
       });
 
       return {
@@ -208,6 +216,9 @@ class NFTMarketplaceService {
 
     } catch (error) {
       console.error('❌ Error comprando NFT:', error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        console.error('❌ Error response:', (error as any).response.status, (error as any).response.data);
+      }
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error desconocido al comprar NFT'

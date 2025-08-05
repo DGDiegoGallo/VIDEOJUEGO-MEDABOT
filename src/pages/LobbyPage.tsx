@@ -9,6 +9,7 @@ import { ProfileView } from '@/components/lobby/ProfileView';
 import { WalletView } from '@/components/lobby/WalletView';
 import { NFTView } from '@/components/lobby/NFTView';
 import { SurvivalLobbyView } from '@/components/lobby/SurvivalLobbyView';
+import { TechnicalSupportView } from '@/components/lobby/TechnicalSupportView';
 
 export const LobbyPage: React.FC = () => {
   const navigate = useNavigate();
@@ -50,6 +51,8 @@ export const LobbyPage: React.FC = () => {
         return <WalletView />;
       case 'nfts':
         return <NFTView />;
+      case 'support':
+        return <TechnicalSupportView />;
       default:
         return <SurvivalLobbyView />;
     }

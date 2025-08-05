@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FaHammer, 
   FaCog, 
@@ -12,6 +12,10 @@ import {
   FaShieldAlt
 } from 'react-icons/fa';
 import { GiSteelClaws } from 'react-icons/gi';
+import { gameSessionService } from '@/services/gameSessionService';
+import { useGameSessionData } from '@/hooks/useGameSessionData';
+import { useAuthStore } from '@/stores/authStore';
+import { getWeaponConfig } from '@/config/weaponConfig';
 
 interface CraftingRecipe {
   id: string;
@@ -37,6 +41,8 @@ interface CraftingTableProps {
     food: number;
   };
   onCraft?: (recipeId: string) => void;
+  equippedWeapons?: string[];
+  onWeaponEquip?: (weaponId: string) => void;
 }
 
 const CRAFTING_RECIPES: CraftingRecipe[] = [
@@ -46,8 +52,8 @@ const CRAFTING_RECIPES: CraftingRecipe[] = [
     description: "Arma automática con mayor cadencia de fuego y daño mejorado",
     icon: <FaCog className="text-2xl" />,
     materials: {
-      steel: 15,
-      energy_cells: 8,
+      steel: 1,
+      energy_cells: 1,
       medicine: 0,
       food: 0
     },
@@ -104,9 +110,27 @@ const CRAFTING_RECIPES: CraftingRecipe[] = [
 
 export const CraftingTable: React.FC<CraftingTableProps> = ({ 
   materials, 
-  onCraft 
+  onCraft,
+  equippedWeapons = [],
+  onWeaponEquip
 }) => {
   const [selectedRecipe, setSelectedRecipe] = useState<string | null>(null);
+  const [isEquipping, setIsEquipping] = useState<string | null>(null);
+  const [isCrafting, setIsCrafting] = useState<string | null>(null);
+  const [craftedWeapons, setCraftedWeapons] = useState<string[]>([]);
+  const { user } = useAuthStore();
+  const userId = user ? parseInt(user.id) : 0;
+  const { sessions } = useGameSessionData(userId);
+  const activeSession = sessions.length > 0 ? sessions[0] : null;
+
+  // Cargar armas ya creadas al montar el componente
+  useEffect(() => {
+    if (activeSession?.guns) {
+      const craftedIds = activeSession.guns.map((gun: any) => gun.id);
+      setCraftedWeapons(craftedIds);
+      console.log('🔫 Armas ya creadas:', craftedIds);
+    }
+  }, [activeSession?.guns]);
 
   const canCraft = (recipe: CraftingRecipe): boolean => {
     return (
@@ -142,10 +166,92 @@ export const CraftingTable: React.FC<CraftingTableProps> = ({
     }
   };
 
-  const handleCraft = (recipeId: string) => {
+  const handleCraft = async (recipeId: string) => {
+    if (!activeSession?.documentId) {
+      console.error('❌ No hay sesión activa para crear arma');
+      return;
+    }
+
+    const recipe = CRAFTING_RECIPES.find(r => r.id === recipeId);
+    if (!recipe) {
+      console.error('❌ Receta no encontrada:', recipeId);
+      return;
+    }
+
+    // Si es un arma, crearla en el arsenal
+    if (recipe.type === 'weapon') {
+      setIsCrafting(recipeId);
+
+      try {
+        const weaponConfig = getWeaponConfig(recipeId);
+        const weaponData = {
+          id: recipeId,
+          name: weaponConfig.name,
+          damage: weaponConfig.effects.damage || 25,
+          fire_rate: weaponConfig.effects.fireRate ? (1000 / weaponConfig.effects.fireRate) : 1,
+          ammo_capacity: 12, // Valor por defecto
+          type: weaponConfig.type,
+          rarity: weaponConfig.rarity,
+          is_default: false
+        };
+
+        await gameSessionService.craftWeapon({
+          weaponId: recipeId,
+          sessionId: activeSession.documentId,
+          weaponData: weaponData
+        });
+
+        console.log('✅ Arma creada exitosamente:', recipeId);
+        
+        // Actualizar estado local
+        setCraftedWeapons(prev => [...prev, recipeId]);
+        
+      } catch (error) {
+        console.error('❌ Error creando arma:', error);
+      } finally {
+        setIsCrafting(null);
+      }
+    }
+
+    // Llamar al callback original si existe
     if (onCraft) {
       onCraft(recipeId);
     }
+  };
+
+  const handleEquipWeapon = async (weaponId: string) => {
+    if (!activeSession?.documentId) {
+      console.error('❌ No hay sesión activa para equipar arma');
+      return;
+    }
+
+    setIsEquipping(weaponId);
+
+    try {
+      await gameSessionService.equipWeapon({
+        weaponId: weaponId,
+        sessionId: activeSession.documentId
+      });
+
+      console.log('✅ Arma equipada exitosamente:', weaponId);
+      
+      // Notificar al componente padre si existe callback
+      if (onWeaponEquip) {
+        onWeaponEquip(weaponId);
+      }
+    } catch (error) {
+      console.error('❌ Error equipando arma:', error);
+    } finally {
+      setIsEquipping(null);
+    }
+  };
+
+  const isWeaponEquipped = (weaponId: string): boolean => {
+    return equippedWeapons.includes(weaponId);
+  };
+
+  const isWeaponCrafted = (weaponId: string): boolean => {
+    return craftedWeapons.includes(weaponId);
   };
 
   return (
@@ -255,32 +361,114 @@ export const CraftingTable: React.FC<CraftingTableProps> = ({
                 )}
               </div>
 
-              {/* Botón de Craft */}
+              {/* Botones de Craft y Equipar */}
               {unlocked && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCraft(recipe.id);
-                  }}
-                  disabled={!canCraftRecipe}
-                  className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
-                    canCraftRecipe
-                      ? 'bg-green-600 hover:bg-green-700 text-white'
-                      : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  {canCraftRecipe ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <FaHammer />
-                      <span>Crear</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center space-x-2">
-                      <FaExclamationTriangle />
-                      <span>Materiales Insuficientes</span>
-                    </div>
+                <div className="space-y-2">
+                  {/* Botón de Craft - Solo para armas */}
+                  {recipe.type === 'weapon' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCraft(recipe.id);
+                      }}
+                      disabled={!canCraftRecipe || isCrafting === recipe.id || isWeaponCrafted(recipe.id)}
+                      className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
+                        isWeaponCrafted(recipe.id)
+                          ? 'bg-green-600 text-white cursor-not-allowed'
+                          : isCrafting === recipe.id
+                          ? 'bg-yellow-600 text-white cursor-not-allowed'
+                          : canCraftRecipe
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                          : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      {isCrafting === recipe.id ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>Creando...</span>
+                        </div>
+                      ) : isWeaponCrafted(recipe.id) ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <FaCheckCircle />
+                          <span>Ya Creada</span>
+                        </div>
+                      ) : canCraftRecipe ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <FaHammer />
+                          <span>Crear Arma</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center space-x-2">
+                          <FaExclamationTriangle />
+                          <span>Materiales Insuficientes</span>
+                        </div>
+                      )}
+                    </button>
                   )}
-                </button>
+
+                  {/* Botón de Craft para consumibles */}
+                  {recipe.type !== 'weapon' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCraft(recipe.id);
+                      }}
+                      disabled={!canCraftRecipe}
+                      className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
+                        canCraftRecipe
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      {canCraftRecipe ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <FaHammer />
+                          <span>Crear</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center space-x-2">
+                          <FaExclamationTriangle />
+                          <span>Materiales Insuficientes</span>
+                        </div>
+                      )}
+                    </button>
+                  )}
+
+                  {/* Botón de Equipar para armas - Solo si está creada */}
+                  {recipe.type === 'weapon' && isWeaponCrafted(recipe.id) && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEquipWeapon(recipe.id);
+                      }}
+                      disabled={isEquipping === recipe.id || isWeaponEquipped(recipe.id)}
+                      className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
+                        isWeaponEquipped(recipe.id)
+                          ? 'bg-blue-600 text-white cursor-not-allowed'
+                          : isEquipping === recipe.id
+                          ? 'bg-yellow-600 text-white cursor-not-allowed'
+                          : 'bg-orange-600 hover:bg-orange-700 text-white'
+                      }`}
+                    >
+                      {isEquipping === recipe.id ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>Equipando...</span>
+                        </div>
+                      ) : isWeaponEquipped(recipe.id) ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <FaCheckCircle />
+                          <span>Equipada</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center space-x-2">
+                          <FaShieldAlt />
+                          <span>Equipar</span>
+                        </div>
+                      )}
+                    </button>
+                  )}
+                </div>
               )}
 
               {/* Mensaje de bloqueo */}

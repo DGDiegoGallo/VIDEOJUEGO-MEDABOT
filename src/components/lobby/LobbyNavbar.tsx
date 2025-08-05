@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaSignOutAlt, FaUser, FaWallet, FaImage, FaPlay, FaGem, FaBolt, FaHeart, FaAppleAlt } from 'react-icons/fa';
+import { FaSignOutAlt, FaUser, FaWallet, FaImage, FaPlay, FaGem, FaBolt, FaHeart, FaAppleAlt, FaLifeRing } from 'react-icons/fa';
 import { GiSteelClaws } from 'react-icons/gi';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
@@ -16,7 +16,7 @@ interface Props {
   };
 }
 
-export type LobbySection = 'main' | 'profile' | 'wallet' | 'nfts';
+export type LobbySection = 'main' | 'profile' | 'wallet' | 'nfts' | 'support';
 
 export const LobbyNavbar: React.FC<Props> = ({ onSectionChange, activeSection, materials }) => {
   const navigate = useNavigate();
@@ -32,6 +32,7 @@ export const LobbyNavbar: React.FC<Props> = ({ onSectionChange, activeSection, m
     { id: 'profile', icon: <FaUser />, label: 'Perfil' },
     { id: 'wallet', icon: <FaWallet />, label: 'Wallet' },
     { id: 'nfts', icon: <FaImage />, label: 'NFTs' },
+    { id: 'support', icon: <FaLifeRing />, label: 'Soporte' },
     { id: 'logout', icon: <FaSignOutAlt />, label: 'Salir', action: handleLogout },
   ];
 

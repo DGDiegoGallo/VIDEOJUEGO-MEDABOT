@@ -1,5 +1,6 @@
 import React from 'react';
-import { FaBandAid, FaShieldAlt, FaExclamationTriangle } from 'react-icons/fa';
+import { FaBandAid, FaShieldAlt, FaExclamationTriangle, FaCog, FaHammer, FaBolt } from 'react-icons/fa';
+import { getWeaponConfig } from '@/config/weaponConfig';
 
 interface EquipmentDisplayProps {
   equipped_items: {
@@ -129,30 +130,81 @@ export const EquipmentDisplay: React.FC<EquipmentDisplayProps> = ({
         <div className="bg-gradient-to-br from-orange-800/60 to-red-800/60 border border-orange-600/50 rounded-xl p-4 transform hover:scale-105 transition-all duration-300">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-3">
-              <FaShieldAlt className="text-4xl text-orange-400" />
+              {weapons.length > 0 && weapons[0] === 'improved_machinegun' ? (
+                <FaCog className="text-4xl text-orange-400" />
+              ) : weapons.length > 0 && weapons[0] === 'grenade_launcher' ? (
+                <FaHammer className="text-4xl text-orange-400" />
+              ) : weapons.length > 0 && weapons[0] === 'laser_rifle' ? (
+                <FaBolt className="text-4xl text-orange-400" />
+              ) : (
+                <FaShieldAlt className="text-4xl text-orange-400" />
+              )}
               <div>
-                <h4 className="text-lg font-bold text-orange-200">Armas Equipadas</h4>
+                <h4 className="text-lg font-bold text-orange-200">Arma Principal</h4>
                 <p className="text-orange-300 text-sm">Equipamiento de combate</p>
               </div>
             </div>
           </div>
           
           <div className="text-center">
-            <div className="text-3xl font-bold text-orange-100 mb-2">
-              {weapons.length}
-            </div>
-            
-            <div className="text-orange-400 text-sm">
-              {weapons.length === 0 ? 'Sin armas equipadas' : 
-               weapons.length === 1 ? '1 arma equipada' : 
-               `${weapons.length} armas equipadas`}
-            </div>
-            
-            {/* Mostrar arma equipada si hay una */}
-            {weapons.length > 0 && (
-              <div className="mt-2 p-2 bg-orange-900/30 rounded-lg">
-                <div className="text-orange-200 text-sm font-medium">
-                  {weapons.includes('pistol_default') ? 'Pistola Básica' : weapons[0]}
+            {/* Mostrar información del arma equipada */}
+            {weapons.length > 0 ? (
+              <div className="space-y-2">
+                {(() => {
+                  const weaponConfig = getWeaponConfig(weapons[0]);
+                  const rarityColors = {
+                    common: 'text-gray-300',
+                    uncommon: 'text-green-300',
+                    rare: 'text-blue-300',
+                    epic: 'text-purple-300'
+                  };
+                  
+                  return (
+                    <>
+                      <div className={`text-xl font-bold ${rarityColors[weaponConfig.rarity]} mb-1`}>
+                        {weaponConfig.name}
+                      </div>
+                      <div className="text-orange-400 text-xs mb-2">
+                        {weaponConfig.rarity.toUpperCase()}
+                      </div>
+                      <div className="text-orange-200 text-sm mb-2">
+                        {weaponConfig.description}
+                      </div>
+                      
+                      {/* Efectos del arma */}
+                      <div className="bg-orange-900/40 rounded-lg p-2 space-y-1">
+                        {weaponConfig.effects.bulletsPerShot && weaponConfig.effects.bulletsPerShot > 1 && (
+                          <div className="text-xs text-orange-300">
+                            • {weaponConfig.effects.bulletsPerShot} proyectiles por disparo
+                          </div>
+                        )}
+                        {weaponConfig.effects.fireRate && (
+                          <div className="text-xs text-orange-300">
+                            • Velocidad: {weaponConfig.effects.fireRate}ms
+                          </div>
+                        )}
+                        {weaponConfig.effects.damage && (
+                          <div className="text-xs text-orange-300">
+                            • Daño: {weaponConfig.effects.damage}
+                          </div>
+                        )}
+                        {weaponConfig.effects.specialEffect && (
+                          <div className="text-xs text-yellow-300">
+                            • Efecto: {weaponConfig.effects.specialEffect}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="text-2xl font-bold text-orange-100">
+                  Sin arma
+                </div>
+                <div className="text-orange-400 text-sm">
+                  Equipa un arma en la mesa de creación
                 </div>
               </div>
             )}

@@ -41,20 +41,42 @@ interface GameMenuProps {
       experienceMultiplier: number;
     };
   };
-  // Daily Quests props
-  dailyQuests?: any[];
-  questProgress?: any;
-  completedQuests?: any[];
 }
 
 interface DailyMission {
   id: string;
   title: string;
   description: string;
+  type: string;
   progress: number;
   target: number;
-  reward: number; // Cambiado a number para alimentos
+  reward: number;
   completed: boolean;
+}
+
+interface QuestProgress {
+  enemiesKilled: number;
+  zombiesKilled: number;
+  dashersKilled: number;
+  tanksKilled: number;
+  currentLevel: number;
+  survivalTime: number;
+  supplyBoxesCollected: number;
+  barrelsDestroyed: number;
+  bandagesUsed: number;
+  levelsGained: number;
+  hasImprovedMachinegun: boolean;
+  hasGrenadeLauncher: boolean;
+  hasLaserRifle: boolean;
+  totalDamageDealt: number;
+  totalDamageReceived: number;
+  shotsFired: number;
+  shotsHit: number;
+  accuracyPercentage: number;
+  finalScore: number;
+  gamesPlayedTotal: number;
+  victoriesTotal: number;
+  defeatsTotal: number;
 }
 
 export const GameMenu: React.FC<GameMenuProps> = ({
@@ -62,71 +84,43 @@ export const GameMenu: React.FC<GameMenuProps> = ({
   onClose,
   onLogout,
   userId,
-  playerStats,
-  dailyQuests = [],
-  questProgress = null,
-  completedQuests = []
+  playerStats
 }) => {
   const [activeTab, setActiveTab] = useState<'main' | 'missions' | 'stats'>('main');
   const [dailyMissions, setDailyMissions] = useState<DailyMission[]>([]);
+  const [questProgress, setQuestProgress] = useState<QuestProgress | null>(null);
 
-  // Usar las misiones diarias del GamePage si están disponibles
+  // Cargar datos del localStorage cada vez que se abre el modal
   useEffect(() => {
-    if (dailyQuests && dailyQuests.length > 0) {
-      // Convertir las misiones del DailyQuestManager al formato del GameMenu
-      const convertedMissions = dailyQuests.map((quest: any) => ({
-        id: quest.id,
-        title: quest.title,
-        description: quest.description,
-        progress: quest.progress || 0,
-        target: quest.target,
-        reward: quest.reward,
-        completed: quest.completed || false
-      }));
-      setDailyMissions(convertedMissions);
-    } else {
-      // Fallback: cargar desde localStorage si no hay misiones del GamePage
+    if (isOpen) {
+      loadQuestProgress();
       loadDailyMissions();
     }
-  }, [dailyQuests]);
+  }, [isOpen, userId]);
 
   // Actualizar progreso de misiones cuando cambie questProgress
   useEffect(() => {
     if (questProgress && dailyMissions.length > 0) {
-      const updatedMissions = dailyMissions.map(mission => {
-        let progress = 0;
-        
-        // Determinar progreso basado en el tipo de misión
-        if (mission.title.includes('enemigo') || mission.title.includes('Exterminador') || mission.title.includes('Cazador')) {
-          progress = Math.min(questProgress.enemiesKilled || 0, mission.target);
-        } else if (mission.title.includes('zombie') || mission.title.includes('Zombie')) {
-          progress = Math.min(questProgress.zombiesKilled || 0, mission.target);
-        } else if (mission.title.includes('dasher') || mission.title.includes('Dasher') || mission.title.includes('Detector')) {
-          progress = Math.min(questProgress.dashersKilled || 0, mission.target);
-        } else if (mission.title.includes('tank') || mission.title.includes('Tank')) {
-          progress = Math.min(questProgress.tanksKilled || 0, mission.target);
-        } else if (mission.title.includes('nivel') || mission.title.includes('Maestro') || mission.title.includes('Ascenso')) {
-          progress = Math.min(playerStats.level, mission.target);
-        } else if (mission.title.includes('Sobrevive') || mission.title.includes('Superviviente') || mission.title.includes('Resistente')) {
-          progress = Math.min(Math.floor(questProgress.survivalTime || 0), mission.target);
-        } else if (mission.title.includes('vendaje') || mission.title.includes('Sanador') || mission.title.includes('Médico')) {
-          progress = Math.min(questProgress.bandagesUsed || 0, mission.target);
-        } else if (mission.title.includes('barril') || mission.title.includes('Demoledor') || mission.title.includes('Explosivo')) {
-          progress = Math.min(questProgress.barrelsDestroyed || 0, mission.target);
-        } else if (mission.title.includes('suministro') || mission.title.includes('Recolector') || mission.title.includes('Buscador')) {
-          progress = Math.min(questProgress.supplyBoxesCollected || 0, mission.target);
-        }
-        
-        return {
-          ...mission,
-          progress,
-          completed: progress >= mission.target
-        };
-      });
-      
-      setDailyMissions(updatedMissions);
+      updateMissionProgress();
     }
-  }, [questProgress, playerStats.level]); // Remover dailyMissions de las dependencias
+  }, [questProgress, dailyMissions.length]);
+
+  const loadQuestProgress = () => {
+    try {
+      const progressKey = `questProgress_${userId}`;
+      const stored = localStorage.getItem(progressKey);
+      
+      if (stored) {
+        const progress = JSON.parse(stored);
+        setQuestProgress(progress);
+        console.log('🎯 GameMenu: Progreso cargado desde localStorage:', progress);
+      } else {
+        console.log('🎯 GameMenu: No se encontró progreso en localStorage');
+      }
+    } catch (error) {
+      console.error('❌ Error al cargar progreso desde localStorage:', error);
+    }
+  };
 
   const loadDailyMissions = () => {
     try {
@@ -135,63 +129,111 @@ export const GameMenu: React.FC<GameMenuProps> = ({
       
       if (stored) {
         const questData = JSON.parse(stored);
-        setDailyMissions(questData.quests.map((quest: any) => ({
+        const missions = questData.quests.map((quest: any) => ({
           id: quest.id,
           title: quest.title,
           description: quest.description,
+          type: quest.type,
           progress: quest.progress || 0,
           target: quest.target,
           reward: quest.reward,
           completed: quest.completed || false
-        })));
+        }));
+        
+        setDailyMissions(missions);
+        console.log('🎯 GameMenu: Misiones cargadas desde localStorage:', missions);
       } else {
-        // Si no hay misiones, crear algunas básicas
+        console.log('🎯 GameMenu: No se encontraron misiones en localStorage');
+        // Crear misiones básicas por defecto
         setDailyMissions([
           {
             id: '1',
-            title: 'Exterminador',
-            description: 'Elimina 1 enemigo',
-            progress: Math.min(playerStats.enemiesKilled, 1),
-            target: 1,
-            reward: 1,
-            completed: playerStats.enemiesKilled >= 1
+            title: 'Cazador de Enemigos',
+            description: 'Elimina 10 enemigos',
+            type: 'kill_enemies',
+            progress: 0,
+            target: 10,
+            reward: 2,
+            completed: false
           },
           {
             id: '2',
-            title: 'Superviviente',
-            description: 'Sobrevive 5 segundos',
+            title: 'Curador',
+            description: 'Usa 1 vendajes',
+            type: 'use_bandages',
             progress: 0,
-            target: 5,
+            target: 1,
             reward: 1,
             completed: false
           },
           {
             id: '3',
-            title: 'Maestro de Habilidades',
-            description: 'Alcanza nivel 1',
-            progress: Math.min(playerStats.level, 1),
-            target: 1,
-            reward: 2,
-            completed: playerStats.level >= 1
+            title: 'Guerrero Anti-Tanque',
+            description: 'Elimina 2 tanques',
+            type: 'kill_tanks',
+            progress: 0,
+            target: 2,
+            reward: 3,
+            completed: false
           }
         ]);
       }
     } catch (error) {
-      console.error('Error loading daily missions:', error);
+      console.error('❌ Error loading daily missions:', error);
     }
   };
 
-  const loadQuestProgress = () => {
-    try {
-      const progressKey = `questProgress_${userId}`;
-      const stored = localStorage.getItem(progressKey);
+  const updateMissionProgress = () => {
+    if (!questProgress) return;
+
+    const updatedMissions = dailyMissions.map(mission => {
+      let progress = 0;
       
-      if (stored) {
-        setQuestProgress(JSON.parse(stored));
+      // Usar el tipo de misión para determinar el progreso exacto
+      switch (mission.type) {
+        case 'destroy_barrels':
+          progress = Math.min(questProgress.barrelsDestroyed, mission.target);
+          break;
+        case 'kill_enemies':
+          progress = Math.min(questProgress.enemiesKilled, mission.target);
+          break;
+        case 'kill_zombies':
+          progress = Math.min(questProgress.zombiesKilled, mission.target);
+          break;
+        case 'kill_dashers':
+          progress = Math.min(questProgress.dashersKilled, mission.target);
+          break;
+        case 'kill_tanks':
+          progress = Math.min(questProgress.tanksKilled, mission.target);
+          break;
+        case 'use_bandages':
+          progress = Math.min(questProgress.bandagesUsed, mission.target);
+          break;
+        case 'collect_boxes':
+          progress = Math.min(questProgress.supplyBoxesCollected, mission.target);
+          break;
+        case 'survive_time':
+          progress = Math.min(Math.floor(questProgress.survivalTime), mission.target);
+          break;
+        case 'reach_level':
+          progress = Math.min(questProgress.currentLevel, mission.target);
+          break;
+        case 'gain_levels':
+          progress = Math.min(questProgress.levelsGained, mission.target);
+          break;
+        default:
+          progress = mission.progress; // Mantener progreso existente si no se reconoce el tipo
       }
-    } catch (error) {
-      console.error('Error loading quest progress:', error);
-    }
+      
+      return {
+        ...mission,
+        progress,
+        completed: progress >= mission.target
+      };
+    });
+    
+    setDailyMissions(updatedMissions);
+    console.log('🎯 GameMenu: Progreso de misiones actualizado:', updatedMissions);
   };
 
   if (!isOpen) return null;
@@ -249,6 +291,19 @@ export const GameMenu: React.FC<GameMenuProps> = ({
         </button>
       </div>
 
+      {/* Mostrar información de debug si hay questProgress */}
+      {questProgress && (
+        <div className="bg-gray-800/50 rounded-lg p-3 mb-4 text-xs border border-gray-600/50">
+          <p className="text-gray-400 mb-2">📊 Datos del localStorage:</p>
+          <div className="grid grid-cols-2 gap-2 text-gray-300">
+            <div>Enemigos: {questProgress.enemiesKilled}</div>
+            <div>Tanques: {questProgress.tanksKilled}</div>
+            <div>Barriles: {questProgress.barrelsDestroyed}</div>
+            <div>Vendajes: {questProgress.bandagesUsed}</div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
         {dailyMissions.map((mission) => (
           <div
@@ -285,7 +340,7 @@ export const GameMenu: React.FC<GameMenuProps> = ({
                       ? 'bg-gradient-to-r from-green-500 to-green-400'
                       : 'bg-gradient-to-r from-blue-500 to-purple-500'
                   }`}
-                  style={{ width: `${(mission.progress / mission.target) * 100}%` }}
+                  style={{ width: `${Math.min((mission.progress / mission.target) * 100, 100)}%` }}
                 ></div>
               </div>
               
@@ -294,12 +349,25 @@ export const GameMenu: React.FC<GameMenuProps> = ({
                   Recompensa: 🍎 {mission.reward} alimentos
                 </span>
                 <span className="text-gray-400 text-xs">
-                  {Math.round((mission.progress / mission.target) * 100)}%
+                  {Math.round(Math.min((mission.progress / mission.target) * 100, 100))}%
                 </span>
               </div>
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Botón para recargar datos */}
+      <div className="pt-4 border-t border-gray-600/50">
+        <button
+          onClick={() => {
+            loadQuestProgress();
+            loadDailyMissions();
+          }}
+          className="w-full bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-semibold py-2 px-4 rounded-lg text-sm"
+        >
+          🔄 Actualizar Datos
+        </button>
       </div>
     </div>
   );
@@ -318,6 +386,35 @@ export const GameMenu: React.FC<GameMenuProps> = ({
           <FaTimes className="text-lg" />
         </button>
       </div>
+
+      {/* Estadísticas del localStorage */}
+      {questProgress && (
+        <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-lg p-4 border border-gray-600/50">
+          <h4 className="text-white font-semibold mb-3 flex items-center space-x-2">
+            <GiDeathSkull className="text-red-400" />
+            <span>Estadísticas de Combate</span>
+          </h4>
+          
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="text-center">
+              <div className="text-lg font-bold text-yellow-400">{questProgress.shotsFired}</div>
+              <div className="text-gray-400 text-xs">Disparos Realizados</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-green-400">{questProgress.shotsHit}</div>
+              <div className="text-gray-400 text-xs">Impactos Exitosos</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-blue-400">{questProgress.accuracyPercentage.toFixed(1)}%</div>
+              <div className="text-gray-400 text-xs">Precisión</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-orange-400">{questProgress.finalScore}</div>
+              <div className="text-gray-400 text-xs">Puntuación Final</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Estadísticas Generales */}
       <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-lg p-4 border border-gray-600/50">
@@ -374,35 +471,6 @@ export const GameMenu: React.FC<GameMenuProps> = ({
             <div className="bg-red-900/30 px-3 py-1 rounded-full border border-red-700/30 skill-level-indicator">
               <span className="text-red-400 font-bold">Nivel {playerStats.skills.multiShot}</span>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Armas (Placeholder) */}
-      <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-lg p-4 border border-gray-600/50">
-        <h4 className="text-white font-semibold mb-3 flex items-center space-x-2">
-          <FaCrosshairs className="text-orange-400" />
-          <span>Arsenal</span>
-        </h4>
-        
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center">
-                <span className="text-white text-sm">🔫</span>
-              </div>
-              <div>
-                <div className="text-white font-medium">Blaster Básico</div>
-                <div className="text-gray-400 text-xs">Arma principal</div>
-              </div>
-            </div>
-            <div className="bg-green-900/30 px-2 py-1 rounded border border-green-700/30">
-              <span className="text-green-400 text-xs">Equipado</span>
-            </div>
-          </div>
-          
-          <div className="text-center py-4">
-            <div className="text-gray-500 text-sm">Más armas próximamente...</div>
           </div>
         </div>
       </div>

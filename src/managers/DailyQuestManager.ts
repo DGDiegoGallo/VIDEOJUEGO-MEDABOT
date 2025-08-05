@@ -1,38 +1,17 @@
 import { Scene } from 'phaser';
-import { Player } from './Player';
-import { EnemyManager } from './EnemyManager';
 import { ExperienceManager } from './ExperienceManager';
-import { SupplyBoxManager } from './SupplyBoxManager';
-import { ExplosionManager } from './ExplosionManager';
 import { dailyQuestService } from '../services/dailyQuestService';
 
 export interface DailyQuest {
   id: string;
   title: string;
   description: string;
-  type: QuestType;
+  type: 'destroy_barrels' | 'kill_enemies' | 'kill_zombies' | 'kill_dashers' | 'kill_tanks' | 'use_bandages' | 'collect_boxes' | 'survive_time' | 'get_improved_machinegun' | 'get_grenade_launcher' | 'get_laser_rifle' | 'reach_level' | 'gain_levels';
   target: number;
   progress: number;
-  reward: number; // Cantidad de food
+  reward: number;
   completed: boolean;
   completedAt?: string;
-}
-
-export enum QuestType {
-  KILL_ENEMIES = 'kill_enemies',
-  KILL_ZOMBIES = 'kill_zombies',
-  KILL_DASHERS = 'kill_dashers',
-  KILL_TANKS = 'kill_tanks',
-  REACH_LEVEL = 'reach_level',
-  SURVIVE_TIME = 'survive_time',
-  COLLECT_SUPPLY_BOXES = 'collect_supply_boxes',
-  DESTROY_BARRELS = 'destroy_barrels',
-  USE_BANDAGES = 'use_bandages',
-  GAIN_LEVELS = 'gain_levels',
-  // Misiones permanentes de armas
-  GET_IMPROVED_MACHINEGUN = 'get_improved_machinegun',
-  GET_GRENADE_LAUNCHER = 'get_grenade_launcher',
-  GET_LASER_RIFLE = 'get_laser_rifle'
 }
 
 export interface QuestProgress {
@@ -65,14 +44,16 @@ export interface QuestProgress {
   defeatsTotal: number;
 }
 
+export interface StoredQuests {
+  userId: string;
+  date: string;
+  quests: DailyQuest[];
+}
+
 export class DailyQuestManager {
   private scene: Scene;
-  private player: Player;
-  private enemyManager: EnemyManager;
   private experienceManager: ExperienceManager;
-  private supplyBoxManager: SupplyBoxManager;
-  private explosionManager: ExplosionManager;
-  private userId: string | number;
+  private userId: string;
   private sessionDocumentId: string | null = null;
 
   private dailyQuests: DailyQuest[] = [];
@@ -103,23 +84,15 @@ export class DailyQuestManager {
   };
 
   private lastQuestCheck: number = 0;
-  private questCheckInterval: number = 500; // Verificar cada 500ms en lugar de 1000ms
+  private questCheckInterval: number = 2000; // Verificar cada 2 segundos
 
   constructor(
     scene: Scene,
-    player: Player,
-    enemyManager: EnemyManager,
     experienceManager: ExperienceManager,
-    supplyBoxManager: SupplyBoxManager,
-    explosionManager: ExplosionManager,
-    userId: string | number
+    userId: string
   ) {
     this.scene = scene;
-    this.player = player;
-    this.enemyManager = enemyManager;
     this.experienceManager = experienceManager;
-    this.supplyBoxManager = supplyBoxManager;
-    this.explosionManager = explosionManager;
     this.userId = userId;
 
     this.initializeQuests();
@@ -147,109 +120,34 @@ export class DailyQuestManager {
 
     // Cargar progreso guardado
     this.loadQuestProgress();
-    console.log('🎯 DailyQuestManager: Progreso cargado:', this.questProgress);
+    console.log('🎯 Progreso de misiones cargado:', this.questProgress);
   }
 
   /**
    * Genera 3 misiones diarias aleatorias
    */
-  public generateDailyQuests(): void {
+  private generateDailyQuests(): void {
     const questTemplates = [
-      {
-        type: QuestType.KILL_ENEMIES,
-        titles: ['Exterminador', 'Cazador de Enemigos', 'Guerrero Implacable'],
-        descriptions: ['Elimina {target} enemigos', 'Derrota {target} enemigos', 'Acaba con {target} enemigos'],
-        targets: [1, 1, 1, 1], // Muy fácil para testing
-        rewards: [1, 2, 3]
-      },
-      {
-        type: QuestType.KILL_ZOMBIES,
-        titles: ['Cazador de Zombies', 'Exterminador de No-Muertos', 'Guardián de la Vida'],
-        descriptions: ['Elimina {target} zombies', 'Derrota {target} zombies', 'Acaba con {target} zombies'],
-        targets: [1, 1, 1, 1], // Muy fácil para testing
-        rewards: [1, 2, 3]
-      },
-      {
-        type: QuestType.KILL_DASHERS,
-        titles: ['Cazador de Velocistas', 'Detector de Dashers', 'Perseguidor Implacable'],
-        descriptions: ['Elimina {target} dashers', 'Derrota {target} dashers', 'Acaba con {target} dashers'],
-        targets: [1, 1, 1, 1], // Muy fácil para testing
-        rewards: [2, 3, 4]
-      },
-      {
-        type: QuestType.KILL_TANKS,
-        titles: ['Destructor de Tanques', 'Cazador de Blindados', 'Guerrero Anti-Tanque'],
-        descriptions: ['Elimina {target} tanques', 'Derrota {target} tanques', 'Acaba con {target} tanques'],
-        targets: [1, 1, 1, 1], // Muy fácil para testing
-        rewards: [2, 3, 4]
-      },
-      {
-        type: QuestType.REACH_LEVEL,
-        titles: ['Ascenso de Poder', 'Maestro de Habilidades', 'Evolución Constante'],
-        descriptions: ['Alcanza el nivel {target}', 'Llega al nivel {target}', 'Sube al nivel {target}'],
-        targets: [1, 1, 1, 1], // Muy fácil para testing
-        rewards: [2, 3, 4]
-      },
-      {
-        type: QuestType.SURVIVE_TIME,
-        titles: ['Superviviente', 'Resistente', 'Guardián del Tiempo'],
-        descriptions: ['Sobrevive {target} segundos', 'Mantente vivo {target} segundos', 'Resiste {target} segundos'],
-        targets: [5, 5, 5, 5], // Muy fácil para testing (5 segundos)
-        rewards: [1, 2, 3]
-      },
-      {
-        type: QuestType.COLLECT_SUPPLY_BOXES,
-        titles: ['Recolector', 'Buscador de Suministros', 'Proveedor'],
-        descriptions: ['Recolecta {target} cajas de suministros', 'Encuentra {target} cajas', 'Obtén {target} suministros'],
-        targets: [1, 1, 1, 1], // Muy fácil para testing
-        rewards: [1, 2, 3]
-      },
-      {
-        type: QuestType.DESTROY_BARRELS,
-        titles: ['Demoledor', 'Destructor de Barriles', 'Explosivo'],
-        descriptions: ['Destruye {target} barriles', 'Explota {target} barriles', 'Acaba con {target} barriles'],
-        targets: [1, 1, 1, 1], // Muy fácil para testing
-        rewards: [1, 2, 3]
-      },
-      {
-        type: QuestType.USE_BANDAGES,
-        titles: ['Sanador', 'Médico de Campo', 'Curador'],
-        descriptions: ['Usa {target} vendajes', 'Aplica {target} vendajes', 'Utiliza {target} vendajes'],
-        targets: [1, 1, 1, 1], // Muy fácil para testing
-        rewards: [1, 2, 3]
-      },
-      {
-        type: QuestType.GAIN_LEVELS,
-        titles: ['Ascenso Rápido', 'Evolución Constante', 'Maestro de Poder'],
-        descriptions: ['Sube {target} niveles', 'Alcanza {target} niveles más', 'Gana {target} niveles'],
-        targets: [1, 1, 1, 1], // Muy fácil para testing
-        rewards: [2, 3, 4]
-      }
+      { id: 'quest_1', title: 'Demoledor', description: 'Explota 1 barriles', type: 'destroy_barrels', target: 1, reward: 1 },
+      { id: 'quest_2', title: 'Cazador de Enemigos', description: 'Elimina 10 enemigos', type: 'kill_enemies', target: 10, reward: 2 },
+      { id: 'quest_3', title: 'Exterminio de Zombies', description: 'Elimina 5 zombies', type: 'kill_zombies', target: 5, reward: 1 },
+      { id: 'quest_4', title: 'Cazador de Dashers', description: 'Elimina 3 dashers', type: 'kill_dashers', target: 3, reward: 2 },
+      { id: 'quest_5', title: 'Guerrero Anti-Tanque', description: 'Elimina 2 tanques', type: 'kill_tanks', target: 2, reward: 3 },
+      { id: 'quest_6', title: 'Curador', description: 'Usa 1 vendajes', type: 'use_bandages', target: 1, reward: 1 },
+      { id: 'quest_7', title: 'Recolector', description: 'Recolecta 3 cajas de suministros', type: 'collect_boxes', target: 3, reward: 2 },
+      { id: 'quest_8', title: 'Superviviente', description: 'Sobrevive por 120 segundos', type: 'survive_time', target: 120, reward: 3 }
     ];
 
     // Seleccionar 3 misiones aleatorias
-    const selectedTemplates = this.shuffleArray([...questTemplates]).slice(0, 3);
-    
-    this.dailyQuests = selectedTemplates.map((template, index) => {
-      const titleIndex = Math.floor(Math.random() * template.titles.length);
-      const descIndex = Math.floor(Math.random() * template.descriptions.length);
-      const targetIndex = Math.floor(Math.random() * template.targets.length);
-      const rewardIndex = Math.floor(Math.random() * template.rewards.length);
+    const shuffled = [...questTemplates].sort(() => 0.5 - Math.random());
+    this.dailyQuests = shuffled.slice(0, 3).map(template => ({
+      ...template,
+      progress: 0,
+      completed: false
+    } as DailyQuest));
 
-      return {
-        id: `quest_${index + 1}`,
-        title: template.titles[titleIndex],
-        description: template.descriptions[descIndex].replace('{target}', template.targets[targetIndex].toString()),
-        type: template.type,
-        target: template.targets[targetIndex],
-        progress: 0,
-        reward: template.rewards[rewardIndex],
-        completed: false
-      };
-    });
-
-    // Guardar las nuevas misiones
     this.saveQuests();
+    console.log('🎯 Nuevas misiones diarias generadas:', this.dailyQuests);
   }
 
   /**
@@ -261,7 +159,7 @@ export class DailyQuestManager {
         id: 'permanent_1',
         title: 'Ametralladora Mejorada',
         description: 'Consigue la Ametralladora Mejorada',
-        type: QuestType.GET_IMPROVED_MACHINEGUN,
+        type: 'get_improved_machinegun',
         target: 1,
         progress: 0,
         reward: 5, // 5 alimentos
@@ -271,7 +169,7 @@ export class DailyQuestManager {
         id: 'permanent_2',
         title: 'Lanzagranadas',
         description: 'Consigue el Lanzagranadas',
-        type: QuestType.GET_GRENADE_LAUNCHER,
+        type: 'get_grenade_launcher',
         target: 1,
         progress: 0,
         reward: 8, // 8 alimentos
@@ -281,7 +179,7 @@ export class DailyQuestManager {
         id: 'permanent_3',
         title: 'Rifle Láser',
         description: 'Consigue el Rifle Láser',
-        type: QuestType.GET_LASER_RIFLE,
+        type: 'get_laser_rifle',
         target: 1,
         progress: 0,
         reward: 10, // 10 alimentos
@@ -310,7 +208,6 @@ export class DailyQuestManager {
           break;
       }
       
-      // Actualizar progreso en localStorage inmediatamente
       this.saveQuestProgress();
     });
 
@@ -321,7 +218,7 @@ export class DailyQuestManager {
     });
 
     // Barril destruido
-    this.scene.events.on('barrelDestroyed', () => {
+    this.scene.events.on('barrelExplosion', () => {
       this.questProgress.barrelsDestroyed++;
       this.saveQuestProgress();
     });
@@ -334,60 +231,50 @@ export class DailyQuestManager {
 
     // Nivel ganado
     this.scene.events.on('levelUp', () => {
-      this.questProgress.currentLevel = this.experienceManager.getLevel();
       this.questProgress.levelsGained++;
       this.saveQuestProgress();
     });
 
-    // NUEVOS EVENTOS PARA COMPLETAR ESTADÍSTICAS
-    
-    // Disparo realizado - emitir desde MainScene autoShoot
-    this.scene.events.on('bulletFired', (data?: { bulletsCount?: number }) => {
-      const bulletCount = data?.bulletsCount || 1;
+    // Disparo realizado
+    this.scene.events.on('bulletFired', (data: { bulletsCount: number }) => {
+      const bulletCount = data.bulletsCount || 1;
       this.questProgress.shotsFired += bulletCount;
       this.updateAccuracy();
       this.saveQuestProgress();
-      console.log(`🔫 Disparos registrados: +${bulletCount} (Total: ${this.questProgress.shotsFired})`);
     });
 
-    // Bala impacta enemigo - emitir desde CollisionManager
-    this.scene.events.on('bulletHit', (data?: { damage?: number }) => {
+    // Impacto exitoso
+    this.scene.events.on('bulletHit', (data: { damage: number }) => {
       this.questProgress.shotsHit++;
-      if (data?.damage) {
-        this.questProgress.totalDamageDealt += data.damage;
-      }
+      this.questProgress.totalDamageDealt += data.damage || 1;
       this.updateAccuracy();
       this.saveQuestProgress();
-      console.log(`🎯 Impacto registrado: ${this.questProgress.shotsHit}/${this.questProgress.shotsFired} (${this.questProgress.accuracyPercentage.toFixed(1)}%)`);
     });
 
-    // Jugador recibe daño - emitir desde Player/CollisionManager
+    // Daño recibido por el jugador
     this.scene.events.on('playerDamaged', (data: { damage: number }) => {
-      this.questProgress.totalDamageReceived += data.damage;
+      this.questProgress.totalDamageReceived += data.damage || 1;
       this.saveQuestProgress();
-      console.log(`💔 Daño recibido: +${data.damage} (Total: ${this.questProgress.totalDamageReceived})`);
     });
 
-    // Actualización de score - emitir desde MainScene/UIManager
+    // Actualización de score
     this.scene.events.on('scoreUpdate', (data: { score: number }) => {
-      this.questProgress.finalScore = data.score;
-      // No guardar en cada actualización de score para evitar spam
+      this.questProgress.finalScore = data.score || 0;
+      this.saveQuestProgress();
     });
 
-    // Victoria del juego
+    // Victoria en el juego
     this.scene.events.on('gameWin', () => {
       this.questProgress.victoriesTotal++;
       this.questProgress.gamesPlayedTotal++;
       this.saveQuestProgress();
-      console.log(`🏆 Victoria registrada: ${this.questProgress.victoriesTotal} victorias de ${this.questProgress.gamesPlayedTotal} juegos`);
     });
 
-    // Derrota del juego
+    // Derrota en el juego
     this.scene.events.on('gameOver', () => {
       this.questProgress.defeatsTotal++;
       this.questProgress.gamesPlayedTotal++;
       this.saveQuestProgress();
-      console.log(`💀 Derrota registrada: ${this.questProgress.defeatsTotal} derrotas de ${this.questProgress.gamesPlayedTotal} juegos`);
     });
   }
 
@@ -403,17 +290,17 @@ export class DailyQuestManager {
   }
 
   /**
-   * Actualiza el progreso de las misiones
+   * Actualiza el progreso de las misiones usando los datos del localStorage
    */
   public async update(): Promise<void> {
     const currentTime = Date.now();
     
-    // Verificar progreso cada segundo
+    // Verificar progreso cada 2 segundos
     if (currentTime - this.lastQuestCheck >= this.questCheckInterval) {
       this.lastQuestCheck = currentTime;
       
       // Actualizar tiempo de supervivencia
-      this.questProgress.survivalTime = this.scene.time.now / 1000; // Convertir a segundos
+      this.questProgress.survivalTime = this.scene.time.now / 1000;
       
       // Actualizar nivel actual
       this.questProgress.currentLevel = this.experienceManager.getLevel();
@@ -423,202 +310,207 @@ export class DailyQuestManager {
       if (uiData?.score !== undefined) {
         this.questProgress.finalScore = uiData.score;
       }
+
+      // Verificar progreso de misiones usando los datos actualizados
+      this.checkQuestProgress();
       
-      // Verificar progreso de misiones diarias
-      await this.checkQuestProgress();
-      
-      // Verificar progreso de misiones permanentes
-      this.checkPermanentQuestProgress();
-      
-      // Guardar progreso
+      // Guardar progreso actualizado
       this.saveQuestProgress();
     }
   }
 
   /**
-   * Verifica el progreso de todas las misiones
+   * Verifica el progreso de las misiones y las marca como completadas
    */
-  public async checkQuestProgress(): Promise<void> {
-    let hasNewCompletion = false;
+  private checkQuestProgress(): void {
+    let questsCompleted = false;
 
-    console.log('🎯 DailyQuestManager: Verificando progreso de misiones...');
-    console.log('🎯 DailyQuestManager: Misiones diarias:', this.dailyQuests);
-    console.log('🎯 DailyQuestManager: Progreso actual:', this.questProgress);
-
-    for (const quest of this.dailyQuests) {
-      if (quest.completed) {
-        console.log(`🎯 Misión ya completada: ${quest.title}`);
-        continue;
-      }
+    this.dailyQuests.forEach(quest => {
+      if (quest.completed) return;
 
       let currentProgress = 0;
 
+      // Usar los datos del questProgress para verificar el progreso
       switch (quest.type) {
-        case QuestType.KILL_ENEMIES:
-          currentProgress = this.questProgress.enemiesKilled;
-          break;
-        case QuestType.KILL_ZOMBIES:
-          currentProgress = this.questProgress.zombiesKilled;
-          break;
-        case QuestType.KILL_DASHERS:
-          currentProgress = this.questProgress.dashersKilled;
-          break;
-        case QuestType.KILL_TANKS:
-          currentProgress = this.questProgress.tanksKilled;
-          break;
-        case QuestType.REACH_LEVEL:
-          currentProgress = this.questProgress.currentLevel;
-          break;
-        case QuestType.SURVIVE_TIME:
-          currentProgress = Math.floor(this.questProgress.survivalTime);
-          break;
-        case QuestType.COLLECT_SUPPLY_BOXES:
-          currentProgress = this.questProgress.supplyBoxesCollected;
-          break;
-        case QuestType.DESTROY_BARRELS:
+        case 'destroy_barrels':
           currentProgress = this.questProgress.barrelsDestroyed;
           break;
-        case QuestType.USE_BANDAGES:
+        case 'kill_enemies':
+          currentProgress = this.questProgress.enemiesKilled;
+          break;
+        case 'kill_zombies':
+          currentProgress = this.questProgress.zombiesKilled;
+          break;
+        case 'kill_dashers':
+          currentProgress = this.questProgress.dashersKilled;
+          break;
+        case 'kill_tanks':
+          currentProgress = this.questProgress.tanksKilled;
+          break;
+        case 'use_bandages':
           currentProgress = this.questProgress.bandagesUsed;
           break;
-        case QuestType.GAIN_LEVELS:
+        case 'collect_boxes':
+          currentProgress = this.questProgress.supplyBoxesCollected;
+          break;
+        case 'survive_time':
+          currentProgress = Math.floor(this.questProgress.survivalTime);
+          break;
+        case 'get_improved_machinegun':
+          currentProgress = this.questProgress.hasImprovedMachinegun ? 1 : 0;
+          break;
+        case 'get_grenade_launcher':
+          currentProgress = this.questProgress.hasGrenadeLauncher ? 1 : 0;
+          break;
+        case 'get_laser_rifle':
+          currentProgress = this.questProgress.hasLaserRifle ? 1 : 0;
+          break;
+        case 'reach_level':
+          currentProgress = this.questProgress.currentLevel;
+          break;
+        case 'gain_levels':
           currentProgress = this.questProgress.levelsGained;
           break;
       }
 
-      // ACTUALIZAR EL PROGRESO EN LA MISIÓN EN TIEMPO REAL
-      quest.progress = currentProgress;
+      // Actualizar progreso
+      quest.progress = Math.min(currentProgress, quest.target);
 
-      console.log(`🎯 Misión: ${quest.title} (${quest.type}) - Progreso: ${quest.progress}/${quest.target} - Completada: ${quest.completed}`);
-
-      // Verificar si se completó
+      // Verificar si se completó la misión
       if (quest.progress >= quest.target && !quest.completed) {
         quest.completed = true;
         quest.completedAt = new Date().toISOString();
-        hasNewCompletion = true;
-
-        console.log(`🎯 Misión completada: ${quest.title} - Recompensa: ${quest.reward} alimentos`);
+        questsCompleted = true;
+        
+        console.log(`✅ Misión completada: ${quest.title} (${quest.progress}/${quest.target})`);
         
         // Emitir evento de misión completada
         this.scene.events.emit('questCompleted', {
-          quest,
+          quest: quest,
           reward: quest.reward
         });
-
-        // Procesar recompensa con el servicio
-        await dailyQuestService.processQuestReward({
-          userId: this.userId,
-          questId: quest.id,
-          questTitle: quest.title,
-          reward: quest.reward,
-          completedAt: quest.completedAt!,
-          sessionId: this.sessionDocumentId || undefined
-        });
       }
-    }
+    });
 
-    // GUARDAR LAS MISIONES CON EL PROGRESO ACTUALIZADO
-    if (hasNewCompletion || this.dailyQuests.length > 0) {
+    if (questsCompleted) {
       this.saveQuests();
-      this.checkAllQuestsCompleted();
     }
   }
 
   /**
-   * Verifica el progreso de las misiones permanentes
+   * Obtiene las misiones almacenadas en localStorage
    */
-  public checkPermanentQuestProgress(): void {
-    for (const quest of this.permanentQuests) {
-      if (quest.completed) continue;
-
-      let currentProgress = 0;
-
-      switch (quest.type) {
-        case QuestType.GET_IMPROVED_MACHINEGUN:
-          currentProgress = this.questProgress.hasImprovedMachinegun ? 1 : 0;
-          break;
-        case QuestType.GET_GRENADE_LAUNCHER:
-          currentProgress = this.questProgress.hasGrenadeLauncher ? 1 : 0;
-          break;
-        case QuestType.GET_LASER_RIFLE:
-          currentProgress = this.questProgress.hasLaserRifle ? 1 : 0;
-          break;
+  private getStoredQuests(): StoredQuests {
+    try {
+      const stored = localStorage.getItem(`dailyQuests_${this.userId}`);
+      if (stored) {
+        return JSON.parse(stored);
       }
-
-      quest.progress = currentProgress;
-
-      // Verificar si se completó
-      if (quest.progress >= quest.target && !quest.completed) {
-        quest.completed = true;
-        quest.completedAt = new Date().toISOString();
-
-        console.log(`🏆 Misión permanente completada: ${quest.title} - Recompensa: ${quest.reward} alimentos`);
-        
-        // Emitir evento de misión completada
-        this.scene.events.emit('questCompleted', {
-          quest,
-          reward: quest.reward
-        });
-
-        // Procesar recompensa con el servicio
-        dailyQuestService.processQuestReward({
-          userId: this.userId,
-          questId: quest.id,
-          questTitle: quest.title,
-          reward: quest.reward,
-          completedAt: quest.completedAt!,
-          sessionId: this.sessionDocumentId || undefined
-        });
-      }
+    } catch (error) {
+      console.error('❌ Error al cargar misiones desde localStorage:', error);
     }
-  }
-
-  /**
-   * Verifica si todas las misiones están completadas
-   */
-  private checkAllQuestsCompleted(): void {
-    const allCompleted = this.dailyQuests.every(quest => quest.completed);
     
-    if (allCompleted) {
-      const totalReward = this.dailyQuests.reduce((sum, quest) => sum + quest.reward, 0);
-      const bonusReward = 10; // Bonus por completar las 3 misiones
-      
-              console.log(`🏆 ¡Todas las misiones diarias completadas! Recompensa total: ${totalReward + bonusReward} alimentos`);
-      
-      // Emitir evento de todas las misiones completadas
-      this.scene.events.emit('allQuestsCompleted', {
-        totalReward: totalReward + bonusReward,
+    return {
+      userId: this.userId,
+      date: new Date().toISOString().split('T')[0],
+      quests: []
+    };
+  }
+
+  /**
+   * Guarda las misiones en localStorage
+   */
+  private saveQuests(): void {
+    try {
+      const questData: StoredQuests = {
+        userId: this.userId,
+        date: new Date().toISOString().split('T')[0],
         quests: this.dailyQuests
-      });
+      };
+      
+      localStorage.setItem(`dailyQuests_${this.userId}`, JSON.stringify(questData));
+      console.log('💾 Misiones guardadas en localStorage');
+    } catch (error) {
+      console.error('❌ Error al guardar misiones en localStorage:', error);
     }
   }
 
   /**
-   * Obtiene las misiones diarias actuales
+   * Carga el progreso desde localStorage
    */
+  private loadQuestProgress(): void {
+    try {
+      const stored = localStorage.getItem(`questProgress_${this.userId}`);
+      if (stored) {
+        const parsedProgress = JSON.parse(stored);
+        this.questProgress = { ...this.getDefaultProgress(), ...parsedProgress };
+        console.log('📊 Progreso cargado desde localStorage:', this.questProgress);
+      }
+    } catch (error) {
+      console.error('❌ Error al cargar progreso desde localStorage:', error);
+      this.questProgress = this.getDefaultProgress();
+    }
+  }
+
+  /**
+   * Guarda el progreso en localStorage
+   */
+  public saveQuestProgress(): void {
+    try {
+      localStorage.setItem(`questProgress_${this.userId}`, JSON.stringify(this.questProgress));
+    } catch (error) {
+      console.error('❌ Error al guardar progreso en localStorage:', error);
+    }
+  }
+
+  /**
+   * Función de debug para mostrar el estado actual de las estadísticas
+   */
+  public debugQuestProgress(): void {
+    console.log('🔍 === DEBUG: Estado Actual de QuestProgress ===');
+    console.log('📊 Estadísticas básicas:');
+    console.log(`  • Enemigos eliminados: ${this.questProgress.enemiesKilled}`);
+    console.log(`  • Zombies eliminados: ${this.questProgress.zombiesKilled}`);
+    console.log(`  • Dashers eliminados: ${this.questProgress.dashersKilled}`);
+    console.log(`  • Tanques eliminados: ${this.questProgress.tanksKilled}`);
+    console.log(`  • Nivel actual: ${this.questProgress.currentLevel}`);
+    console.log(`  • Tiempo de supervivencia: ${this.questProgress.survivalTime.toFixed(2)}s`);
+    console.log(`  • Cajas recolectadas: ${this.questProgress.supplyBoxesCollected}`);
+    console.log(`  • Barriles destruidos: ${this.questProgress.barrelsDestroyed}`);
+    console.log(`  • Vendajes usados: ${this.questProgress.bandagesUsed}`);
+    console.log(`  • Niveles ganados: ${this.questProgress.levelsGained}`);
+
+    console.log('🎯 Estadísticas de combate:');
+    console.log(`  • Disparos realizados: ${this.questProgress.shotsFired}`);
+    console.log(`  • Impactos exitosos: ${this.questProgress.shotsHit}`);
+    console.log(`  • Precisión: ${this.questProgress.accuracyPercentage.toFixed(1)}%`);
+    console.log(`  • Daño causado: ${this.questProgress.totalDamageDealt}`);
+    console.log(`  • Daño recibido: ${this.questProgress.totalDamageReceived}`);
+
+    console.log('🏆 Estadísticas de juego:');
+    console.log(`  • Score final: ${this.questProgress.finalScore}`);
+    console.log(`  • Juegos jugados: ${this.questProgress.gamesPlayedTotal}`);
+    console.log(`  • Victorias: ${this.questProgress.victoriesTotal}`);
+    console.log(`  • Derrotas: ${this.questProgress.defeatsTotal}`);
+
+    console.log('📋 Estado de Daily Quests:');
+    this.dailyQuests.forEach((quest, index) => {
+      const status = quest.completed ? '✅ COMPLETADA' : '⏳ En progreso';
+      console.log(`  ${index + 1}. ${quest.title}: ${quest.progress}/${quest.target} ${status}`);
+    });
+  }
+
+  // Getters públicos
   public getDailyQuests(): DailyQuest[] {
-    return [...this.dailyQuests];
+    return this.dailyQuests;
   }
 
-  /**
-   * Obtiene las misiones permanentes
-   */
-  public getPermanentQuests(): DailyQuest[] {
-    return [...this.permanentQuests];
-  }
-
-  /**
-   * Obtiene todas las misiones (diarias + permanentes)
-   */
-  public getAllQuests(): DailyQuest[] {
-    return [...this.dailyQuests, ...this.permanentQuests];
-  }
-
-  /**
-   * Obtiene el progreso actual
-   */
   public getQuestProgress(): QuestProgress {
-    return { ...this.questProgress };
+    return this.questProgress;
+  }
+
+  public getCompletedQuestsCount(): number {
+    return this.dailyQuests.filter(q => q.completed).length;
   }
 
   /**
@@ -634,35 +526,35 @@ export class DailyQuestManager {
         
         // Intentar inferir el tipo basado en el título
         if (quest.title.includes('tanque') || quest.title.includes('Tank') || quest.title.includes('Blindado')) {
-          quest.type = QuestType.KILL_TANKS;
-          console.log(`🔧 Corregido tipo de misión ${index} a KILL_TANKS`);
+          quest.type = 'kill_tanks';
+          console.log(`🔧 Corregido tipo de misión ${index} a kill_tanks`);
         } else if (quest.title.includes('zombie') || quest.title.includes('Zombie') || quest.title.includes('No-Muerto')) {
-          quest.type = QuestType.KILL_ZOMBIES;
-          console.log(`🔧 Corregido tipo de misión ${index} a KILL_ZOMBIES`);
+          quest.type = 'kill_zombies';
+          console.log(`🔧 Corregido tipo de misión ${index} a kill_zombies`);
         } else if (quest.title.includes('dasher') || quest.title.includes('Dasher') || quest.title.includes('Detector')) {
-          quest.type = QuestType.KILL_DASHERS;
-          console.log(`🔧 Corregido tipo de misión ${index} a KILL_DASHERS`);
+          quest.type = 'kill_dashers';
+          console.log(`🔧 Corregido tipo de misión ${index} a kill_dashers`);
         } else if (quest.title.includes('enemigo') || quest.title.includes('Exterminador') || quest.title.includes('Cazador')) {
-          quest.type = QuestType.KILL_ENEMIES;
-          console.log(`🔧 Corregido tipo de misión ${index} a KILL_ENEMIES`);
+          quest.type = 'kill_enemies';
+          console.log(`🔧 Corregido tipo de misión ${index} a kill_enemies`);
         } else if (quest.title.includes('nivel') || quest.title.includes('Maestro') || quest.title.includes('Ascenso')) {
-          quest.type = QuestType.REACH_LEVEL;
-          console.log(`🔧 Corregido tipo de misión ${index} a REACH_LEVEL`);
+          quest.type = 'reach_level';
+          console.log(`🔧 Corregido tipo de misión ${index} a reach_level`);
         } else if (quest.title.includes('Sobrevive') || quest.title.includes('Superviviente') || quest.title.includes('Resistente')) {
-          quest.type = QuestType.SURVIVE_TIME;
-          console.log(`🔧 Corregido tipo de misión ${index} a SURVIVE_TIME`);
+          quest.type = 'survive_time';
+          console.log(`🔧 Corregido tipo de misión ${index} a survive_time`);
         } else if (quest.title.includes('vendaje') || quest.title.includes('Sanador') || quest.title.includes('Médico')) {
-          quest.type = QuestType.USE_BANDAGES;
-          console.log(`🔧 Corregido tipo de misión ${index} a USE_BANDAGES`);
+          quest.type = 'use_bandages';
+          console.log(`🔧 Corregido tipo de misión ${index} a use_bandages`);
         } else if (quest.title.includes('barril') || quest.title.includes('Demoledor') || quest.title.includes('Explosivo')) {
-          quest.type = QuestType.DESTROY_BARRELS;
-          console.log(`🔧 Corregido tipo de misión ${index} a DESTROY_BARRELS`);
+          quest.type = 'destroy_barrels';
+          console.log(`🔧 Corregido tipo de misión ${index} a destroy_barrels`);
         } else if (quest.title.includes('suministro') || quest.title.includes('Recolector') || quest.title.includes('Buscador')) {
-          quest.type = QuestType.COLLECT_SUPPLY_BOXES;
-          console.log(`🔧 Corregido tipo de misión ${index} a COLLECT_SUPPLY_BOXES`);
+          quest.type = 'collect_boxes';
+          console.log(`🔧 Corregido tipo de misión ${index} a collect_boxes`);
         } else {
-          quest.type = QuestType.KILL_ENEMIES; // Default
-          console.log(`🔧 Asignado tipo por defecto KILL_ENEMIES a misión ${index}`);
+          quest.type = 'kill_enemies'; // Default
+          console.log(`🔧 Asignado tipo por defecto kill_enemies a misión ${index}`);
         }
       }
     });
@@ -716,34 +608,34 @@ export class DailyQuestManager {
       let currentProgress = 0;
       
       switch (quest.type) {
-        case QuestType.KILL_ENEMIES:
+        case 'kill_enemies':
           currentProgress = this.questProgress.enemiesKilled;
           break;
-        case QuestType.KILL_ZOMBIES:
+        case 'kill_zombies':
           currentProgress = this.questProgress.zombiesKilled;
           break;
-        case QuestType.KILL_DASHERS:
+        case 'kill_dashers':
           currentProgress = this.questProgress.dashersKilled;
           break;
-        case QuestType.KILL_TANKS:
+        case 'kill_tanks':
           currentProgress = this.questProgress.tanksKilled;
           break;
-        case QuestType.REACH_LEVEL:
+        case 'reach_level':
           currentProgress = this.questProgress.currentLevel;
           break;
-        case QuestType.SURVIVE_TIME:
+        case 'survive_time':
           currentProgress = Math.floor(this.questProgress.survivalTime);
           break;
-        case QuestType.COLLECT_SUPPLY_BOXES:
+        case 'collect_boxes':
           currentProgress = this.questProgress.supplyBoxesCollected;
           break;
-        case QuestType.DESTROY_BARRELS:
+        case 'destroy_barrels':
           currentProgress = this.questProgress.barrelsDestroyed;
           break;
-        case QuestType.USE_BANDAGES:
+        case 'use_bandages':
           currentProgress = this.questProgress.bandagesUsed;
           break;
-        case QuestType.GAIN_LEVELS:
+        case 'gain_levels':
           currentProgress = this.questProgress.levelsGained;
           break;
       }
@@ -786,34 +678,34 @@ export class DailyQuestManager {
       
       // Obtener progreso actual basado en el tipo de misión
       switch (quest.type) {
-        case QuestType.KILL_ENEMIES:
+        case 'kill_enemies':
           currentProgress = this.questProgress.enemiesKilled;
           break;
-        case QuestType.KILL_ZOMBIES:
+        case 'kill_zombies':
           currentProgress = this.questProgress.zombiesKilled;
           break;
-        case QuestType.KILL_DASHERS:
+        case 'kill_dashers':
           currentProgress = this.questProgress.dashersKilled;
           break;
-        case QuestType.KILL_TANKS:
+        case 'kill_tanks':
           currentProgress = this.questProgress.tanksKilled;
           break;
-        case QuestType.REACH_LEVEL:
+        case 'reach_level':
           currentProgress = this.questProgress.currentLevel;
           break;
-        case QuestType.SURVIVE_TIME:
+        case 'survive_time':
           currentProgress = Math.floor(this.questProgress.survivalTime);
           break;
-        case QuestType.COLLECT_SUPPLY_BOXES:
+        case 'collect_boxes':
           currentProgress = this.questProgress.supplyBoxesCollected;
           break;
-        case QuestType.DESTROY_BARRELS:
+        case 'destroy_barrels':
           currentProgress = this.questProgress.barrelsDestroyed;
           break;
-        case QuestType.USE_BANDAGES:
+        case 'use_bandages':
           currentProgress = this.questProgress.bandagesUsed;
           break;
-        case QuestType.GAIN_LEVELS:
+        case 'gain_levels':
           currentProgress = this.questProgress.levelsGained;
           break;
       }
@@ -920,64 +812,6 @@ export class DailyQuestManager {
   }
 
   /**
-   * Guarda las misiones en localStorage
-   */
-  private saveQuests(): void {
-    const questData = {
-      date: new Date().toDateString(),
-      userId: this.userId,
-      quests: this.dailyQuests
-    };
-    
-    localStorage.setItem(`dailyQuests_${this.userId}`, JSON.stringify(questData));
-  }
-
-  /**
-   * Obtiene las misiones guardadas en localStorage
-   */
-  private getStoredQuests(): { date: string; userId: string | number; quests: DailyQuest[] } {
-    const storageKey = `dailyQuests_${this.userId}`;
-    console.log('🎯 DailyQuestManager: Buscando misiones con key:', storageKey);
-    
-    const stored = localStorage.getItem(storageKey);
-    console.log('🎯 DailyQuestManager: Datos raw de localStorage:', stored);
-    
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        console.log('🎯 DailyQuestManager: Datos parseados:', parsed);
-        return parsed;
-      } catch (error) {
-        console.warn('Error parsing stored quests:', error);
-      }
-    }
-    
-    console.log('🎯 DailyQuestManager: No se encontraron misiones, retornando objeto vacío');
-    return { date: '', userId: this.userId, quests: [] };
-  }
-
-  /**
-   * Guarda el progreso en localStorage
-   */
-  private saveQuestProgress(): void {
-    localStorage.setItem(`questProgress_${this.userId}`, JSON.stringify(this.questProgress));
-  }
-
-  /**
-   * Carga el progreso desde localStorage
-   */
-  private loadQuestProgress(): void {
-    const stored = localStorage.getItem(`questProgress_${this.userId}`);
-    if (stored) {
-      try {
-        this.questProgress = JSON.parse(stored);
-      } catch (error) {
-        console.warn('Error parsing stored quest progress:', error);
-      }
-    }
-  }
-
-  /**
    * Establece el ID de la sesión (documentId)
    */
   public setSessionId(sessionDocumentId: string): void {
@@ -1017,17 +851,7 @@ export class DailyQuestManager {
     };
   }
 
-  /**
-   * Mezcla un array aleatoriamente
-   */
-  private shuffleArray<T>(array: T[]): T[] {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  }
+
 
   /**
    * Destruye el manager y limpia recursos
@@ -1036,7 +860,7 @@ export class DailyQuestManager {
     // Remover event listeners
     this.scene.events.off('enemyKilled');
     this.scene.events.off('supplyBoxCollected');
-    this.scene.events.off('barrelDestroyed');
+    this.scene.events.off('barrelExplosion');
     this.scene.events.off('bandageUsed');
     this.scene.events.off('diamondCollected');
     this.scene.events.off('levelUp');
@@ -1045,68 +869,81 @@ export class DailyQuestManager {
   }
 
   /**
-   * Función de debug para mostrar el estado actual de las estadísticas
+   * Verifica el progreso de las misiones permanentes
    */
-  public debugQuestProgress(): void {
-    console.log('🔍 === DEBUG: Estado Actual de QuestProgress ===');
-    console.log('📊 Estadísticas básicas:');
-    console.log(`  • Enemigos eliminados: ${this.questProgress.enemiesKilled}`);
-    console.log(`  • Zombies eliminados: ${this.questProgress.zombiesKilled}`);
-    console.log(`  • Dashers eliminados: ${this.questProgress.dashersKilled}`);
-    console.log(`  • Tanques eliminados: ${this.questProgress.tanksKilled}`);
-    console.log(`  • Nivel actual: ${this.questProgress.currentLevel}`);
-    console.log(`  • Tiempo de supervivencia: ${this.questProgress.survivalTime.toFixed(2)}s`);
-    console.log(`  • Cajas recolectadas: ${this.questProgress.supplyBoxesCollected}`);
-    console.log(`  • Barriles destruidos: ${this.questProgress.barrelsDestroyed}`);
-    console.log(`  • Vendajes usados: ${this.questProgress.bandagesUsed}`);
-    console.log(`  • Niveles ganados: ${this.questProgress.levelsGained}`);
-    
-    console.log('🎯 Estadísticas de combate:');
-    console.log(`  • Disparos realizados: ${this.questProgress.shotsFired}`);
-    console.log(`  • Disparos que dieron: ${this.questProgress.shotsHit}`);
-    console.log(`  • Precisión: ${this.questProgress.accuracyPercentage.toFixed(1)}%`);
-    console.log(`  • Daño total causado: ${this.questProgress.totalDamageDealt}`);
-    console.log(`  • Daño total recibido: ${this.questProgress.totalDamageReceived}`);
-    console.log(`  • Score final: ${this.questProgress.finalScore}`);
-    
-    console.log('🏆 Estadísticas generales:');
-    console.log(`  • Juegos jugados: ${this.questProgress.gamesPlayedTotal}`);
-    console.log(`  • Victorias: ${this.questProgress.victoriesTotal}`);
-    console.log(`  • Derrotas: ${this.questProgress.defeatsTotal}`);
-    
-    console.log('🔧 Armas especiales:');
-    console.log(`  • Ametralladora mejorada: ${this.questProgress.hasImprovedMachinegun ? '✅' : '❌'}`);
-    console.log(`  • Lanzagranadas: ${this.questProgress.hasGrenadeLauncher ? '✅' : '❌'}`);
-    console.log(`  • Rifle láser: ${this.questProgress.hasLaserRifle ? '✅' : '❌'}`);
-    
-    console.log('💾 Datos en localStorage:');
-    const stored = localStorage.getItem(`questProgress_${this.userId}`);
-    if (stored) {
-      try {
-        const parsedData = JSON.parse(stored);
-        console.log('  • Datos guardados:', parsedData);
-      } catch (error) {
-        console.log('  • Error parsing localStorage:', error);
+  public checkPermanentQuestProgress(): void {
+    for (const quest of this.permanentQuests) {
+      if (quest.completed) continue;
+
+      let currentProgress = 0;
+
+      switch (quest.type) {
+        case 'get_improved_machinegun':
+          currentProgress = this.questProgress.hasImprovedMachinegun ? 1 : 0;
+          break;
+        case 'get_grenade_launcher':
+          currentProgress = this.questProgress.hasGrenadeLauncher ? 1 : 0;
+          break;
+        case 'get_laser_rifle':
+          currentProgress = this.questProgress.hasLaserRifle ? 1 : 0;
+          break;
       }
-    } else {
-      console.log('  • No hay datos en localStorage');
+
+      quest.progress = currentProgress;
+
+      // Verificar si se completó
+      if (quest.progress >= quest.target && !quest.completed) {
+        quest.completed = true;
+        quest.completedAt = new Date().toISOString();
+
+        console.log(`🏆 Misión permanente completada: ${quest.title} - Recompensa: ${quest.reward} alimentos`);
+        
+        // Emitir evento de misión completada
+        this.scene.events.emit('questCompleted', {
+          quest,
+          reward: quest.reward
+        });
+
+        // Procesar recompensa con el servicio
+        dailyQuestService.processQuestReward({
+          userId: this.userId,
+          questId: quest.id,
+          questTitle: quest.title,
+          reward: quest.reward,
+          completedAt: quest.completedAt!,
+          sessionId: this.sessionDocumentId || undefined
+        });
+      }
     }
-    
-    console.log('🔍 === FIN DEBUG ===');
   }
 
   /**
-   * Obtiene un resumen compacto de las estadísticas para logging
+   * Valores por defecto para el progreso
    */
-  public getStatsResumen(): string {
-    return `Stats: ${this.questProgress.enemiesKilled}E/${this.questProgress.shotsFired}S/${this.questProgress.shotsHit}H/${this.questProgress.accuracyPercentage.toFixed(1)}%A/${this.questProgress.finalScore}P`;
-  }
-
-  /**
-   * Fuerza el guardado inmediato de las estadísticas
-   */
-  public forceSaveProgress(): void {
-    this.saveQuestProgress();
-    console.log('💾 Progreso guardado forzadamente:', this.getStatsResumen());
+  private getDefaultProgress(): QuestProgress {
+    return {
+      enemiesKilled: 0,
+      zombiesKilled: 0,
+      dashersKilled: 0,
+      tanksKilled: 0,
+      currentLevel: 1,
+      survivalTime: 0,
+      supplyBoxesCollected: 0,
+      barrelsDestroyed: 0,
+      bandagesUsed: 0,
+      levelsGained: 0,
+      hasImprovedMachinegun: false,
+      hasGrenadeLauncher: false,
+      hasLaserRifle: false,
+      totalDamageDealt: 0,
+      totalDamageReceived: 0,
+      shotsFired: 0,
+      shotsHit: 0,
+      accuracyPercentage: 0,
+      finalScore: 0,
+      gamesPlayedTotal: 0,
+      victoriesTotal: 0,
+      defeatsTotal: 0
+    };
   }
 } 

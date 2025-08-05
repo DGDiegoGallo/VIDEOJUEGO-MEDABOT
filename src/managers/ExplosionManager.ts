@@ -598,12 +598,7 @@ export class ExplosionManager {
     
     // Debug: obtener todas las estructuras en el área
     const allStructuresInArea = structureManager.getStructuresInArea(x, y, radius);
-    console.log(`🔍 DEBUG: Todas las estructuras en radio ${radius}px desde (${Math.round(x)}, ${Math.round(y)}):`, allStructuresInArea.length);
-    
-    // Debug: mostrar tipos de estructuras encontradas
-    allStructuresInArea.forEach((structure, index) => {
-      console.log(`🔍 DEBUG: Estructura ${index + 1}: tipo=${structure.getType()}, pos=(${Math.round(structure.x)}, ${Math.round(structure.y)}), health=${structure.health}, active=${structure.active}`);
-    });
+    // Análisis de estructuras en área de explosión
     
     // Obtener solo barriles explosivos
     const barrelsInArea = allStructuresInArea.filter(structure => {
@@ -611,12 +606,8 @@ export class ExplosionManager {
       const isActive = structure.active && structure.scene;
       const hasHealth = structure.health > 0;
       
-      console.log(`🔍 DEBUG: Barril candidato: tipo=${structure.getType()}, esBarril=${isBarrel}, activo=${isActive}, salud=${structure.health}, cumpleFiltros=${isBarrel && isActive && hasHealth}`);
-      
       return isBarrel && isActive && hasHealth;
     });
-
-    console.log(`🔍 DEBUG: Barriles filtrados encontrados: ${barrelsInArea.length}`);
 
     if (barrelsInArea.length > 0) {
       console.log(`🔥 REACCIÓN EN CADENA: ${barrelsInArea.length} barriles detectados en radio ${radius}px desde (${Math.round(x)}, ${Math.round(y)})`);
@@ -654,12 +645,7 @@ export class ExplosionManager {
       
       // Debug adicional: verificar si hay barriles en el mundo
       const allBarrels = structureManager.getStructuresByType(StructureType.EXPLOSIVE_BARREL);
-      console.log(`🔍 DEBUG: Total de barriles en el mundo: ${allBarrels.length}`);
-      
-      allBarrels.forEach((barrel, index) => {
-        const distance = Phaser.Math.Distance.Between(x, y, barrel.x, barrel.y);
-        console.log(`🔍 DEBUG: Barril ${index + 1}: pos=(${Math.round(barrel.x)}, ${Math.round(barrel.y)}), distancia=${Math.round(distance)}, radio=${radius}, enRadio=${distance <= radius}, health=${barrel.health}, active=${barrel.active}`);
-      });
+      // No hay barriles en radio de explosión
     }
   }
 

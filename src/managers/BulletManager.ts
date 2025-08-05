@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import { BulletConfig } from '../types/game';
+import { WeaponConfig, getWeaponConfig } from '../config/weaponConfig';
 
 /**
  * Clase que maneja toda la lógica relacionada con las balas
@@ -23,6 +24,7 @@ export class BulletManager {
   private scene: Scene;
   private config: BulletConfig;
   private bulletsPerShot: number = 1;
+  private currentWeapon: WeaponConfig;
 
   /**
    * Constructor de la clase BulletManager
@@ -41,6 +43,10 @@ export class BulletManager {
       lifetime: 2000,
       ...config
     };
+
+    // Inicializar con pistola por defecto
+    this.currentWeapon = getWeaponConfig('pistol_default');
+    this.updateFromWeaponConfig();
   }
 
   /**
@@ -197,7 +203,6 @@ export class BulletManager {
   setBulletsPerShot(count: number): void {
     const previousCount = this.bulletsPerShot;
     this.bulletsPerShot = Math.max(1, count);
-    console.log(`🔫 BulletManager setBulletsPerShot: ${previousCount} → ${this.bulletsPerShot} (requested: ${count})`);
   }
 
   /**
@@ -306,6 +311,46 @@ export class BulletManager {
         this.removeBullet(bullet);
       }
     });
+  }
+
+  /**
+   * Actualiza la configuración del BulletManager basándose en el arma equipada
+   */
+  private updateFromWeaponConfig(): void {
+    if (this.currentWeapon.effects.bulletsPerShot) {
+      this.bulletsPerShot = this.currentWeapon.effects.bulletsPerShot;
+    }
+    
+    if (this.currentWeapon.effects.bulletSpeed) {
+      this.config.speed = this.currentWeapon.effects.bulletSpeed;
+    }
+    
+    if (this.currentWeapon.effects.bulletLifetime) {
+      this.config.lifetime = this.currentWeapon.effects.bulletLifetime;
+    }
+
+    console.log(`🔫 Configuración actualizada para ${this.currentWeapon.name}:`, {
+      bulletsPerShot: this.bulletsPerShot,
+      speed: this.config.speed,
+      lifetime: this.config.lifetime,
+      specialEffect: this.currentWeapon.effects.specialEffect
+    });
+  }
+
+  /**
+   * Cambia el arma equipada y actualiza la configuración
+   */
+  setWeapon(weaponId: string): void {
+    this.currentWeapon = getWeaponConfig(weaponId);
+    this.updateFromWeaponConfig();
+    console.log(`🔫 Arma cambiada a: ${this.currentWeapon.name}`);
+  }
+
+  /**
+   * Obtiene el arma actualmente equipada
+   */
+  getCurrentWeapon(): WeaponConfig {
+    return this.currentWeapon;
   }
 
   /**

@@ -226,26 +226,16 @@ export const NFTCard: React.FC<NFTCardProps> = ({
                 Listar
               </motion.button>
             ) : (
-              <>
+              onBuy && (
                 <motion.button
-                  onClick={handleUnlistClick}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded text-sm font-medium transition-colors"
+                  onClick={handleBuyClick}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded text-sm font-medium transition-colors"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  Quitar
+                  Comprar
                 </motion.button>
-                {onBuy && (
-                  <motion.button
-                    onClick={handleBuyClick}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded text-sm font-medium transition-colors"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    Comprar
-                  </motion.button>
-                )}
-              </>
+              )
             )}
           </motion.div>
         )}

@@ -511,6 +511,34 @@ export const GamePage: React.FC = () => {
       }));
     }
 
+    // Detectar y aplicar arma equipada
+    if (activeSession?.equipped_items?.weapons && activeSession.equipped_items.weapons.length > 0) {
+      const equippedWeaponId = activeSession.equipped_items.weapons[0]; // Primer arma equipada
+      console.log('🔫 Arma equipada detectada:', equippedWeaponId);
+      
+      // Configurar el arma en el juego cuando esté listo  
+      setTimeout(() => {
+        if (gameRef.current) {
+          const mainScene = gameRef.current.scene.getScene('MainScene') as MainScene;
+          if (mainScene) {
+            // Configurar arma en BulletManager
+            if (mainScene.bulletManager) {
+              mainScene.bulletManager.setWeapon(equippedWeaponId);
+              console.log('✅ Arma configurada en BulletManager:', equippedWeaponId);
+            }
+            
+            // Configurar arma en GameEffectsManager
+            if (mainScene.gameEffectsManager) {
+              mainScene.gameEffectsManager.setEquippedWeapon(equippedWeaponId);
+              console.log('✅ Arma configurada en GameEffectsManager:', equippedWeaponId);
+            }
+          }
+        }
+      }, 500); // Esperar a que el juego se inicialice
+    } else {
+      console.log('🔫 No hay arma equipada, usando pistola por defecto');
+    }
+
     // Inicializar inventario de vendajes desde los datos de la sesión
     let medicineAmount = 0; // Valor por defecto
     

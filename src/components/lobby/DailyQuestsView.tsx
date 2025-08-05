@@ -11,6 +11,7 @@ import { BsBox, BsCollection } from 'react-icons/bs';
 import { MdLocalHospital, MdHealing } from 'react-icons/md';
 import { dailyQuestService } from '../../services/dailyQuestService';
 import { gameSessionService } from '../../services/gameSessionService';
+import { AIAdviceModal } from './AIAdviceModal';
 
 export interface DailyQuest {
   id: string;
@@ -35,6 +36,8 @@ export const DailyQuestsView: React.FC<DailyQuestsViewProps> = ({ userId, onClos
   const [availableFood, setAvailableFood] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [selectedQuest, setSelectedQuest] = useState<DailyQuest | null>(null);
 
   useEffect(() => {
     loadQuestsFromBackend();
@@ -290,9 +293,21 @@ export const DailyQuestsView: React.FC<DailyQuestsViewProps> = ({ userId, onClos
   };
 
   const handleConsultAI = (questId: string) => {
-    // TODO: Implementar consulta con IA
-    console.log(`🤖 Consultando IA para misión: ${questId}`);
-    alert('Función de consulta con IA próximamente disponible');
+    // Buscar la misión en ambas listas
+    const quest = [...dailyQuests, ...permanentQuests].find(q => q.id === questId);
+    
+    if (quest) {
+      setSelectedQuest(quest);
+      setIsAIModalOpen(true);
+      console.log(`🤖 Abriendo consulta con IA para misión: ${quest.title}`);
+    } else {
+      console.error('Quest not found:', questId);
+    }
+  };
+
+  const handleCloseAIModal = () => {
+    setIsAIModalOpen(false);
+    setSelectedQuest(null);
   };
 
   const handleUpdateQuests = async () => {
@@ -620,6 +635,13 @@ export const DailyQuestsView: React.FC<DailyQuestsViewProps> = ({ userId, onClos
           </div>
         </div>
       </div>
+
+      {/* Modal de Asistente IA */}
+      <AIAdviceModal
+        isOpen={isAIModalOpen}
+        onClose={handleCloseAIModal}
+        quest={selectedQuest}
+      />
     </div>
   );
 }; 

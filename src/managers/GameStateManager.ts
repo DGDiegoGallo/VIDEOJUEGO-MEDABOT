@@ -191,16 +191,7 @@ export class GameStateManager {
         console.log('📊 Actualizando estadísticas acumulativas de la sesión...');
         const questProgress = this.dailyQuestManager.getQuestProgress();
         
-        // DEBUG: Mostrar todos los campos que se van a enviar
-        console.log('🔍 DEBUG GameStateManager: Campos de combate a enviar:');
-        console.log('  • shotsFired:', questProgress.shotsFired);
-        console.log('  • shotsHit:', questProgress.shotsHit);
-        console.log('  • accuracyPercentage:', questProgress.accuracyPercentage?.toFixed(1) + '%');
-        console.log('  • totalDamageDealt:', questProgress.totalDamageDealt);
-        console.log('  • totalDamageReceived:', questProgress.totalDamageReceived);
-        console.log('  • gamesPlayedTotal:', questProgress.gamesPlayedTotal);
-        console.log('  • victoriesTotal:', questProgress.victoriesTotal);
-        console.log('  • defeatsTotal:', questProgress.defeatsTotal);
+        // Enviar estadísticas de combate a Strapi
         
         const statsResult = await gameSessionService.updateSessionStats({
           sessionId: this.sessionDocumentId,
@@ -337,16 +328,7 @@ export class GameStateManager {
         console.log('📊 Actualizando estadísticas acumulativas de la sesión...');
         const questProgress = this.dailyQuestManager.getQuestProgress();
         
-        // DEBUG: Mostrar todos los campos que se van a enviar (VICTORIA)
-        console.log('🔍 DEBUG GameStateManager: Campos de combate a enviar (VICTORIA):');
-        console.log('  • shotsFired:', questProgress.shotsFired);
-        console.log('  • shotsHit:', questProgress.shotsHit);
-        console.log('  • accuracyPercentage:', questProgress.accuracyPercentage?.toFixed(1) + '%');
-        console.log('  • totalDamageDealt:', questProgress.totalDamageDealt);
-        console.log('  • totalDamageReceived:', questProgress.totalDamageReceived);
-        console.log('  • gamesPlayedTotal:', questProgress.gamesPlayedTotal);
-        console.log('  • victoriesTotal:', questProgress.victoriesTotal);
-        console.log('  • defeatsTotal:', questProgress.defeatsTotal);
+        // Enviar estadísticas de combate a Strapi (victoria)
         
         const statsResult = await gameSessionService.updateSessionStats({
           sessionId: this.sessionDocumentId,

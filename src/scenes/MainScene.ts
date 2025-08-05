@@ -23,11 +23,11 @@ export class MainScene extends Scene {
   // Managers
   private player!: Player;
   private enemyManager!: EnemyManager;
-  private bulletManager!: BulletManager;
+  public bulletManager!: BulletManager;
   private experienceManager!: ExperienceManager;
   private visualEffects!: VisualEffects;
   private worldManager!: WorldManager;
-  private gameEffectsManager!: GameEffectsManager;
+  public gameEffectsManager!: GameEffectsManager;
   private collisionManager!: CollisionManager;
   private cameraManager!: CameraManager;
   private timerManager!: TimerManager;

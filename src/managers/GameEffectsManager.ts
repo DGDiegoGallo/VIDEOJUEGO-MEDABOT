@@ -10,6 +10,7 @@ import type { SkillLevels } from '@/types/game';
 import type { Player } from './Player';
 import type { BulletManager } from './BulletManager';
 import type { ExperienceManager } from './ExperienceManager';
+import { WeaponConfig, getWeaponConfig } from '@/config/weaponConfig';
 
 export class GameEffectsManager {
   private nftService: GameNFTService;
@@ -27,8 +28,14 @@ export class GameEffectsManager {
     multiShot: 0
   };
 
+  // Arma equipada
+  private equippedWeapon: WeaponConfig;
+
   constructor() {
     this.nftService = GameNFTService.getInstance();
+    
+    // Inicializar con pistola por defecto
+    this.equippedWeapon = getWeaponConfig('pistol_default');
     
     // Configurar estadísticas base
     this.baseStats = {
@@ -81,6 +88,25 @@ export class GameEffectsManager {
     
     // Recalcular efectos combinados
     this.applyAllEffects();
+  }
+
+  /**
+   * Cambia el arma equipada y aplica sus efectos
+   * @param weaponId - ID del arma a equipar
+   */
+  setEquippedWeapon(weaponId: string): void {
+    this.equippedWeapon = getWeaponConfig(weaponId);
+    console.log(`🔫 Arma equipada en GameEffectsManager: ${this.equippedWeapon.name}`);
+    
+    // Recalcular efectos combinados
+    this.applyAllEffects();
+  }
+
+  /**
+   * Obtiene el arma actualmente equipada
+   */
+  getEquippedWeapon(): WeaponConfig {
+    return this.equippedWeapon;
   }
 
   /**
@@ -416,14 +442,22 @@ export class GameEffectsManager {
 
     // Actualizar configuración de balas
     if (this.bulletManager) {
-      console.log(`🔫 Updating BulletManager with bulletsPerShot: ${this.currentStats.projectileCount}`);
+      // Combinar efectos del arma con los efectos de NFT/habilidades
+      const weaponBulletsPerShot = this.equippedWeapon.effects.bulletsPerShot || 1;
+      const combinedBulletsPerShot = Math.max(weaponBulletsPerShot, this.currentStats.projectileCount);
+      
+      console.log(`🔫 Updating BulletManager - Weapon: ${weaponBulletsPerShot}, NFT/Skills: ${this.currentStats.projectileCount}, Combined: ${combinedBulletsPerShot}`);
+      
       this.bulletManager.updateConfig({
-        damage: this.currentStats.damage,
-        bulletsPerShot: this.currentStats.projectileCount,
-        fireRate: this.currentStats.fireRate,
-        speed: this.currentStats.bulletSpeed,
-        lifetime: this.currentStats.bulletLifetime
+        damage: this.equippedWeapon.effects.damage || this.currentStats.damage,
+        bulletsPerShot: combinedBulletsPerShot,
+        fireRate: this.equippedWeapon.effects.fireRate || this.currentStats.fireRate,
+        speed: this.equippedWeapon.effects.bulletSpeed || this.currentStats.bulletSpeed,
+        lifetime: this.equippedWeapon.effects.bulletLifetime || this.currentStats.bulletLifetime
       } as any);
+      
+      // Configurar el arma específicamente en el BulletManager
+      this.bulletManager.setWeapon(this.equippedWeapon.id);
       
       // Verificar que se aplicó correctamente
       const currentBulletsPerShot = this.bulletManager.getBulletsPerShot();

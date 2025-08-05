@@ -12,6 +12,31 @@ interface UnequipNFTData {
   sessionId: string;
 }
 
+interface EquipWeaponData {
+  weaponId: string;
+  sessionId: string;
+}
+
+interface UnequipWeaponData {
+  weaponId: string;
+  sessionId: string;
+}
+
+interface CraftWeaponData {
+  weaponId: string;
+  sessionId: string;
+  weaponData: {
+    id: string;
+    name: string;
+    damage: number;
+    fire_rate: number;
+    ammo_capacity: number;
+    type: string;
+    rarity: string;
+    is_default: boolean;
+  };
+}
+
 interface UpdateMaterialsData {
   sessionId: string;
   materials: GameMaterials;
@@ -553,6 +578,224 @@ class GameSessionService {
       );
     } catch (error) {
       console.error('Error checking if NFT is equipped:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Equipa un arma en la sesión de juego del usuario
+   */
+  async equipWeapon({ weaponId, sessionId }: EquipWeaponData): Promise<any> {
+    try {
+      console.log('🔫 Equipando arma:', weaponId, 'en sesión:', sessionId);
+
+      // Primero obtener la sesión actual
+      const currentSession = await this.getSessionById(sessionId);
+      if (!currentSession) {
+        throw new Error('Sesión de juego no encontrada');
+      }
+
+      // Obtener las armas actuales equipadas
+      const currentEquippedWeapons = currentSession.equipped_items?.weapons || ['pistol_default'];
+      
+      // Verificar si el arma ya está equipada
+      if (currentEquippedWeapons.includes(weaponId)) {
+        console.log('⚠️ Arma ya está equipada');
+        return { success: false, message: 'Arma ya está equipada' };
+      }
+
+      // Reemplazar arma principal (índice 0) con la nueva arma
+      const updatedEquippedWeapons = [weaponId, ...currentEquippedWeapons.slice(1)];
+
+      // Actualizar equipped_items
+      const updatedEquippedItems = {
+        ...currentSession.equipped_items,
+        weapons: updatedEquippedWeapons
+      };
+
+      // Actualizar la sesión
+      const updateData = {
+        data: {
+          equipped_items: updatedEquippedItems
+        }
+      };
+
+      console.log('📤 Enviando actualización de arma:', updateData);
+
+      const response = await fetch(
+        `${this.baseURL}/game-sessions/${sessionId}`,
+        {
+          method: 'PUT',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(updateData)
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Error response:', errorData);
+        throw new Error(`Error equipando arma: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Arma equipada exitosamente:', result);
+      return { success: true, data: result };
+    } catch (error) {
+      console.error('❌ Error equipando arma:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Desequipa un arma de la sesión de juego del usuario
+   */
+  async unequipWeapon({ weaponId, sessionId }: UnequipWeaponData): Promise<any> {
+    try {
+      console.log('🔫 Desequipando arma:', weaponId, 'de sesión:', sessionId);
+
+      // Primero obtener la sesión actual
+      const currentSession = await this.getSessionById(sessionId);
+      if (!currentSession) {
+        throw new Error('Sesión de juego no encontrada');
+      }
+
+      // Obtener las armas actuales equipadas
+      const currentEquippedWeapons = currentSession.equipped_items?.weapons || ['pistol_default'];
+      
+      // Remover el arma específica y mantener la pistola por defecto si no hay otras
+      const updatedEquippedWeapons = currentEquippedWeapons.filter((weapon: string) => weapon !== weaponId);
+      
+      // Si no quedan armas, equipar la pistola por defecto
+      if (updatedEquippedWeapons.length === 0) {
+        updatedEquippedWeapons.push('pistol_default');
+      }
+
+      // Actualizar equipped_items
+      const updatedEquippedItems = {
+        ...currentSession.equipped_items,
+        weapons: updatedEquippedWeapons
+      };
+
+      // Actualizar la sesión
+      const updateData = {
+        data: {
+          equipped_items: updatedEquippedItems
+        }
+      };
+
+      console.log('📤 Enviando actualización de arma:', updateData);
+
+      const response = await fetch(
+        `${this.baseURL}/game-sessions/${sessionId}`,
+        {
+          method: 'PUT',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(updateData)
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Error response:', errorData);
+        throw new Error(`Error desequipando arma: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Arma desequipada exitosamente:', result);
+      return { success: true, data: result };
+    } catch (error) {
+      console.error('❌ Error desequipando arma:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verifica si un arma está equipada en la sesión
+   */
+  async isWeaponEquipped(weaponId: string, sessionId: string): Promise<boolean> {
+    try {
+      const session = await this.getSessionById(sessionId);
+      if (!session) return false;
+
+      const equippedWeapons = session.equipped_items?.weapons || [];
+      return equippedWeapons.includes(weaponId);
+    } catch (error) {
+      console.error('Error checking if weapon is equipped:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Crea un arma y la agrega al arsenal del usuario
+   */
+  async craftWeapon({ weaponId, sessionId, weaponData }: CraftWeaponData): Promise<any> {
+    try {
+      console.log('🔨 Creando arma:', weaponId, 'en sesión:', sessionId);
+
+      // Primero obtener la sesión actual
+      const currentSession = await this.getSessionById(sessionId);
+      if (!currentSession) {
+        throw new Error('Sesión de juego no encontrada');
+      }
+
+      // Obtener las armas actuales del arsenal
+      const currentGuns = currentSession.guns || [];
+      
+      // Verificar si el arma ya existe
+      const weaponExists = currentGuns.some((gun: any) => gun.id === weaponId);
+      if (weaponExists) {
+        console.log('⚠️ Arma ya existe en el arsenal');
+        return { success: false, message: 'Arma ya existe en el arsenal' };
+      }
+
+      // Agregar la nueva arma al arsenal
+      const updatedGuns = [...currentGuns, weaponData];
+
+      // Actualizar la sesión
+      const updateData = {
+        data: {
+          guns: updatedGuns
+        }
+      };
+
+      console.log('📤 Enviando actualización de arsenal:', updateData);
+
+      const response = await fetch(
+        `${this.baseURL}/game-sessions/${sessionId}`,
+        {
+          method: 'PUT',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(updateData)
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Error response:', errorData);
+        throw new Error(`Error creando arma: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Arma creada exitosamente:', result);
+      return { success: true, data: result };
+    } catch (error) {
+      console.error('❌ Error creando arma:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verifica si un arma ya está creada en el arsenal
+   */
+  async isWeaponCrafted(weaponId: string, sessionId: string): Promise<boolean> {
+    try {
+      const session = await this.getSessionById(sessionId);
+      if (!session) return false;
+
+      const guns = session.guns || [];
+      return guns.some((gun: any) => gun.id === weaponId);
+    } catch (error) {
+      console.error('Error checking if weapon is crafted:', error);
       return false;
     }
   }

@@ -92,7 +92,9 @@ export const NFTMarketplace: React.FC = () => {
     setShowSuccessNotification(true);
     
     // Recargar la lista de NFTs para reflejar los cambios
-    refetch();
+    setTimeout(() => {
+      refetch();
+    }, 500);
   };
 
   const handleClosePurchaseModal = () => {
@@ -255,6 +257,7 @@ export const NFTMarketplace: React.FC = () => {
           nfts={nfts}
           isLoading={isLoading}
           showPrice={true}
+          showActions={true}
           onSelect={handleSelectNFT}
           onBuy={handleBuyNFT}
           emptyMessage="No hay NFTs disponibles en el marketplace"
