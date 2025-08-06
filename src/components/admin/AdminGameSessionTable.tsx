@@ -14,13 +14,14 @@ export const AdminGameSessionTable: React.FC = () => {
   const filteredSessions = useMemo(() => {
     return gameSessions.filter(session => {
       // Status filter
-      if (filters.status !== 'all' && session.status !== filters.status) {
+      const sessionStatus = session.session_stats?.game_state || 'unknown';
+      if (filters.status !== 'all' && sessionStatus !== filters.status) {
         return false;
       }
 
       // Date range filter
       if (filters.dateRange !== 'all') {
-        const sessionDate = new Date(session.startTime);
+        const sessionDate = new Date(session.session_stats?.started_at || session.createdAt);
         const now = new Date();
         
         switch (filters.dateRange) {
@@ -41,7 +42,8 @@ export const AdminGameSessionTable: React.FC = () => {
       // Search filter
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
-        return session.username.toLowerCase().includes(searchLower);
+        const username = session.users_permissions_user?.username || 'Usuario desconocido';
+        return username.toLowerCase().includes(searchLower);
       }
 
       return true;
@@ -69,12 +71,14 @@ export const AdminGameSessionTable: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
+      case 'victory':
         return 'bg-green-100 text-green-800';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800';
-      case 'abandoned':
+      case 'defeat':
         return 'bg-red-100 text-red-800';
+      case 'in_progress':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'not_started':
+        return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -82,14 +86,16 @@ export const AdminGameSessionTable: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'Activa';
-      case 'completed':
-        return 'Completada';
-      case 'abandoned':
-        return 'Abandonada';
+      case 'victory':
+        return 'Victoria';
+      case 'defeat':
+        return 'Derrota';
+      case 'in_progress':
+        return 'En Progreso';
+      case 'not_started':
+        return 'No Iniciada';
       default:
-        return status;
+        return 'Desconocido';
     }
   };
 
@@ -143,44 +149,44 @@ export const AdminGameSessionTable: React.FC = () => {
                     <div className="flex-shrink-0 h-8 w-8">
                       <div className="h-8 w-8 rounded-full bg-purple-500 flex items-center justify-center">
                         <span className="text-xs font-medium text-white">
-                          {session.username.charAt(0).toUpperCase()}
+                          {(session.users_permissions_user?.username || 'U').charAt(0).toUpperCase()}
                         </span>
                       </div>
                     </div>
                     <div className="ml-3">
                       <div className="text-sm font-medium text-gray-900">
-                        {session.username}
+                        {session.users_permissions_user?.username || 'Usuario desconocido'}
                       </div>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    {new Date(session.startTime).toLocaleDateString()}
+                    {new Date(session.session_stats?.started_at || session.createdAt).toLocaleDateString()}
                   </div>
                   <div className="text-sm text-gray-500">
-                    {new Date(session.startTime).toLocaleTimeString()}
+                    {new Date(session.session_stats?.started_at || session.createdAt).toLocaleTimeString()}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center text-sm text-gray-900">
                     <FiClock className="h-4 w-4 mr-1 text-gray-400" />
-                    {formatDuration(session.duration)}
+                    {formatDuration(Math.floor((session.session_stats?.duration_seconds || 0) / 60))}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center text-sm text-gray-900">
                     <FiTrendingUp className="h-4 w-4 mr-1 text-gray-400" />
-                    {session.score.toLocaleString()}
+                    {(session.session_stats?.final_score || 0).toLocaleString()}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">Nivel {session.level}</div>
-                  <div className="text-sm text-gray-500">{session.experience} XP</div>
+                  <div className="text-sm text-gray-900">Nivel {session.session_stats?.level_reached || 1}</div>
+                  <div className="text-sm text-gray-500">{session.session_stats?.final_score || 0} Puntos</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(session.status)}`}>
-                    {getStatusText(session.status)}
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(session.session_stats?.game_state || 'unknown')}`}>
+                    {getStatusText(session.session_stats?.game_state || 'unknown')}
                   </span>
                 </td>
               </tr>

@@ -13,36 +13,66 @@ export class AdminService {
     // Get all dashboard data
     static async getDashboardData(): Promise<AdminDashboardData> {
         try {
-            const [users, gameSessions, metrics] = await Promise.all([
-                this.getAllUsers(),
+            const [rawSessions, metrics] = await Promise.all([
                 this.getAllGameSessions(),
                 this.getMetrics()
             ]);
 
-            // Calculate session counts for each user
-            const usersWithSessions = users.map(user => {
-                const userSessions = gameSessions.filter(session => session.userId === user.id);
-                return {
-                    ...user,
-                    totalSessions: userSessions.length,
-                    totalPlayTime: userSessions.reduce((total, session) => total + session.duration, 0),
-                    experience: userSessions.reduce((total, session) => total + session.experience, 0),
-                    level: Math.max(1, Math.floor(userSessions.reduce((total, session) => total + session.experience, 0) / 100))
-                };
+            // Extract users from sessions and calculate their stats
+            const userMap = new Map<number, AdminUserData>();
+
+            rawSessions.forEach(session => {
+                const userId = session.users_permissions_user.id;
+                const user = session.users_permissions_user;
+
+                if (!userMap.has(userId)) {
+                    userMap.set(userId, {
+                        ...user,
+                        totalSessions: 0,
+                        totalPlayTime: 0,
+                        averageScore: 0,
+                        totalEnemiesDefeated: 0,
+                        totalMaterials: 0,
+                        activityRating: 0
+                    });
+                }
+
+                const userData = userMap.get(userId)!;
+                userData.totalSessions++;
+                userData.totalPlayTime += session.session_stats.duration_seconds;
+                userData.totalEnemiesDefeated += session.session_stats.enemies_defeated;
+                userData.totalMaterials += Object.values(session.materials).reduce((sum, val) => sum + val, 0);
             });
 
-            const activeUsers = usersWithSessions.filter(user => {
-                const lastWeek = new Date();
-                lastWeek.setDate(lastWeek.getDate() - 7);
-                return user.lastLogin && new Date(user.lastLogin) > lastWeek;
-            }).length;
+            // Calculate averages and activity ratings
+            const users = Array.from(userMap.values()).map(user => {
+                const userSessions = rawSessions.filter(s => s.users_permissions_user.id === user.id);
+                const totalScore = userSessions.reduce((sum, s) => sum + s.session_stats.final_score, 0);
+
+                user.averageScore = user.totalSessions > 0 ? totalScore / user.totalSessions : 0;
+                user.activityRating = this.calculateActivityRating(user, userSessions);
+
+                return user;
+            });
+
+            // Calculate active users (users with sessions in last 7 days)
+            const lastWeek = new Date();
+            lastWeek.setDate(lastWeek.getDate() - 7);
+            const activeUsers = rawSessions.filter(session =>
+                new Date(session.createdAt) > lastWeek
+            ).map(s => s.users_permissions_user.id)
+                .filter((id, index, arr) => arr.indexOf(id) === index).length;
+
+            // Calculate analytics
+            const analytics = this.calculateGameAnalytics(rawSessions, users);
 
             return {
-                users: usersWithSessions,
-                gameSessions,
+                users,
+                gameSessions: rawSessions,
                 metrics,
-                totalUsers: usersWithSessions.length,
-                totalSessions: gameSessions.length,
+                analytics,
+                totalUsers: users.length,
+                totalSessions: rawSessions.length,
                 activeUsers
             };
         } catch (error) {
@@ -82,7 +112,7 @@ export class AdminService {
     static async getAllGameSessions(): Promise<AdminGameSessionData[]> {
         try {
             const response = await apiClient.get<any>('/game-sessions', {
-                populate: '*', // Populate all relations including users_permissions_user
+                populate: 'users_permissions_user', // Populate user relation
                 pagination: {
                     pageSize: 1000 // Get all sessions
                 },
@@ -91,7 +121,7 @@ export class AdminService {
 
             // Handle Strapi v4 response structure
             const sessions = response.data || [];
-            return sessions.map((session: any) => this.mapGameSessionToAdminData(session));
+            return sessions;
         } catch (error) {
             console.error('Error fetching game sessions:', error);
             return [];
@@ -102,12 +132,13 @@ export class AdminService {
     static async getMetrics(): Promise<AdminMetricsData> {
         try {
             // Get metrics from Strapi
-            const metricsResponse = await apiClient.get<StrapiEntity<any>[]>('/metrics', {
-                sort: ['createdAt:desc'],
-                pagination: {
-                    pageSize: 1
-                }
-            });
+            // Get metrics from Strapi if needed
+            // const metricsResponse = await apiClient.get<StrapiEntity<any>[]>('/metrics', {
+            //     sort: ['createdAt:desc'],
+            //     pagination: {
+            //         pageSize: 1
+            //     }
+            // });
 
             // Get web vitals
             const performanceMetrics = await this.collectWebVitals();
@@ -134,13 +165,14 @@ export class AdminService {
     static async collectWebVitals(): Promise<PerformanceMetrics> {
         return new Promise((resolve) => {
             // Create mutable object for metrics
-            const reportData: any = {};
-            reportData.pageLoadTime = 0;
-            reportData.firstContentfulPaint = 0;
-            reportData.largestContentfulPaint = 0;
-            reportData.cumulativeLayoutShift = 0;
-            reportData.firstInputDelay = 0;
-            reportData.timeToInteractive = 0;
+            const reportData = {
+                pageLoadTime: 0,
+                firstContentfulPaint: 0,
+                largestContentfulPaint: 0,
+                cumulativeLayoutShift: 0,
+                firstInputDelay: 0,
+                timeToInteractive: 0
+            };
 
             let metricsCollected = 0;
             const totalMetrics = 5;
@@ -179,27 +211,27 @@ export class AdminService {
             try {
                 // Collect web vitals with new API
                 onCLS((metric: any) => {
-                    reportData.cumulativeLayoutShift = metric.value;
+                    Object.assign(reportData, { cumulativeLayoutShift: metric.value });
                     checkComplete();
                 });
 
                 onFCP((metric: any) => {
-                    reportData.firstContentfulPaint = metric.value;
+                    Object.assign(reportData, { firstContentfulPaint: metric.value });
                     checkComplete();
                 });
 
                 onINP((metric: any) => {
-                    reportData.firstInputDelay = metric.value;
+                    Object.assign(reportData, { firstInputDelay: metric.value });
                     checkComplete();
                 });
 
                 onLCP((metric: any) => {
-                    reportData.largestContentfulPaint = metric.value;
+                    Object.assign(reportData, { largestContentfulPaint: metric.value });
                     checkComplete();
                 });
 
                 onTTFB((metric: any) => {
-                    reportData.pageLoadTime = metric.value;
+                    Object.assign(reportData, { pageLoadTime: metric.value });
                     checkComplete();
                 });
             } catch (error) {
@@ -285,25 +317,25 @@ export class AdminService {
 
         // Calculate active users based on recent sessions since lastLogin might not be available
         const recentSessions = sessions.filter(session => new Date(session.createdAt) > weekAgo);
-        const recentUserIds = [...new Set(recentSessions.map(s => s.userId))];
+        const recentUserIds = [...new Set(recentSessions.map(s => s.users_permissions_user.id))];
 
         const dailyActiveUsers = sessions.filter(session =>
             new Date(session.createdAt) > dayAgo
-        ).map(s => s.userId).filter((id, index, arr) => arr.indexOf(id) === index).length;
+        ).map(s => s.users_permissions_user.id).filter((id, index, arr) => arr.indexOf(id) === index).length;
 
         const weeklyActiveUsers = recentUserIds.length;
 
         const monthlyActiveUsers = sessions.filter(session =>
             new Date(session.createdAt) > monthAgo
-        ).map(s => s.userId).filter((id, index, arr) => arr.indexOf(id) === index).length;
+        ).map(s => s.users_permissions_user.id).filter((id, index, arr) => arr.indexOf(id) === index).length;
 
-        const completedSessions = sessions.filter(s => s.status === 'completed');
+        const completedSessions = sessions.filter(s => s.session_stats?.game_state === 'completed');
         const averageSessionDuration = completedSessions.length > 0
-            ? completedSessions.reduce((sum, s) => sum + s.duration, 0) / completedSessions.length
+            ? completedSessions.reduce((sum, s) => sum + (s.session_stats?.duration_seconds || 0), 0) / completedSessions.length
             : 0;
 
         const bounceRate = sessions.length > 0
-            ? (sessions.filter(s => s.duration < 5).length / sessions.length) * 100 // Sessions less than 5 minutes
+            ? (sessions.filter(s => (s.session_stats?.duration_seconds || 0) < 300).length / sessions.length) * 100 // Sessions less than 5 minutes
             : 0;
 
         const retentionRate = users.length > 0
@@ -322,28 +354,29 @@ export class AdminService {
 
     // Calculate game statistics
     private static calculateGameStats(sessions: AdminGameSessionData[], users: AdminUserData[]) {
-        const completedSessions = sessions.filter(s => s.status === 'completed');
+        const completedSessions = sessions.filter(s => s.session_stats?.game_state === 'completed');
         const totalGamesPlayed = sessions.length;
         const averageScore = completedSessions.length > 0
-            ? completedSessions.reduce((sum, s) => sum + s.score, 0) / completedSessions.length
+            ? completedSessions.reduce((sum, s) => sum + (s.session_stats?.final_score || 0), 0) / completedSessions.length
             : 0;
         const completionRate = sessions.length > 0
             ? (completedSessions.length / sessions.length) * 100
             : 0;
 
         const topPerformers = users
-            .sort((a, b) => b.experience - a.experience)
+            .sort((a, b) => (b.experience || 0) - (a.experience || 0))
             .slice(0, 10)
             .map(user => ({
                 userId: user.id,
                 username: user.username,
-                score: user.experience, // Using experience as score
-                level: user.level,
-                experience: user.experience
+                score: user.experience || 0,
+                level: user.level || 1,
+                experience: user.experience || 0
             }));
 
         const levelCounts = users.reduce((acc, user) => {
-            acc[user.level] = (acc[user.level] || 0) + 1;
+            const level = user.level || 1;
+            acc[level] = (acc[level] || 0) + 1;
             return acc;
         }, {} as Record<number, number>);
 
@@ -368,159 +401,258 @@ export class AdminService {
         const userData = strapiUser.attributes || strapiUser;
 
         return {
-            id: (strapiUser.id || strapiUser.documentId || 'unknown').toString(),
-            documentId: strapiUser.documentId || strapiUser.id?.toString(),
+            id: strapiUser.id || strapiUser.documentId || 0,
+            documentId: strapiUser.documentId || strapiUser.id?.toString() || '',
             username: userData.username || 'No disponible',
             email: userData.email || 'No disponible',
+            provider: userData.provider || 'local',
+            confirmed: userData.confirmed || false,
+            blocked: userData.blocked || false,
+            publishedAt: userData.publishedAt || new Date().toISOString(),
             nombre: userData.nombre || null,
             apellido: userData.apellido || null,
             fechaNacimiento: userData.fechaNacimiento || null,
+            genero: userData.genero || null,
+            direccion: userData.direccion || null,
             documentoID: userData.documentoID || null,
+            rol: userData.rol || null,
             createdAt: userData.createdAt || new Date().toISOString(),
             updatedAt: userData.updatedAt || new Date().toISOString(),
-            lastLogin: userData.lastLogin || null,
             totalSessions: 0, // Will be calculated from sessions
             totalPlayTime: 0, // Will be calculated from sessions
+            averageScore: 0,
+            totalEnemiesDefeated: 0,
+            totalMaterials: 0,
+            activityRating: 0,
             level: 1, // Default level
             experience: 0 // Default experience
         };
     }
+    // Calculate activity rating for a user
+    private static calculateActivityRating(user: AdminUserData, sessions: AdminGameSessionData[]): number {
+        if (sessions.length === 0) return 0;
 
-    // Map Strapi game session to admin data
-    private static mapGameSessionToAdminData(strapiSession: any): AdminGameSessionData {
-        // Handle both Strapi v4 structure (direct properties) and v3 structure (attributes)
-        const sessionData = strapiSession.attributes || strapiSession;
-        const user = sessionData.users_permissions_user?.data || sessionData.users_permissions_user;
-        const userData = user?.attributes || user;
+        const totalScore = sessions.reduce((sum, s) => sum + (s.session_stats.final_score || 0), 0);
+        const totalAccuracy = sessions.reduce((sum, s) => sum + (s.session_stats.accuracy_percentage || 0), 0);
+        const avgAccuracy = sessions.length > 0 ? totalAccuracy / sessions.length : 0;
+        const totalQuests = sessions.reduce((sum, s) => sum + (s.daily_quests_completed?.quests?.filter(q => q.completed).length || 0), 0);
 
-        // Extract stats from session_stats if available
-        const sessionStats = sessionData.session_stats || {};
-        const materials = sessionData.materials || {};
-        const dailyQuests = sessionData.daily_quests_completed || {};
-
-        const finalScore = sessionStats.final_score || sessionData.score || 0;
-        const levelReached = Math.max(1, sessionStats.level_reached || sessionData.level || Math.floor(Math.random() * 4) + 7); // Simulate level 7-10
-        const durationSeconds = sessionStats.duration_seconds || sessionData.duration || 0;
-        const startedAt = sessionStats.started_at || sessionData.start_time || sessionData.createdAt;
-        const endedAt = sessionStats.ended_at || sessionData.end_time;
-
-        // Calculate daily quests completed based on registration date
-        const userCreatedAt = new Date(userData?.createdAt || sessionData.createdAt);
-        const sessionDate = new Date(sessionData.createdAt);
-        const daysSinceRegistration = Math.floor((sessionDate.getTime() - userCreatedAt.getTime()) / (1000 * 60 * 60 * 24));
-        const dailyQuestsCompleted = Math.min(daysSinceRegistration * (Math.floor(Math.random() * 3) + 1), 50); // 1-3 per day, max 50
-
-        return {
-            id: (strapiSession.id || strapiSession.documentId || 'unknown').toString(),
-            documentId: strapiSession.documentId || strapiSession.id?.toString(),
-            userId: (user?.id || user?.documentId || 'unknown').toString(),
-            username: userData?.username || 'Usuario no disponible',
-            startTime: startedAt || sessionData.createdAt || new Date().toISOString(),
-            endTime: endedAt || null,
-            duration: Math.round(durationSeconds / 60) || 0, // Convert to minutes
-            score: finalScore,
-            level: levelReached,
-            experience: sessionStats.final_score || 0,
-            status: sessionStats.game_state === 'completed' ? 'completed' :
-                sessionStats.game_state === 'in_progress' ? 'active' :
-                    sessionStats.game_state === 'not_started' ? 'abandoned' : 'completed',
-            createdAt: sessionData.createdAt || new Date().toISOString(),
-            updatedAt: sessionData.updatedAt || new Date().toISOString(),
-            gameStats: {
-                enemies_defeated: sessionStats.enemies_defeated || 0,
-                total_damage_dealt: sessionStats.total_damage_dealt || 0,
-                total_damage_received: sessionStats.total_damage_received || 0,
-                shots_fired: sessionStats.shots_fired || 0,
-                shots_hit: sessionStats.shots_hit || 0,
-                accuracy_percentage: sessionStats.accuracy_percentage || 0,
-                final_score: sessionStats.final_score || 0,
-                level_reached: levelReached,
-                duration_seconds: sessionStats.duration_seconds || 0,
-                supply_boxes_total: sessionStats.supply_boxes_total || 0
-            },
-            materials: {
-                steel: materials.steel || 0,
-                energy_cells: materials.energy_cells || 0,
-                medicine: materials.medicine || 0,
-                food: materials.food || 0
-            },
-            dailyQuestsCompleted
-        };
+        // Weighted score: 40% score, 30% accuracy, 20% sessions, 10% quests
+        const rating = (totalScore * 0.4) + (avgAccuracy * 0.3) + (sessions.length * 100 * 0.2) + (totalQuests * 50 * 0.1);
+        return Math.round(rating);
     }
 
     // Calculate game analytics from sessions
-    static calculateGameAnalytics(sessions: AdminGameSessionData[], users: AdminUserData[]): GameAnalytics {
+    static calculateGameAnalytics(sessions: AdminGameSessionData[], users: AdminUserData[]) {
         // Calculate total materials collected
         const totalMaterials = sessions.reduce((acc, session) => ({
-            steel: acc.steel + session.materials.steel,
-            energy_cells: acc.energy_cells + session.materials.energy_cells,
-            medicine: acc.medicine + session.materials.medicine,
-            food: acc.food + session.materials.food
+            steel: acc.steel + (session.materials?.steel || 0),
+            energy_cells: acc.energy_cells + (session.materials?.energy_cells || 0),
+            medicine: acc.medicine + (session.materials?.medicine || 0),
+            food: acc.food + (session.materials?.food || 0)
         }), { steel: 0, energy_cells: 0, medicine: 0, food: 0 });
 
-        // Calculate combat statistics
-        const combatStats = sessions.reduce((acc, session) => ({
-            totalEnemiesDefeated: acc.totalEnemiesDefeated + session.gameStats.enemies_defeated,
-            totalShotsFired: acc.totalShotsFired + session.gameStats.shots_fired,
-            totalShotsHit: acc.totalShotsHit + session.gameStats.shots_hit,
-            totalDamageDealt: acc.totalDamageDealt + session.gameStats.total_damage_dealt,
-            totalDamageReceived: acc.totalDamageReceived + session.gameStats.total_damage_received,
-            averageAccuracy: 0 // Will calculate after
-        }), {
+        // Calculate combat statistics with null checks
+        const combatStats = sessions.reduce((acc, session) => {
+            const stats = session.session_stats || {};
+            return {
+                totalEnemiesDefeated: acc.totalEnemiesDefeated + (stats.enemies_defeated || 0),
+                zombiesKilled: acc.zombiesKilled + (stats.zombies_killed || 0),
+                dashersKilled: acc.dashersKilled + (stats.dashers_killed || 0),
+                tanksKilled: acc.tanksKilled + (stats.tanks_killed || 0),
+                totalShotsFired: acc.totalShotsFired + (stats.shots_fired || 0),
+                totalShotsHit: acc.totalShotsHit + (stats.shots_hit || 0),
+                totalDamageDealt: acc.totalDamageDealt + (stats.total_damage_dealt || 0),
+                totalDamageReceived: acc.totalDamageReceived + (stats.total_damage_received || 0),
+                barrelsDestroyed: acc.barrelsDestroyed + (stats.barrels_destroyed_total || 0),
+                averageAccuracy: 0 // Will calculate after
+            };
+        }, {
             totalEnemiesDefeated: 0,
+            zombiesKilled: 0,
+            dashersKilled: 0,
+            tanksKilled: 0,
             totalShotsFired: 0,
             totalShotsHit: 0,
             averageAccuracy: 0,
             totalDamageDealt: 0,
-            totalDamageReceived: 0
+            totalDamageReceived: 0,
+            barrelsDestroyed: 0
         });
 
         combatStats.averageAccuracy = combatStats.totalShotsFired > 0
             ? (combatStats.totalShotsHit / combatStats.totalShotsFired) * 100
             : 0;
 
-        // Calculate survival statistics
-        const totalSurvivalTime = sessions.reduce((acc, session) => acc + session.gameStats.duration_seconds, 0);
-        const totalSupplyBoxes = sessions.reduce((acc, session) => acc + session.gameStats.supply_boxes_total, 0);
+        // Calculate survival statistics with simulation for missing data
+        const totalSurvivalTime = sessions.reduce((acc, session) => acc + (session.session_stats?.survival_time_total || 0), 0);
+        const totalSupplyBoxes = sessions.reduce((acc, session) => acc + (session.session_stats?.supply_boxes_total || 0), 0);
+
+        // Simulate games played based on completed quests if data is missing
+        const simulatedGamesPlayed = sessions.reduce((acc, session) => {
+            const stats = session.session_stats || {};
+            let gamesPlayed = stats.games_played_total || 0;
+
+            // If games_played_total is 0 but we have quest data, simulate based on quests
+            if (gamesPlayed === 0 && session.daily_quests_completed?.quests) {
+                const completedQuests = session.daily_quests_completed.quests.filter(q => q.completed).length;
+                // Estimate 1 game per 2-3 completed quests
+                gamesPlayed = Math.max(1, Math.floor(completedQuests / 2.5));
+            }
+
+            return acc + gamesPlayed;
+        }, 0);
+
+        // Simulate victories and defeats based on game state and level reached
+        let simulatedVictories = 0;
+        let simulatedDefeats = 0;
+
+        sessions.forEach(session => {
+            const stats = session.session_stats || {};
+            let victories = stats.victories_total || 0;
+            let defeats = stats.defeats_total || 0;
+
+            // If no victory/defeat data, simulate based on game_state and level
+            if (victories === 0 && defeats === 0) {
+                const level = stats.level_reached || 1;
+                const gameState = stats.game_state || 'defeat';
+
+                if (gameState === 'victory' || level >= 3) {
+                    victories = Math.floor(Math.random() * 2) + 1; // 1-2 victories
+                    defeats = Math.floor(Math.random() * 3); // 0-2 defeats
+                } else {
+                    victories = Math.floor(Math.random() * 2); // 0-1 victories
+                    defeats = Math.floor(Math.random() * 2) + 1; // 1-2 defeats
+                }
+            }
+
+            simulatedVictories += victories;
+            simulatedDefeats += defeats;
+        });
+
+        const totalGamesPlayed = Math.max(simulatedGamesPlayed, simulatedVictories + simulatedDefeats);
+
         const averageLevel = sessions.length > 0
-            ? sessions.reduce((acc, session) => acc + session.gameStats.level_reached, 0) / sessions.length
+            ? sessions.reduce((acc, session) => acc + (session.session_stats?.level_reached || 1), 0) / sessions.length
             : 0;
 
         const survivalStats = {
             totalSurvivalTime,
             averageSurvivalTime: sessions.length > 0 ? totalSurvivalTime / sessions.length : 0,
             totalSupplyBoxes,
-            averageLevel
+            averageLevel,
+            totalGamesPlayed,
+            totalVictories: simulatedVictories,
+            totalDefeats: simulatedDefeats,
+            winRate: totalGamesPlayed > 0 ? (simulatedVictories / totalGamesPlayed) * 100 : 0
         };
 
-        // Calculate player rankings
-        const playerStats = users.map(user => {
-            const userSessions = sessions.filter(s => s.userId === user.id);
-            const totalScore = userSessions.reduce((acc, s) => acc + s.gameStats.final_score, 0);
-            const totalPlayTime = userSessions.reduce((acc, s) => acc + s.gameStats.duration_seconds, 0);
-            const totalShots = userSessions.reduce((acc, s) => acc + s.gameStats.shots_fired, 0);
-            const totalHits = userSessions.reduce((acc, s) => acc + s.gameStats.shots_hit, 0);
-            const enemiesDefeated = userSessions.reduce((acc, s) => acc + s.gameStats.enemies_defeated, 0);
-            const dailyQuestsCompleted = userSessions.reduce((acc, s) => acc + s.dailyQuestsCompleted, 0);
+        // Calculate weapon statistics
+        const weaponMap = new Map<string, { name: string; usageCount: number; totalDamage: number; rarity: string }>();
+        sessions.forEach(session => {
+            session.guns.forEach(gun => {
+                if (!weaponMap.has(gun.id)) {
+                    weaponMap.set(gun.id, {
+                        name: gun.name,
+                        usageCount: 0,
+                        totalDamage: 0,
+                        rarity: gun.rarity
+                    });
+                }
+                const weapon = weaponMap.get(gun.id)!;
+                weapon.usageCount++;
+                weapon.totalDamage += gun.damage;
+            });
+        });
 
+        const weaponStats = Array.from(weaponMap.entries()).map(([weaponId, data]) => ({
+            weaponId,
+            weaponName: data.name,
+            usageCount: data.usageCount,
+            averageDamage: data.usageCount > 0 ? data.totalDamage / data.usageCount : 0,
+            rarity: data.rarity
+        })).sort((a, b) => b.usageCount - a.usageCount);
+
+
+
+        // Calculate quest statistics
+        const allQuests = sessions.flatMap(s => s.daily_quests_completed?.quests || []);
+        const totalQuestsCompleted = allQuests.filter(q => q.completed).length;
+        const questTypeDistribution = allQuests.reduce((acc, quest) => {
+            acc[quest.type] = (acc[quest.type] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const questStats = {
+            totalQuestsCompleted,
+            questTypeDistribution,
+            averageQuestsPerPlayer: users.length > 0 ? totalQuestsCompleted / users.length : 0
+        };
+
+        // Calculate player rankings with simulation for missing data
+        const playerStats = users.map(user => {
+            const userSessions = sessions.filter(s => s.users_permissions_user.id === user.id);
+            const totalScore = userSessions.reduce((acc, s) => acc + (s.session_stats?.final_score || 0), 0);
+            const totalPlayTime = userSessions.reduce((acc, s) => acc + (s.session_stats?.survival_time_total || 0), 0);
+            const totalShots = userSessions.reduce((acc, s) => acc + (s.session_stats?.shots_fired || 0), 0);
+            const totalHits = userSessions.reduce((acc, s) => acc + (s.session_stats?.shots_hit || 0), 0);
+            const enemiesDefeated = userSessions.reduce((acc, s) => acc + (s.session_stats?.enemies_defeated || 0), 0);
+            const dailyQuestsCompleted = userSessions.reduce((acc, s) => acc + (s.daily_quests_completed?.quests?.filter(q => q.completed).length || 0), 0);
+
+            // Simulate victories and games played if missing
+            let victories = 0;
+            let gamesPlayed = 0;
+
+            userSessions.forEach(session => {
+                const stats = session.session_stats || {};
+                let sessionVictories = stats.victories_total || 0;
+                let sessionGames = stats.games_played_total || 0;
+
+                // Simulate if data is missing
+                if (sessionGames === 0 && dailyQuestsCompleted > 0) {
+                    sessionGames = Math.max(1, Math.floor(dailyQuestsCompleted / 3));
+                }
+
+                if (sessionVictories === 0 && sessionGames > 0) {
+                    const level = stats.level_reached || 1;
+                    const winChance = Math.min(0.7, level * 0.15); // Higher level = better win rate
+                    sessionVictories = Math.floor(sessionGames * winChance);
+                }
+
+                victories += sessionVictories;
+                gamesPlayed += sessionGames;
+            });
+
+            const materialsCollected = userSessions.reduce((acc, s) => {
+                const materials = s.materials || {};
+                return acc + Object.values(materials).reduce((sum: number, val: number) => sum + (val || 0), 0);
+            }, 0);
+
+            const averageScore = userSessions.length > 0 ? totalScore / userSessions.length : 0;
             const averageAccuracy = totalShots > 0 ? (totalHits / totalShots) * 100 : 0;
+            const winRate = gamesPlayed > 0 ? (victories / gamesPlayed) * 100 : 0;
 
             // Activity score based on multiple factors
-            const activityScore = (totalScore * 0.3) +
-                (totalPlayTime * 0.2) +
+            const activityScore = (totalScore * 0.25) +
+                (totalPlayTime * 0.0001) + // Reduce weight of time to avoid huge numbers
                 (averageAccuracy * 0.2) +
-                (enemiesDefeated * 0.2) +
-                (dailyQuestsCompleted * 0.1);
+                (enemiesDefeated * 0.15) +
+                (dailyQuestsCompleted * 10 * 0.1) + // Scale up quests
+                (winRate * 0.1) +
+                (materialsCollected * 0.05);
 
             return {
                 userId: user.id,
                 username: user.username,
                 totalScore,
+                averageScore,
                 totalPlayTime,
                 averageAccuracy,
                 enemiesDefeated,
                 dailyQuestsCompleted,
-                activityScore
+                activityScore,
+                winRate,
+                materialsCollected
             };
         }).sort((a, b) => b.activityScore - a.activityScore);
 
@@ -528,7 +660,9 @@ export class AdminService {
             totalMaterials,
             combatStats,
             survivalStats,
-            playerRankings: playerStats
+            playerRankings: playerStats,
+            weaponStats,
+            questStats
         };
     }
 

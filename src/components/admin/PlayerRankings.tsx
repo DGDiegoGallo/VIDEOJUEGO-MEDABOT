@@ -1,13 +1,15 @@
 import React from 'react';
 import { BsTrophy } from 'react-icons/bs';
-import { FiTarget, FiClock, FiCheck } from 'react-icons/fi';
+import { FiTarget, FiClock, FiCheck, FiBox } from 'react-icons/fi';
+import { GiTrophy } from 'react-icons/gi';
 import type { GameAnalytics } from '@/types/admin';
 
 interface PlayerRankingsProps {
   rankings: GameAnalytics['playerRankings'];
+  onExplain: (type: string) => void;
 }
 
-export const PlayerRankings: React.FC<PlayerRankingsProps> = ({ rankings }) => {
+export const PlayerRankings: React.FC<PlayerRankingsProps> = ({ rankings, onExplain }) => {
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -42,15 +44,23 @@ export const PlayerRankings: React.FC<PlayerRankingsProps> = ({ rankings }) => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
-      <div className="flex items-center mb-6">
-        <BsTrophy className="h-6 w-6 text-yellow-500 mr-2" />
-        <h3 className="text-lg font-medium text-gray-900">Ranking de Jugadores</h3>
+      <div className="flex justify-between items-start mb-6">
+        <div className="flex items-center">
+          <BsTrophy className="h-6 w-6 text-yellow-500 mr-2" />
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">Ranking de Jugadores</h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Top 10 jugadores clasificados por puntuación de actividad
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => onExplain('rankings')}
+          className="bg-blue-100 text-blue-700 px-3 py-1 rounded-md text-sm hover:bg-blue-200 transition-colors"
+        >
+          ¿Cómo se calcula?
+        </button>
       </div>
-      
-      <p className="text-sm text-gray-600 mb-6">
-        Clasificación basada en una puntuación de actividad que considera múltiples factores: 
-        puntuación total (30%), tiempo de juego (20%), precisión (20%), enemigos derrotados (20%) y misiones diarias completadas (10%)
-      </p>
 
       <div className="space-y-4">
         {rankings.slice(0, 10).map((player, index) => (
@@ -71,7 +81,7 @@ export const PlayerRankings: React.FC<PlayerRankingsProps> = ({ rankings }) => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-center">
                 <div className="flex flex-col items-center">
                   <BsTrophy className="h-4 w-4 text-yellow-500 mb-1" />
                   <span className="text-sm font-medium text-gray-900">
@@ -97,11 +107,27 @@ export const PlayerRankings: React.FC<PlayerRankingsProps> = ({ rankings }) => {
                 </div>
                 
                 <div className="flex flex-col items-center">
-                  <FiCheck className="h-4 w-4 text-green-500 mb-1" />
+                  <GiTrophy className="h-4 w-4 text-green-500 mb-1" />
+                  <span className="text-sm font-medium text-gray-900">
+                    {player.winRate.toFixed(1)}%
+                  </span>
+                  <span className="text-xs text-gray-500">Victoria</span>
+                </div>
+                
+                <div className="flex flex-col items-center">
+                  <FiCheck className="h-4 w-4 text-purple-500 mb-1" />
                   <span className="text-sm font-medium text-gray-900">
                     {player.dailyQuestsCompleted}
                   </span>
                   <span className="text-xs text-gray-500">Misiones</span>
+                </div>
+
+                <div className="flex flex-col items-center">
+                  <FiBox className="h-4 w-4 text-teal-500 mb-1" />
+                  <span className="text-sm font-medium text-gray-900">
+                    {player.materialsCollected}
+                  </span>
+                  <span className="text-xs text-gray-500">Materiales</span>
                 </div>
               </div>
             </div>
