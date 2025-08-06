@@ -25,6 +25,7 @@ interface AdminActions {
   clearError: () => void;
   exportToPDF: () => Promise<void>;
   collectAndSaveMetrics: () => Promise<void>;
+  clearMetrics: () => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
 }
 
@@ -325,6 +326,18 @@ export const useAdminStore = create<AdminState & AdminActions>()(
         await AdminService.saveMetrics(metrics);
       } catch (error) {
         console.error('Error collecting metrics:', error);
+      }
+    },
+
+    clearMetrics: async () => {
+      try {
+        // Aquí iría la lógica para limpiar métricas del servidor
+        // Por ahora solo simulamos la operación
+        console.log('Clearing metrics...');
+        // await AdminService.clearMetrics();
+      } catch (error) {
+        console.error('Error clearing metrics:', error);
+        throw error;
       }
     },
 

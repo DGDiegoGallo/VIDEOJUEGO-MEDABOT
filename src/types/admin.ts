@@ -261,3 +261,84 @@ export interface GameAnalytics {
     averageQuestsPerPlayer: number;
   };
 }
+
+// Tipo para datos detallados de sesión de un jugador específico
+export interface PlayerGameSessionDetail {
+  id: number;
+  documentId: string;
+  sessionName: string;
+  sessionId?: string | null;
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    createdAt: string;
+  };
+  sessionStats: {
+    enemiesDefeated: number;
+    zombiesKilled: number;
+    dashersKilled: number;
+    tanksKilled: number;
+    totalDamageDealt: number;
+    totalDamageReceived: number;
+    shotsFired: number;
+    shotsHit: number;
+    accuracyPercentage: number;
+    finalScore: number;
+    levelReached: number;
+    durationSeconds: number;
+    survivalTimeTotal: number;
+    supplyBoxesTotal: number;
+    barrelsDestroyedTotal: number;
+    bandagesUsedTotal: number;
+    levelsGainedTotal: number;
+    gamesPlayedTotal: number;
+    victoriesTotal: number;
+    defeatsTotal: number;
+    startedAt: string;
+    endedAt: string;
+    gameState: string;
+    lastGameScore: number;
+    lastGameLevel: number;
+    lastGameSurvivalTime: number;
+  };
+  materials: {
+    steel: number;
+    energyCells: number;
+    medicine: number;
+    food: number;
+  };
+  guns: Array<{
+    id: string;
+    name: string;
+    damage: number;
+    fire_rate: number;
+    ammo_capacity: number;
+    type: string;
+    rarity: string;
+    is_default: boolean;
+  }>;
+  dailyQuestsCompleted: {
+    date: string;
+    quests: Array<{
+      id: string;
+      title: string;
+      description: string;
+      type: string;
+      target?: number;
+      progress: number;
+      reward: number;
+      completed: boolean;
+      completedAt: string;
+    }>;
+  };
+  equippedItems: {
+    nfts: any[];
+    weapons: string[];
+    activeEffects: any[];
+    bandages: number;
+  };
+  userNfts: any[];
+  createdAt: string;
+  updatedAt: string;
+}

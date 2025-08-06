@@ -5,7 +5,8 @@ import type {
     AdminUserData,
     AdminGameSessionData,
     AdminMetricsData,
-    PerformanceMetrics
+    PerformanceMetrics,
+    PlayerGameSessionDetail
 } from '@/types/admin';
 import type { StrapiEntity } from '@/types/api';
 
@@ -700,5 +701,84 @@ export class AdminService {
                 levelDistribution: []
             }
         };
+    }
+
+    // Obtener datos detallados de sesión de un jugador específico
+    static async getPlayerGameSession(userId: number): Promise<PlayerGameSessionDetail | null> {
+        try {
+            const response = await apiClient.get<any>('/game-sessions', {
+                filters: {
+                    users_permissions_user: userId
+                },
+                populate: '*'
+            });
+            
+            if (!response.data || response.data.length === 0) {
+                return null;
+            }
+
+            const session = response.data[0]; // Un jugador tiene una sola sesión
+            
+            return {
+                id: session.id,
+                documentId: session.documentId,
+                sessionName: session.session_name || 'Sesión sin nombre',
+                sessionId: session.session_id,
+                user: {
+                    id: session.users_permissions_user?.id || 0,
+                    username: session.users_permissions_user?.username || 'Usuario desconocido',
+                    email: session.users_permissions_user?.email || '',
+                    createdAt: session.users_permissions_user?.createdAt || ''
+                },
+                sessionStats: {
+                    enemiesDefeated: session.session_stats?.enemies_defeated || 0,
+                    zombiesKilled: session.session_stats?.zombies_killed || 0,
+                    dashersKilled: session.session_stats?.dashers_killed || 0,
+                    tanksKilled: session.session_stats?.tanks_killed || 0,
+                    totalDamageDealt: session.session_stats?.total_damage_dealt || 0,
+                    totalDamageReceived: session.session_stats?.total_damage_received || 0,
+                    shotsFired: session.session_stats?.shots_fired || 0,
+                    shotsHit: session.session_stats?.shots_hit || 0,
+                    accuracyPercentage: session.session_stats?.accuracy_percentage || 0,
+                    finalScore: session.session_stats?.final_score || 0,
+                    levelReached: session.session_stats?.level_reached || 1,
+                    durationSeconds: session.session_stats?.duration_seconds || 0,
+                    survivalTimeTotal: session.session_stats?.survival_time_total || 0,
+                    supplyBoxesTotal: session.session_stats?.supply_boxes_total || 0,
+                    barrelsDestroyedTotal: session.session_stats?.barrels_destroyed_total || 0,
+                    bandagesUsedTotal: session.session_stats?.bandages_used_total || 0,
+                    levelsGainedTotal: session.session_stats?.levels_gained_total || 0,
+                    gamesPlayedTotal: session.session_stats?.games_played_total || 0,
+                    victoriesTotal: session.session_stats?.victories_total || 0,
+                    defeatsTotal: session.session_stats?.defeats_total || 0,
+                    startedAt: session.session_stats?.started_at || '',
+                    endedAt: session.session_stats?.ended_at || '',
+                    gameState: session.session_stats?.game_state || 'unknown',
+                    lastGameScore: session.session_stats?.last_game_score || 0,
+                    lastGameLevel: session.session_stats?.last_game_level || 1,
+                    lastGameSurvivalTime: session.session_stats?.last_game_survival_time || 0
+                },
+                materials: {
+                    steel: session.materials?.steel || 0,
+                    energyCells: session.materials?.energy_cells || 0,
+                    medicine: session.materials?.medicine || 0,
+                    food: session.materials?.food || 0
+                },
+                guns: session.guns || [],
+                dailyQuestsCompleted: session.daily_quests_completed || { date: '', quests: [] },
+                equippedItems: {
+                    nfts: session.equipped_items?.nfts || [],
+                    weapons: session.equipped_items?.weapons || [],
+                    activeEffects: session.equipped_items?.active_effects || [],
+                    bandages: session.equipped_items?.bandages || 0
+                },
+                userNfts: session.user_nfts || [],
+                createdAt: session.createdAt,
+                updatedAt: session.updatedAt
+            };
+        } catch (error) {
+            console.error('Error fetching player game session:', error);
+            throw error;
+        }
     }
 }

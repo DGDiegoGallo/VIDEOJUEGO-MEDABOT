@@ -1,7 +1,7 @@
 import React from 'react';
 import { FiHome, FiUsers, FiPlay, FiActivity, FiSettings } from 'react-icons/fi';
 
-export type AdminTabType = 'game-analytics' | 'users' | 'sessions' | 'metrics' | 'settings';
+export type AdminTabType = 'game-analytics' | 'users' | 'sessions' | 'metrics';
 
 interface AdminTabsProps {
   activeTab: AdminTabType;
@@ -33,12 +33,6 @@ export const AdminTabs: React.FC<AdminTabsProps> = ({ activeTab, onTabChange }) 
       name: 'Métricas',
       icon: FiActivity,
       description: 'Rendimiento y análisis'
-    },
-    {
-      id: 'settings' as AdminTabType,
-      name: 'Configuración',
-      icon: FiSettings,
-      description: 'Configuración del sistema'
     }
   ];
 

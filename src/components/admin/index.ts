@@ -24,4 +24,6 @@ export { AdminGameAnalyticsView } from './views/AdminGameAnalyticsView';
 export { AdminUsersView } from './views/AdminUsersView';
 export { AdminSessionsView } from './views/AdminSessionsView';
 export { AdminMetricsView } from './views/AdminMetricsView';
-export { AdminSettingsView } from './views/AdminSettingsView';
+export { AdminMetricsCharts } from './AdminMetricsCharts';
+export { WebVitalsExplanation } from './WebVitalsExplanation';
+export { PlayerGameSessionDetailComponent } from './PlayerGameSessionDetail';

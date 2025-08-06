@@ -7,7 +7,7 @@ import { AdminGameAnalyticsView } from './views/AdminGameAnalyticsView';
 import { AdminUsersView } from './views/AdminUsersView';
 import { AdminSessionsView } from './views/AdminSessionsView';
 import { AdminMetricsView } from './views/AdminMetricsView';
-import { AdminSettingsView } from './views/AdminSettingsView';
+
 
 export const AdminDashboard: React.FC = () => {
   const { 
@@ -78,7 +78,6 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'users' && <AdminUsersView data={dashboardData} />}
         {activeTab === 'sessions' && <AdminSessionsView data={dashboardData} />}
         {activeTab === 'metrics' && <AdminMetricsView data={dashboardData} />}
-        {activeTab === 'settings' && <AdminSettingsView />}
       </div>
     </div>
   );
